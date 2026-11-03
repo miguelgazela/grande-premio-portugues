@@ -6,7 +6,7 @@ import type { EndMsg, PublicBody, PublicQuestion, RevealMsg } from '../../lib/pr
 import type { AnswerValue } from '../../lib/types';
 import { useApi } from '../useApi';
 import { Asset } from '../ui/Asset';
-import { CarGrid } from '../ui/TeamPicker';
+import { CarPicker } from '../ui/TeamPicker';
 import { carDef } from '../../game/teamStyle';
 import { StudentInput, describeSolution } from '../ui/Question';
 import { clearPlayer, deviceToken, loadAvatar, loadPlayer, savePlayer } from './session';
@@ -210,10 +210,10 @@ export function Play() {
       )}
       {view.k === 'wait' && (
         <div className="msg">
-          <div style={{ width: '100%', maxWidth: 520 }}>
+          <div style={{ width: '100%', maxWidth: 640 }}>
             Estás dentro! 🏁<small>{view.count ? `${view.count} na corrida · ` : ''}À espera que a professora comece…</small>
-            <small>Toca num carro para votar: o mais votado é o da turma.</small>
-            <CarGrid value={car} onPick={vote} />
+            <small>Vota no carro da turma: escolhe o modelo e a cor. O mais votado ganha.</small>
+            <CarPicker value={car} onPick={vote} />
           </div>
         </div>
       )}

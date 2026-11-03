@@ -317,7 +317,6 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
 @media (prefers-reduced-motion: reduce) { details.more summary::after { transition: none; } }
 .lobby button, .host .overlay .card button { min-height: 56px; }
 
-.cargrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; margin-top: 12px; }
 .carpick { display: grid; justify-items: center; gap: 4px; min-height: 96px; padding: 10px 6px; background: #0004; border: 3px solid transparent; border-radius: 14px; }
 .carpick small { font-size: 13px; }
 .carpick.on { border-color: var(--gold); background: #ffffff22; box-shadow: 0 0 0 2px var(--gold); }
@@ -345,3 +344,23 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
 @media (min-width: 700px) { .sheet-backdrop { align-items: center; } .sheet { border-radius: 24px; } }
 @media (max-height: 520px) { .avatar-grid { grid-template-columns: repeat(6, 1fr); } }
 @media (prefers-reduced-motion: reduce) { .sheet { animation: none; } }
+
+/* Escolha do carro em 2 passos (aluno): modelo, depois cor */
+.step { margin-top: 12px; animation: stepin .18s ease-out; }
+.step-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; text-align: left; }
+.step-head b { font-size: 1.25rem; font-weight: 800; }
+.step-head .back { min-height: 56px; padding: 0 18px; font-size: 1.05rem; }
+.carpick small { font-size: 15px; font-weight: 700; }
+.modelgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.colorgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.colorgrid.n8 { grid-template-columns: repeat(4, 1fr); }
+.carpick { min-height: 96px; }
+.carpick:focus-visible, .step-head .back:focus-visible, .vote-done button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.carpick .carprev { max-width: 100%; height: auto !important; }
+.vote-done { display: grid; justify-items: center; gap: 8px; margin-top: 12px; padding: 16px; background: #ffffff14; border: 3px solid var(--gold); border-radius: 18px; animation: stepin .18s ease-out; }
+.vote-done small { font-size: 1rem; color: var(--muted); }
+.vote-done b { display: block; font-size: 1.6rem; }
+.vote-done button { min-height: 56px; min-width: 140px; font-size: 1.1rem; }
+@keyframes stepin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .step, .vote-done { animation: none; } }
+@media (max-width: 420px) { .colorgrid.n8 { grid-template-columns: repeat(3, 1fr); } .modelgrid { gap: 8px; } }
