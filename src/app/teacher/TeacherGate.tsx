@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { Api } from '../../lib/api';
 import { configured } from '../../lib/supabase';
 import { useApi } from '../useApi';
+import { Asset } from '../ui/Asset';
 import { errorMessage } from '../../lib/api';
 
 interface Ctx {
@@ -32,6 +33,7 @@ export function TeacherGate({ children }: { children: ReactNode }) {
     return (
       <div className="center">
         <div className="card">
+          <GateHeader />
           <h2>Conta sem acesso</h2>
           <p className="muted">Esta conta existe, mas não está registada como professora neste jogo.</p>
           <button onClick={() => void api.signOut().then(() => setState({ s: 'anon' }))}>Sair</button>
@@ -43,6 +45,15 @@ export function TeacherGate({ children }: { children: ReactNode }) {
     <TeacherCtx.Provider value={{ api, teacher: { id: state.id, name: state.name }, signOut: () => void api.signOut().then(() => setState({ s: 'anon' })) }}>
       {children}
     </TeacherCtx.Provider>
+  );
+}
+
+function GateHeader() {
+  return (
+    <>
+      <Asset name="ui-logo" alt="Grande Prémio de Português" className="join-logo gate-logo" fallback={<h1 style={{ textAlign: 'center' }}>🏎️ Grande Prémio</h1>} />
+      <p className="gate-title">Professora</p>
+    </>
   );
 }
 
@@ -69,7 +80,7 @@ function Login({ api, onDone }: { api: Api; onDone(): void }) {
   return (
     <div className="center">
       <form className="card" onSubmit={submit}>
-        <h1>🏎️ Professora</h1>
+        <GateHeader />
         {api.mock && <p className="muted">Modo de teste (base de dados falsa): qualquer email entra.</p>}
         {!configured && !api.mock && <p className="error">Falta configurar o .env (VITE_SUPABASE_URL e VITE_SUPABASE_PUBLISHABLE_KEY).</p>}
         <input type="email" placeholder="Email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required={!api.mock} />
