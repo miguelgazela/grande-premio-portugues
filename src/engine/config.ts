@@ -10,8 +10,10 @@ export interface RaceConfig {
   minFactor: number;
   maxFactor: number;
 
-  /** Speed factor while students think (igual para todos). O efeito da resposta vem numa rajada no reveal. */
-  cruiseMult: number;
+  /** Velocidade de cruzeiro (unidades do mundo por segundo), constante para todos os carros. */
+  cruiseSpeed: number;
+  /** Quanto do efeito de cada resposta chega à velocidade (0..1). Pequeno: os efeitos mexem nas posições, não no ritmo da corrida. */
+  effectScale: number;
 
   turboThreshold: number;
   turboMult: number;
@@ -32,9 +34,6 @@ export interface RaceConfig {
   /** Bot catch-up strength per lap of gap to the class car. */
   rubberBand: number;
   rubberBandCap: number;
-
-  /** Accuracy at which the class car finishes right as the last question ends. */
-  calibrationAccuracy: number;
 }
 
 export const DEFAULT_CONFIG: RaceConfig = {
@@ -44,7 +43,8 @@ export const DEFAULT_CONFIG: RaceConfig = {
   overheadTime: 5,
   minFactor: 0.6,
   maxFactor: 1.4,
-  cruiseMult: 1.0,
+  cruiseSpeed: 160,
+  effectScale: 0.07,
   turboThreshold: 0.8,
   turboMult: 1.12,
   slowThreshold: 0.5,
@@ -57,7 +57,6 @@ export const DEFAULT_CONFIG: RaceConfig = {
   finalLapMult: 2,
   rubberBand: 2,
   rubberBandCap: 0.25,
-  calibrationAccuracy: 0.7,
 };
 
 export const totalQuestions = (c: RaceConfig) => c.laps * c.questionsPerLap;

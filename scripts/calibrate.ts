@@ -11,7 +11,7 @@ console.log(`Pista ${Math.round(track.length)}px · ${races} corridas por nível
 const header = ['nível', 'acerto', 'pos.média', ...DEFAULT_SIM.botSkills.map((_, i) => `${i + 1}º`), `${DEFAULT_SIM.botSkills.length + 1}º`, 'renhida', 'ultrap.', 'perdidas'];
 console.log(header.map((h) => h.padStart(8)).join(''));
 for (const mean of levels) {
-  const s = runBatch(DEFAULT_CONFIG, { ...DEFAULT_SIM, classMean: mean }, track.length, races);
+  const s = runBatch(DEFAULT_CONFIG, { ...DEFAULT_SIM, classMean: mean }, races);
   const row = [
     mean.toFixed(2),
     `${Math.round(s.avgAccuracy * 100)}%`,

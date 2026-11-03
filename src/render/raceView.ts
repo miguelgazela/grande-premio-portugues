@@ -2,17 +2,24 @@
 import 'pixi.js/unsafe-eval';
 import { Application, Container, Graphics, Sprite, Text, TilingSprite, type Texture } from 'pixi.js';
 import { mulberry32 } from '../engine/rng';
-import { CURB_W, ROAD_W, WORLD_H, WORLD_W, type Track } from '../engine/track';
+import { CURB_W, ROAD_W, type Road } from '../engine/track';
 import type { CarState, Race } from '../engine/race';
 import { themeForTrack, themeKeys, type Theme } from '../engine/theme';
 import { loadRaceTextures, type RaceTextures } from './assets';
 import { Particles } from './particles';
 
 const CAR_LEN = 34;
-/** Zoom da câmara em relação ao "caber o mundo antigo (1000 de largura) no ecrã". */
+/** Zoom da câmara em relação ao "caber 1000 de largura no ecrã". */
 const FOLLOW_ZOOM = 2.2;
 const LOOK_AHEAD = 70;
 const CURB_STRIPE = 18;
+/** A pista desenha-se aos bocados, só à volta da câmara: a estrada vai "nascendo" à frente do carro. */
+const CHUNK = 1000;
+const CHUNKS_BEHIND = 2;
+const CHUNKS_AHEAD = 4;
+/** Área de mundo que um bloco de relva/props cobria antes (para manter a densidade dos temas). */
+const OLD_WORLD_AREA = 1800 * 1140;
+const OLD_TRACK_LEN = 3948;
 
 interface CarNode {
   root: Container;
@@ -30,38 +37,48 @@ interface CarNode {
 /**
  * Renderer da pista. Com `{ sprites: true }` carrega os assets do manifest e usa
  * formas desenhadas para tudo o que faltar (ou se não houver manifest).
+ * A estrada é aberta e infinita para o jogo: só os blocos perto da câmara existem.
  */
 export class RaceView {
   readonly app = new Application();
   private world = new Container();
+  private chunkLayer = new Container();
   private carLayer = new Container();
   private cars = new Map<string, CarNode>();
+  private chunks = new Map<number, Container>();
+  private bg: TilingSprite | null = null;
   private tex: RaceTextures = new Map();
   private destroyed = false;
   private view = { w: 0, h: 0 };
-  private cam = { x: WORLD_W / 2, y: WORLD_H / 2, zoom: 1, snapped: false };
+  private cam = { x: 0, y: 0, zoom: 1, snapped: false };
   private lastClock = 0;
   private mini = new Container();
   private miniDots = new Graphics();
-  private miniScale = 1;
+  private miniW = 200;
   private miniLabels = new Map<string, Text>();
-  private clearancePts: Float32Array;
   private theme: Theme;
   private particles = new Particles();
   private lastRender = 0;
   private stands: Sprite[] = [];
   private cheerT = 0;
+  private normals: { x: number; y: number }[];
+  private raceLength: number;
 
   constructor(
-    private track: Track,
-    private opts: { sprites?: boolean; follow?: boolean; trackId?: string } = {},
+    private track: Road,
+    private opts: { sprites?: boolean; follow?: boolean; trackId?: string; raceLength?: number } = {},
   ) {
     this.theme = themeForTrack(opts.trackId ?? '');
-    const pts = track.points.slice(0, -1);
-    this.clearancePts = new Float32Array(pts.length * 2);
-    pts.forEach((p, i) => {
-      this.clearancePts[i * 2] = p.x;
-      this.clearancePts[i * 2 + 1] = p.y;
+    this.raceLength = opts.raceLength ?? track.length;
+    const pts = track.points;
+    const n = pts.length;
+    this.normals = pts.map((_p, i) => {
+      const a = pts[Math.max(0, i - 1)];
+      const b = pts[Math.min(n - 1, i + 1)];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      return { x: -dy / len, y: dx / len };
     });
   }
 
@@ -71,31 +88,32 @@ export class RaceView {
     if (this.destroyed) return;
     el.appendChild(this.app.canvas);
     this.app.stage.addChild(this.world);
-    this.drawTrack();
-    this.world.addChild(this.particles.under, this.carLayer, this.particles.over);
-    if (this.opts.follow) {
-      this.app.stage.addChild(this.mini);
-      this.mini.addChild(this.miniDots);
+    const grass = this.t(`bg-${this.theme.suffix || 'grass'}`);
+    if (grass) {
+      this.bg = new TilingSprite({ texture: grass, width: 100, height: 100 });
+      this.bg.tileScale.set(0.45);
+      this.world.addChild(this.bg);
     }
+    this.world.addChild(this.chunkLayer, this.particles.under, this.carLayer, this.particles.over);
+    const start = this.track.poseAt(0);
+    this.cam.x = start.x + LOOK_AHEAD;
+    this.cam.y = start.y;
+    this.app.stage.addChild(this.mini);
+    this.mini.addChild(this.miniDots);
     const fit = () => {
       if (this.destroyed) return;
       // `resizeTo` só reage ao resize da janela; a pista muda de altura quando a pergunta aparece/desaparece.
       if (el.clientWidth && el.clientHeight) this.app.renderer.resize(el.clientWidth, el.clientHeight);
       this.view = { w: el.clientWidth, h: el.clientHeight };
-      if (this.opts.follow) {
-        this.layoutMinimap();
-        this.applyCamera(0);
-      } else {
-        const s = Math.min(el.clientWidth / WORLD_W, el.clientHeight / WORLD_H);
-        this.world.scale.set(s);
-        this.world.position.set((el.clientWidth - WORLD_W * s) / 2, (el.clientHeight - WORLD_H * s) / 2);
-      }
+      this.layoutMinimap();
+      this.applyCamera(0);
     };
     new ResizeObserver(fit).observe(el);
     fit();
+    this.ensureChunks(0);
   }
 
-  /** Escala base: o mundo antigo (1000 de largura) cabia no ecrã; o zoom de seguimento mede-se contra isso. */
+  /** Escala base: 1000 de largura no ecrã; o zoom de seguimento mede-se contra isso. */
   private baseScale(): number {
     return Math.min(this.view.w / 1000, this.view.h / 620);
   }
@@ -107,21 +125,28 @@ export class RaceView {
       this.view.w / 2 - this.cam.x * s + (shake ? (Math.random() - 0.5) * shake : 0),
       this.view.h / 2 - this.cam.y * s + (shake ? (Math.random() - 0.5) * shake : 0),
     );
+    if (this.bg && s > 0) {
+      // Relva infinita: o tile acompanha a câmara, ancorado ao mundo.
+      const w = this.view.w / s + 400;
+      const h = this.view.h / s + 400;
+      const x = this.cam.x - w / 2;
+      const y = this.cam.y - h / 2;
+      this.bg.width = w;
+      this.bg.height = h;
+      this.bg.position.set(x, y);
+      this.bg.tilePosition.set(-x, -y);
+    }
   }
 
+  /** Barra de progresso: um ponto por carro ao longo da corrida (a pista é longa demais para um mapa). */
   private layoutMinimap(): void {
-    const w = Math.max(150, Math.min(260, this.view.w * 0.24));
-    const h = w * (WORLD_H / WORLD_W);
-    this.miniScale = w / WORLD_W;
-    this.mini.position.set(this.view.w - w - 12, this.view.h - h - 12);
+    const w = Math.max(220, Math.min(420, this.view.w * 0.34));
+    this.miniW = w;
+    this.mini.position.set(this.view.w - w - 18, this.view.h - 26);
     const bg = new Graphics();
-    bg.roundRect(-8, -8, w + 16, h + 16, 10).fill({ color: 0x14141c, alpha: 0.55 });
-    const pts = this.track.points;
-    bg.moveTo(pts[0].x * this.miniScale, pts[0].y * this.miniScale);
-    for (let i = 1; i < pts.length; i += 3) bg.lineTo(pts[i].x * this.miniScale, pts[i].y * this.miniScale);
-    bg.closePath().stroke({ width: 5, color: 0xffffff, alpha: 0.85, join: 'round' });
-    const start = this.track.poseAt(0);
-    bg.circle(start.x * this.miniScale, start.y * this.miniScale, 3).fill(0xffd23f);
+    bg.roundRect(-10, -14, w + 20, 28, 12).fill({ color: 0x14141c, alpha: 0.55 });
+    bg.moveTo(0, 0).lineTo(w, 0).stroke({ width: 4, color: 0xffffff, alpha: 0.85, cap: 'round' });
+    bg.rect(w - 3, -9, 6, 18).fill(0xffd23f);
     const labels = new Set<unknown>(this.miniLabels.values());
     this.mini.children.filter((c) => c !== this.miniDots && !labels.has(c)).forEach((c) => c.destroy());
     this.mini.addChildAt(bg, 0);
@@ -131,97 +156,103 @@ export class RaceView {
     return this.tex.get(key);
   }
 
-  private path(g: Graphics): Graphics {
-    const pts = this.track.points;
-    g.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
-    return g.closePath();
+  // ---------- Blocos de pista ----------
+
+  /** Cria os blocos à frente da câmara e deita fora os que ficaram para trás. */
+  private ensureChunks(d: number): void {
+    const lastChunk = Math.floor(Math.min(this.track.length, this.raceLength + 600) / CHUNK);
+    const cur = Math.floor(Math.max(0, d) / CHUNK);
+    const lo = Math.max(0, cur - CHUNKS_BEHIND);
+    const hi = Math.min(lastChunk, cur + CHUNKS_AHEAD);
+    for (let i = lo; i <= hi; i++) if (!this.chunks.has(i)) {
+      const c = this.buildChunk(i);
+      this.chunkLayer.addChild(c);
+      this.chunks.set(i, c);
+    }
+    for (const [i, c] of this.chunks) {
+      if (i < lo - 1 || i > hi + 1) {
+        this.chunks.delete(i);
+        c.destroy({ children: true });
+        this.stands = this.stands.filter((s) => !s.destroyed);
+      }
+    }
   }
 
-  private drawTrack(): void {
-    // Fundo: relva em tile, muito além do mundo (o canvas pode ter margens).
-    const grass = this.t(`bg-${this.theme.suffix || 'grass'}`);
-    if (grass) {
-      const bg = new TilingSprite({ texture: grass, width: 4000, height: 3000 });
-      bg.position.set(-1500, -1200);
-      bg.tileScale.set(0.45);
-      this.world.addChild(bg);
-    }
+  private buildChunk(index: number): Container {
+    const c = new Container();
+    const tr = this.track;
+    const d0 = index * CHUNK;
+    const d1 = Math.min(tr.length, d0 + CHUNK);
+    const i0 = Math.max(0, tr.indexAt(d0) - 1);
+    const i1 = Math.min(tr.points.length - 1, tr.indexAt(d1) + 2);
+    const pts = tr.points.slice(i0, i1 + 1);
+    const path = (g: Graphics) => {
+      g.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i].x, pts[i].y);
+      return g;
+    };
 
-    this.drawCurbs();
-    const road = new Graphics();
-    const asphalt = this.t(`track-asphalt${this.theme.suffix ? '-' + this.theme.suffix : ''}`);
-    if (asphalt) {
-      // Asfalto em tile, recortado pela forma da estrada.
-      const mask = this.path(new Graphics()).stroke({ width: ROAD_W, color: 0xffffff, join: 'round' });
-      const tile = new TilingSprite({ texture: asphalt, width: WORLD_W + 400, height: WORLD_H + 400 });
-      tile.position.set(-200, -200);
-      tile.tileScale.set(0.3);
-      tile.mask = mask;
-      this.world.addChild(road, mask, tile);
-    } else {
-      this.path(road).stroke({ width: ROAD_W, color: 0x3d3d48, join: 'round' });
-      this.world.addChild(road);
-    }
-
-    // Linha central tracejada.
-    const dashes = new Graphics();
-    for (let d = 0; d < this.track.length; d += 34) {
-      const a = this.track.poseAt(d);
-      const b = this.track.poseAt(d + 16);
-      dashes.moveTo(a.x, a.y).lineTo(b.x, b.y);
-    }
-    dashes.stroke({ width: 3, color: asphalt ? 0xf4f4f4 : 0xdddddd, alpha: asphalt ? 0.8 : 1 });
-    this.world.addChild(dashes);
-
-    this.drawStartLine();
-    this.drawProps();
-  }
-
-  /**
-   * Curb contínuo: base laranja (traço mais largo que a estrada) e quads brancos por cima,
-   * gerados a partir das normais por vértice, por isso sem buracos nem sobreposições em curva.
-   */
-  private drawCurbs(): void {
-    const g = new Graphics();
-    this.path(g).stroke({ width: ROAD_W + CURB_W * 2, color: this.theme.curbA, join: 'round' });
-    const pts = this.track.points.slice(0, -1);
-    const n = pts.length;
-    const cum = this.track.cum;
-    const normals = pts.map((_p, i) => {
-      const a = pts[(i - 1 + n) % n];
-      const b = pts[(i + 1) % n];
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const len = Math.hypot(dx, dy) || 1;
-      return { x: -dy / len, y: dx / len };
-    });
+    // Curb: base laranja e quads brancos por cima, a partir das normais por vértice.
+    const curb = path(new Graphics()).stroke({ width: ROAD_W + CURB_W * 2, color: this.theme.curbA, join: 'round', cap: 'butt' });
     const inner = ROAD_W / 2 - 1;
     const outer = ROAD_W / 2 + CURB_W;
-    const white = (i: number) => Math.floor(cum[i] / CURB_STRIPE) % 2 === 1;
+    const white = (i: number) => Math.floor(tr.cum[i] / CURB_STRIPE) % 2 === 1;
     for (const side of [-1, 1]) {
-      let i = 0;
-      while (i < n) {
+      let i = i0;
+      while (i < i1) {
         if (!white(i)) {
           i++;
           continue;
         }
         let j = i;
-        while (j + 1 < n && white(j + 1)) j++;
-        // Inclui o vértice seguinte para as listas encostarem.
-        const end = Math.min(j + 1, n - 1);
+        while (j + 1 < i1 && white(j + 1)) j++;
+        const end = Math.min(j + 1, i1);
         const poly: number[] = [];
-        for (let k = i; k <= end; k++) poly.push(pts[k].x + normals[k].x * outer * side, pts[k].y + normals[k].y * outer * side);
-        for (let k = end; k >= i; k--) poly.push(pts[k].x + normals[k].x * inner * side, pts[k].y + normals[k].y * inner * side);
-        g.poly(poly).fill(this.theme.curbB);
+        for (let k = i; k <= end; k++) poly.push(tr.points[k].x + this.normals[k].x * outer * side, tr.points[k].y + this.normals[k].y * outer * side);
+        for (let k = end; k >= i; k--) poly.push(tr.points[k].x + this.normals[k].x * inner * side, tr.points[k].y + this.normals[k].y * inner * side);
+        curb.poly(poly).fill(this.theme.curbB);
         i = j + 1;
       }
     }
-    this.world.addChild(g);
+    c.addChild(curb);
+
+    const asphalt = this.t(`track-asphalt${this.theme.suffix ? '-' + this.theme.suffix : ''}`);
+    if (asphalt) {
+      // Asfalto em tile, recortado pela forma da estrada deste bloco.
+      const mask = path(new Graphics()).stroke({ width: ROAD_W, color: 0xffffff, join: 'round', cap: 'butt' });
+      const xs = pts.map((p) => p.x);
+      const ys = pts.map((p) => p.y);
+      const x0 = Math.min(...xs) - ROAD_W;
+      const y0 = Math.min(...ys) - ROAD_W;
+      const tile = new TilingSprite({ texture: asphalt, width: Math.max(...xs) - x0 + ROAD_W, height: Math.max(...ys) - y0 + ROAD_W });
+      tile.position.set(x0, y0);
+      tile.tileScale.set(0.3);
+      tile.tilePosition.set(-x0, -y0);
+      tile.mask = mask;
+      c.addChild(mask, tile);
+    } else {
+      c.addChild(path(new Graphics()).stroke({ width: ROAD_W, color: 0x3d3d48, join: 'round', cap: 'butt' }));
+    }
+
+    // Linha central tracejada.
+    const dashes = new Graphics();
+    for (let d = Math.ceil(d0 / 34) * 34; d < d1; d += 34) {
+      const a = tr.poseAt(d);
+      const b = tr.poseAt(d + 16);
+      dashes.moveTo(a.x, a.y).lineTo(b.x, b.y);
+    }
+    dashes.stroke({ width: 3, color: asphalt ? 0xf4f4f4 : 0xdddddd, alpha: asphalt ? 0.8 : 1 });
+    c.addChild(dashes);
+
+    if (index === 0) this.addLine(c, 0);
+    if (this.raceLength >= d0 && this.raceLength < d0 + CHUNK) this.addLine(c, this.raceLength);
+    this.addProps(c, index, d0, d1);
+    return c;
   }
 
-  private drawStartLine(): void {
-    const p = this.track.poseAt(0);
+  /** Linha de partida/meta: sprite do manifest ou xadrez desenhado. */
+  private addLine(into: Container, d: number): void {
+    const p = this.track.poseAt(d);
     const tex = this.t('prop-startline');
     if (tex) {
       const s = new Sprite(tex);
@@ -230,7 +261,7 @@ export class RaceView {
       s.width = (tex.width / tex.height) * s.height * 1.4;
       s.position.set(p.x, p.y);
       s.rotation = p.angle;
-      this.world.addChild(s);
+      into.addChild(s);
       return;
     }
     const finish = new Graphics();
@@ -241,29 +272,30 @@ export class RaceView {
     }
     finish.position.set(p.x, p.y);
     finish.rotation = p.angle;
-    this.world.addChild(finish);
+    into.addChild(finish);
   }
 
-  /** Distância ao ponto mais próximo de QUALQUER troço da pista. */
-  private clearance(x: number, y: number): number {
-    const c = this.clearancePts;
-    let best = Infinity;
-    for (let i = 0; i < c.length; i += 2) {
-      const dx = c[i] - x;
-      const dy = c[i + 1] - y;
-      const d = dx * dx + dy * dy;
-      if (d < best) best = d;
-    }
-    return Math.sqrt(best);
-  }
-
-  /** Árvores, arbustos, cones, pneus e bancadas: acima da estrada, ordenados por y, nunca sobre ela. */
-  private drawProps(): void {
+  /** Árvores, arbustos, cones, pneus e bancadas do bloco: ordenados por y, nunca sobre a estrada. */
+  private addProps(into: Container, index: number, d0: number, d1: number): void {
     const layer = new Container();
     layer.sortableChildren = true;
-    const rng = mulberry32(7);
+    const rng = mulberry32(7 + index * 7919);
+    const tr = this.track;
     const roadEdge = ROAD_W / 2 + CURB_W;
     const placed: { x: number; y: number; r: number }[] = [];
+    // O mapa só avança em x (ver Road): basta comparar com os pontos da estrada próximos em distância.
+    const lo = Math.max(0, tr.indexAt(d0 - 400));
+    const hi = Math.min(tr.points.length - 1, tr.indexAt(d1 + 400));
+    const clearance = (x: number, y: number) => {
+      let best = Infinity;
+      for (let i = lo; i <= hi; i++) {
+        const dx = tr.points[i].x - x;
+        const dy = tr.points[i].y - y;
+        const dd = dx * dx + dy * dy;
+        if (dd < best) best = dd;
+      }
+      return Math.sqrt(best);
+    };
     const add = (tex: Texture, x: number, y: number, w: number, h: number, rotation = 0) => {
       const s = new Sprite(tex);
       s.anchor.set(0.5);
@@ -273,87 +305,52 @@ export class RaceView {
       s.position.set(x, y);
       s.zIndex = y;
       layer.addChild(s);
+      return s;
     };
 
-    // Bancadas: nas retas mais direitas, do lado de fora da pista, viradas para ela. A principal junto à meta.
+    // Bancadas: à partida e à meta, do lado de fora da curva (lado esquerdo na partida, direito na meta).
     const stand = this.t('prop-grandstand');
     if (stand) {
-      const L = this.track.length;
-      const turn = (d: number) => {
-        let worst = 0;
-        for (let k = -4; k < 4; k++) {
-          const a = this.track.poseAt(d + k * 40).angle;
-          const b = this.track.poseAt(d + (k + 1) * 40).angle;
-          worst += Math.abs(Math.atan2(Math.sin(b - a), Math.cos(b - a)));
-        }
-        return worst;
-      };
-      const candidates: { d: number; score: number }[] = [];
-      for (let d = 0; d < L; d += 30) candidates.push({ d, score: turn(d) });
-      candidates.sort((a, b) => a.score - b.score);
-      const near = (d: number, e: number) => Math.min(Math.abs(d - e), L - Math.abs(d - e));
-      const cx = WORLD_W / 2;
-      const cy = WORLD_H / 2;
-      const tryStand = (d: number, w: number): boolean => {
+      const standAt = (d: number, side: number, w: number) => {
         const h = (stand.height / stand.width) * w;
-        const p = this.track.poseAt(d);
-        // Lado de fora: o que se afasta do centro do mundo.
-        const side = (p.nx * (p.x - cx) + p.ny * (p.y - cy)) >= 0 ? 1 : -1;
-        const off = roadEdge + 12 + h / 2;
+        const p = tr.poseAt(d);
+        const off = roadEdge + 14 + h / 2;
         const x = p.x + p.nx * side * off;
         const y = p.y + p.ny * side * off;
-        const tx = Math.cos(p.angle);
-        const ty = Math.sin(p.angle);
-        const fx = -p.nx * side; // para a pista
-        const fy = -p.ny * side;
-        // Todos os pontos do retângulo (cantos e meios) longe de QUALQUER troço, não só do mais próximo.
-        for (const u of [-0.5, -0.25, 0, 0.25, 0.5]) {
-          for (const v of [-0.5, 0, 0.5]) {
-            if (this.clearance(x + tx * w * u + fx * h * v, y + ty * w * u + fy * h * v) < roadEdge + 8) return false;
-          }
-        }
-        const s = new Sprite(stand);
-        s.anchor.set(0.5);
-        s.width = w;
-        s.height = h;
-        s.rotation = Math.atan2(fy, fx) - Math.PI / 2;
-        s.position.set(x, y);
-        s.zIndex = y;
-        layer.addChild(s);
+        const s = add(stand, x, y, w, h, Math.atan2(-p.ny * side, -p.nx * side) - Math.PI / 2);
         this.stands.push(s);
         placed.push({ x, y, r: w / 2 });
-        return true;
       };
-      const picks: number[] = [];
-      for (const c of candidates.filter((c) => near(c.d, 0) < 0.12 * L)) {
-        if (tryStand(c.d, 300)) {
-          picks.push(c.d);
-          break;
-        }
-      }
-      for (const c of candidates) {
-        if (picks.length >= 3) break;
-        if (picks.every((p) => near(p, c.d) > 0.22 * L) && tryStand(c.d, 230)) picks.push(c.d);
+      if (index === 0) standAt(60, -1, 300);
+      if (this.raceLength >= d0 && this.raceLength < d0 + CHUNK) {
+        standAt(this.raceLength - 40, 1, 300);
+        standAt(this.raceLength + 260, -1, 230);
       }
     }
 
+    // Props espalhados: a densidade dos temas era "count por mundo antigo" (e "por pista" nos que ficam junto da estrada).
+    const chunkLen = d1 - d0;
     const place = (key: string, size: number, count: number, margin: number, nearRoad: boolean, spin = false) => {
       const tex = this.t(key);
       if (!tex) return;
       const r = size / 2;
-      for (let n = 0, tries = 0; n < count && tries < 1500; tries++) {
+      const along = nearRoad ? count * (chunkLen / OLD_TRACK_LEN) : (count * (chunkLen * 900)) / OLD_WORLD_AREA;
+      const want = Math.floor(along) + (rng() < along - Math.floor(along) ? 1 : 0);
+      for (let n = 0, tries = 0; n < want && tries < 120; tries++) {
         let x: number;
         let y: number;
         if (nearRoad) {
-          const p = this.track.poseAt(rng() * this.track.length);
+          const p = tr.poseAt(d0 + rng() * chunkLen);
           const off = (rng() < 0.5 ? -1 : 1) * (roadEdge + r + margin + rng() * 10);
           x = p.x + p.nx * off;
           y = p.y + p.ny * off;
         } else {
-          x = -140 + rng() * (WORLD_W + 280);
-          y = -140 + rng() * (WORLD_H + 280);
+          const p = tr.poseAt(d0 + rng() * chunkLen);
+          const off = (rng() < 0.5 ? -1 : 1) * (roadEdge + r + margin + rng() * 520);
+          x = p.x + p.nx * off;
+          y = p.y + p.ny * off;
         }
-        if (this.clearance(x, y) < roadEdge + r * 0.8 + margin) continue;
+        if (clearance(x, y) < roadEdge + r * 0.8 + margin) continue;
         if (placed.some((o) => Math.hypot(o.x - x, o.y - y) < (o.r + r) * 0.9)) continue;
         placed.push({ x, y, r });
         const k = size / Math.max(tex.width, tex.height);
@@ -362,7 +359,7 @@ export class RaceView {
       }
     };
     for (const pr of this.theme.props) place(pr.key, pr.size, pr.count, pr.margin, pr.nearRoad, pr.spin);
-    this.world.addChild(layer);
+    into.addChild(layer);
   }
 
   private carNode(car: CarState): CarNode {
@@ -538,6 +535,7 @@ export class RaceView {
     const boosted = team.finishTime === null && !spinning && race.bursting;
     const targetZoom = boosted && team.nitroActive ? 0.84 : boosted && team.lastEffect === 'turbo' ? 0.92 : 1;
     cam.zoom += (targetZoom - cam.zoom) * (1 - Math.exp(-dt * 2.5));
+    this.ensureChunks(team.distance);
     this.applyCamera(spinning ? 10 : 0);
 
     // Minimapa: um ponto por carro, o da turma maior e por cima.
@@ -548,8 +546,8 @@ export class RaceView {
       const node = this.cars.get(c.driver.id);
       if (!node) continue;
       const isTeam = c === team;
-      const x = node.root.x * this.miniScale;
-      const y = node.root.y * this.miniScale;
+      const x = Math.min(1, Math.max(0, c.distance / this.raceLength)) * this.miniW;
+      const y = isTeam ? 0 : ((c.driver.kind === 'ghost' ? 1 : -1) * 7 * ((this.cars.size + order.indexOf(c)) % 2 ? 1 : -1));
       d.circle(x, y, isTeam ? 6 : 3.5).fill(c.driver.kind === 'ghost' ? 0xbfc5cc : c.driver.color || 0x95a5a6);
       if (isTeam) d.circle(x, y, 6).stroke({ width: 2, color: 0xffffff });
       if (c.driver.kind === 'ghost') {
@@ -574,7 +572,17 @@ export class RaceView {
     }
   }
 
-  reset(): void {
+  /** Nova corrida na mesma estrada (simulador): limpa os blocos e muda onde fica a meta. */
+  reset(raceLength?: number): void {
+    if (raceLength) this.raceLength = raceLength;
+    for (const c of this.chunks.values()) c.destroy({ children: true });
+    this.chunks.clear();
+    this.stands = [];
+    this.cam.snapped = false;
+    const start = this.track.poseAt(0);
+    this.cam.x = start.x + LOOK_AHEAD;
+    this.cam.y = start.y;
+    if (this.app.renderer) this.ensureChunks(0);
     this.carLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.cars.clear();
     this.particles.clear();

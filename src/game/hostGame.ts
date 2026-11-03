@@ -1,10 +1,10 @@
 import type { RaceConfig } from '../engine/config';
 import { BOT_FIELDS, makeBot, makeGhost } from '../engine/drivers';
 import { outcomeFromAnswers, type PlayerAnswer, type QuestionOutcome } from '../engine/outcome';
-import { Race, type Driver } from '../engine/race';
+import { Race, raceLengthFor, type Driver } from '../engine/race';
 import { mulberry32 } from '../engine/rng';
 import { pickAwards, scoreRace } from '../engine/scoring';
-import { TRACKS, Track, trackFor } from '../engine/track';
+import { TRACKS, Road, roadSeed, trackFor } from '../engine/track';
 import type { Api, Channel } from '../lib/api';
 import { music, play, unlockAudio } from '../lib/audio';
 import { ghostLabel, makeTimeline, type GhostRecord } from '../lib/ghosts';
@@ -64,7 +64,7 @@ type Listener = () => void;
  * calcula a corrida com o motor e grava respostas e estado a cada pergunta.
  */
 export class HostGame {
-  readonly track: Track;
+  readonly track: Road;
   readonly trackId: string;
   readonly config: RaceConfig;
   readonly questions: QuestionRow[];
@@ -113,8 +113,8 @@ export class HostGame {
     const { config, used } = raceConfigFor(questions, session.settings);
     const def = TRACKS.find((t) => t.id === session.settings?.trackId) ?? trackFor(session.id);
     this.trackId = def.id;
-    this.track = new Track(def.points, def.samples);
     this.config = config;
+    this.track = new Road(roadSeed(session.id), raceLengthFor(config));
     this.questions = questions.slice(0, used);
     this.seed = session.state?.seed ?? Math.floor(Math.random() * 2 ** 31);
     this.race = this.buildRace();
@@ -184,7 +184,7 @@ export class HostGame {
       b.car = cars[i]?.key;
       b.color = cars[i]?.color ?? b.color;
     });
-    const race = new Race([team, ...bots, ...ghosts], this.track.length, this.config);
+    const race = new Race([team, ...bots, ...ghosts], this.config);
     // Pré-rolo: a resolução de cada pergunta coincide com o fim do tempo de resposta.
     race.time = this.config.overheadTime;
     return race;

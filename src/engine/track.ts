@@ -1,3 +1,5 @@
+import { clamp, gaussian, mulberry32 } from './rng';
+
 export interface Vec {
   x: number;
   y: number;
@@ -125,4 +127,74 @@ export function trackFor(sessionId: string): (typeof TRACKS)[number] {
   let h = 0;
   for (let i = 0; i < sessionId.length; i++) h = (h * 31 + sessionId.charCodeAt(i)) >>> 0;
   return TRACKS[h % TRACKS.length];
+}
+
+/** Pista aberta, gerada a partir de uma semente: avança sempre para a frente (sem voltas nem cruzamentos). */
+export class Road {
+  readonly points: Vec[] = [];
+  readonly cum: number[] = [];
+  readonly length: number;
+
+  /** `length` é o mínimo; a estrada acaba um pouco depois (a meta fica dentro dela). */
+  constructor(seed: number, length: number, samplesPerSegment = 12) {
+    const rng = mulberry32(seed);
+    const step = 170;
+    const n = Math.ceil(length / (step * 0.95)) + 8;
+    const control: Vec[] = [{ x: -step, y: 0 }, { x: 0, y: 0 }];
+    let heading = 0;
+    let curv = 0;
+    for (let i = 0; i < n; i++) {
+      // Curvatura com memória (curvas longas) e uma força que traz o rumo de volta ao eixo.
+      curv = curv * 0.8 + gaussian(rng) * 0.2 - heading * 0.12;
+      curv = clamp(curv, -0.42, 0.42);
+      heading = clamp(heading + curv, -1.2, 1.2);
+      const last = control[control.length - 1];
+      control.push({ x: last.x + Math.cos(heading) * step, y: last.y + Math.sin(heading) * step });
+    }
+    for (let i = 1; i < control.length - 2; i++) {
+      for (let s = 0; s < samplesPerSegment; s++) {
+        this.points.push(catmullRom(control[i - 1], control[i], control[i + 1], control[i + 2], s / samplesPerSegment));
+      }
+    }
+    let total = 0;
+    this.cum.push(0);
+    for (let i = 1; i < this.points.length; i++) {
+      total += Math.hypot(this.points[i].x - this.points[i - 1].x, this.points[i].y - this.points[i - 1].y);
+      this.cum.push(total);
+    }
+    this.length = total;
+  }
+
+  /** Índice do último ponto com `cum <= d`. */
+  indexAt(d: number): number {
+    let lo = 0;
+    let hi = this.cum.length - 1;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      if (this.cum[mid] <= d) lo = mid;
+      else hi = mid;
+    }
+    return lo;
+  }
+
+  poseAt(distance: number): TrackPose {
+    const d = clamp(distance, 0, this.length);
+    const lo = this.indexAt(d);
+    const hi = Math.min(lo + 1, this.points.length - 1);
+    const a = this.points[lo];
+    const b = this.points[hi];
+    const seg = this.cum[hi] - this.cum[lo] || 1;
+    const t = (d - this.cum[lo]) / seg;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: a.x + dx * t, y: a.y + dy * t, angle: Math.atan2(dy, dx), nx: -dy / len, ny: dx / len };
+  }
+}
+
+/** Semente estável da estrada de uma sessão (sobrevive a um refresh do projetor). */
+export function roadSeed(sessionId: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < sessionId.length; i++) h = Math.imul(h ^ sessionId.charCodeAt(i), 16777619) >>> 0;
+  return h;
 }

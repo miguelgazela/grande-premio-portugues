@@ -2,12 +2,13 @@ import './sim.css';
 import { DEFAULT_CONFIG, type RaceConfig } from '../engine/config';
 import { DEFAULT_SIM, buildRace, runBatch, type SimOptions } from '../engine/batch';
 import { BOT_FIELDS, type BotField } from '../engine/drivers';
-import { Track, DEFAULT_TRACK_POINTS } from '../engine/track';
+import { Road } from '../engine/track';
 import { pickAwards, scoreRace } from '../engine/scoring';
-import type { Effect, Race } from '../engine/race';
+import { type Effect, type Race } from '../engine/race';
 import { RaceView } from '../render/raceView';
 
-const track = new Track(DEFAULT_TRACK_POINTS);
+// Estrada longa o bastante para qualquer corrida do simulador; a meta é posta por corrida (`view.reset`).
+const track = new Road(1, 400000);
 const config: RaceConfig = { ...DEFAULT_CONFIG };
 const sim: SimOptions = { ...DEFAULT_SIM, botSkills: [...DEFAULT_SIM.botSkills] };
 let botField: BotField = 'medio';
@@ -91,7 +92,7 @@ function renderMatrix() {
   const cars = sim.botSkills.length + 1;
   const head = `<tr><th>Nível</th><th>Acerto</th><th>Pos.</th>${Array.from({ length: cars }, (_, i) => `<th>${i + 1}º</th>`).join('')}<th>Renhida</th><th>Ultrap.</th></tr>`;
   const rows = LEVELS.map((mean) => {
-    const s = runBatch(config, { ...sim, classMean: mean }, track.length, 300);
+    const s = runBatch(config, { ...sim, classMean: mean }, 300);
     const cells = s.positionShare
       .map((p) => `<td class="cell"><i style="opacity:${Math.min(1, p * 1.6).toFixed(2)}"></i><b>${Math.round(p * 100)}%</b></td>`)
       .join('');
@@ -101,7 +102,7 @@ function renderMatrix() {
 }
 
 // ---------- Live race ----------
-const view = new RaceView(track);
+const view = new RaceView(track, { follow: true });
 let race: Race | null = null;
 let raceData: ReturnType<typeof buildRace> | null = null;
 let shownEvents = 0;
@@ -112,9 +113,9 @@ const EFFECT_LABEL: Record<Effect, string> = { turbo: '🔥 TURBO!', normal: 'Ri
 
 function startRace() {
   const seed = Math.floor(Math.random() * 1e9);
-  raceData = buildRace(config, sim, track.length, seed);
+  raceData = buildRace(config, sim, seed);
   race = raceData.race;
-  view.reset();
+  view.reset(race.raceLength);
   shownEvents = 0;
   $('#log').innerHTML = '';
   $('#results').innerHTML = '';
@@ -126,7 +127,7 @@ function updateHud() {
   if (!race) return;
   const team = race.team!;
   const q = race.currentQuestion;
-  $('#hud-q').textContent = q < race.questionCount ? `Pergunta ${q + 1}/${race.questionCount} · Volta ${race.lapOf(team)}/${config.laps}` : 'Sprint final';
+  $('#hud-q').textContent = q < race.questionCount ? `Pergunta ${q + 1}/${race.questionCount}` : 'Sprint final';
   $('#hud-pos').textContent = `${race.rankOf(team)}º lugar`;
 
   while (shownEvents < race.events.length) {
