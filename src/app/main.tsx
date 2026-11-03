@@ -15,6 +15,10 @@ import { Prepare } from './teacher/Prepare';
 import { Report } from './teacher/Report';
 import { TeacherGate } from './teacher/TeacherGate';
 
+// `/prof` é a página que se guarda no ecrã principal do iPad (tem o manifest da professora):
+// abre a área da professora em vez do ecrã de entrada dos alunos.
+if (location.pathname.replace(/\/$/, '') === '/prof' && !location.hash) history.replaceState(null, '', '/#/prof');
+
 createRoot(document.getElementById('root')!).render(
     <HashRouter>
       <Routes>

@@ -21,6 +21,8 @@ export default defineConfig(({ mode, command }) => {
         // sim.html (simulador de mecânica) é só de desenvolvimento: o dev server serve-o,
         // mas não vai para o build de produção.
         main: resolve(root, 'index.html'),
+        // /prof: página para instalar a app da professora no ecrã principal (manifest com start_url próprio).
+        prof: resolve(root, 'prof.html'),
       },
     },
   },

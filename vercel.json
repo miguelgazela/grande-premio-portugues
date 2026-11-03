@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "vite",
   "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/prof", "destination": "/prof.html" },
+    { "source": "/prof/", "destination": "/prof.html" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -22,7 +26,7 @@
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=300, must-revalidate" }]
     },
     {
-      "source": "/(manifest.webmanifest|icon-192.png|icon-512.png|apple-touch-icon.png)",
+      "source": "/(manifest.webmanifest|manifest-prof.webmanifest|icon-192.png|icon-512.png|apple-touch-icon.png)",
       "headers": [{ "key": "Cache-Control", "value": "public, max-age=3600" }]
     }
   ]
