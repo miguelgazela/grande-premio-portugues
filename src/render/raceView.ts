@@ -11,8 +11,6 @@ const CAR_LEN = 34;
 const FOLLOW_ZOOM = 2.2;
 const LOOK_AHEAD = 70;
 const CURB_STRIPE = 18;
-const CAR_MODELS = ['cartype-coupe', 'cartype-rally', 'cartype-pickup', 'cartype-kart', 'cartype-van'];
-const GHOST_TINT = 0xb8c0c8;
 
 /** Cor do bot → sprite de carro. */
 const CAR_BY_COLOR: Record<number, string> = {
@@ -377,29 +375,15 @@ export class RaceView {
     this.world.addChild(layer);
   }
 
-  /** Modelo tingido (cartype-*) quando existe; senão o carro de cor fixa; senão formas. */
-  private carLook(car: CarState): { tex: Texture; tint: number | null } | null {
-    const d = car.driver;
-    const idx = d.kind === 'bot' ? Number(/\d+$/.exec(d.id)?.[0] ?? 0) : 0;
-    const model = d.kind === 'team' ? d.model ?? 'cartype-coupe' : d.kind === 'ghost' ? 'cartype-coupe' : CAR_MODELS[(idx + 1) % CAR_MODELS.length];
-    const tinted = this.t(model) ?? this.t('cartype-coupe');
-    const tint = d.kind === 'ghost' ? GHOST_TINT : d.color;
-    if (tinted) return { tex: tinted, tint };
-    const fixed = this.t(CAR_BY_COLOR[d.kind === 'ghost' ? 0x95a5a6 : d.color] ?? 'car-grey');
-    return fixed ? { tex: fixed, tint: null } : null;
-  }
-
   private carNode(car: CarState): CarNode {
     const root = new Container();
-    const look = this.carLook(car);
-    const tex = look?.tex;
+    const tex = this.t(CAR_BY_COLOR[car.driver.kind === 'ghost' ? 0x95a5a6 : car.driver.color] ?? 'car-grey');
     const node: CarNode = { root };
 
     if (tex) {
       const body = new Sprite(tex);
       body.anchor.set(0.5);
       body.scale.set((CAR_LEN * 1.12) / tex.width);
-      if (look!.tint !== null) body.tint = look!.tint;
       const smokeTex = this.t('fx-smoke');
       if (smokeTex) {
         node.smoke = new Sprite(smokeTex);

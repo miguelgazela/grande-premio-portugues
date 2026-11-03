@@ -251,17 +251,12 @@ h1, h2, h3 { margin: 0 0 .5em; }
 .menubg { background-size: cover; background-position: center; background-color: var(--bg, #14141c); }
 .menubg .lobby .who, .menubg .podium .box { background: #14141cd9; border-radius: 22px; padding: 2vmin; }
 .menubg .lobby .join { background: #14141c99; border-radius: 22px; padding: 2vmin; }
-.carprev { display: inline-block; position: relative; mask-size: contain; mask-repeat: no-repeat; mask-position: center; -webkit-mask-size: contain; -webkit-mask-repeat: no-repeat; -webkit-mask-position: center; flex: none; }
-.carprev img { width: 100%; height: 100%; display: block; mix-blend-mode: multiply; object-fit: contain; }
+.carprev { display: block; object-fit: contain; flex: none; }
 .picker { display: grid; gap: 8px; }
 .picker .opts { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; padding: 4px; border-radius: 12px; }
 .picker .opts.fixed { outline: 2px solid var(--gold); }
-.picker .team-name { font-size: clamp(18px, 3vmin, 30px); }
 .swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff4; padding: 0; }
 .swatch.on { border-color: #fff; box-shadow: 0 0 0 3px var(--gold); }
-.model { display: grid; justify-items: center; gap: 2px; padding: 6px 8px; background: #0004; border: 2px solid transparent; }
-.model.on, .chipbtn.on { border-color: var(--gold); background: #ffffff22; }
-.chipbtn { padding: 6px 12px; border: 2px solid transparent; }
 .carbox { background: #0003; border-radius: 14px; padding: 8px 12px; margin: 6px 0; }
 .carbox summary { cursor: pointer; font-weight: 800; }
 .overtake { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); font-size: clamp(26px, 6.5vmin, 72px); font-weight: 900; color: #fff; padding: .45em 1.6em; background-size: 100% 100%; background-repeat: no-repeat; text-shadow: 0 3px 0 #000a; white-space: nowrap; pointer-events: none; display: flex; align-items: center; gap: .3em; animation: overtake 1.6s ease-out both; z-index: 4; }
@@ -269,7 +264,5 @@ h1, h2, h3 { margin: 0 0 .5em; }
 @keyframes overtake { 0% { transform: translateX(-50%) scale(.4); opacity: 0; } 15% { transform: translateX(-50%) scale(1.15); opacity: 1; } 25% { transform: translateX(-50%) scale(1); } 80% { opacity: 1; } 100% { transform: translateX(-50%) translateY(-30px) scale(1); opacity: 0; } }
 .soundbtn { background: #0006; }
 .student .picker { margin-top: 12px; }
-.picker .chipbtn { font-size: 15px; }
-.picker .model small { font-size: 12px; }
-.picker .swatch { flex: none; }
+.picker .picker .swatch { flex: none; }
 .menubg .podium h1 { justify-self: center; background: #14141cd9; border-radius: 18px; padding: .15em .7em; }

@@ -7,11 +7,12 @@ let musicBus: GainNode | null = null;
 let noiseBuf: AudioBuffer | null = null;
 
 const MUTE_KEY = 'gpp.muted';
+/** Desligado por defeito; a professora liga-o (a escolha fica guardada neste iPad). */
 let muted = (() => {
   try {
-    return localStorage.getItem(MUTE_KEY) === '1';
+    return localStorage.getItem(MUTE_KEY) !== '0';
   } catch {
-    return false;
+    return true;
   }
 })();
 

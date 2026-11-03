@@ -1,30 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import { THEMES, themeForTrack, themeKeys } from '../engine/theme';
 import { TRACKS } from '../engine/track';
-import { DEFAULT_STYLE, TEAM_COLORS, cleanVote, parseStyle, tally } from './teamStyle';
+import { DEFAULT_STYLE, TEAM_COLORS, carKeyFor, cleanVote, parseStyle, tally } from './teamStyle';
 
 describe('teamStyle', () => {
-  it('sem votos dá o estilo por defeito', () => {
+  it('sem votos dá a cor por defeito', () => {
     expect(tally([]).style).toEqual(DEFAULT_STYLE);
   });
-  it('escolhe o mais votado por campo e conta quem votou', () => {
-    const r = tally([{ color: TEAM_COLORS[1].value, name: 'Tigres' }, { color: TEAM_COLORS[1].value }, { color: TEAM_COLORS[2].value, model: 'cartype-kart' }]);
-    expect(r.style).toEqual({ name: 'Tigres', color: TEAM_COLORS[1].value, model: 'cartype-kart' });
+  it('escolhe a cor mais votada e conta quem votou', () => {
+    const r = tally([{ color: TEAM_COLORS[1].value }, { color: TEAM_COLORS[1].value }, { color: TEAM_COLORS[2].value }]);
+    expect(r.style).toEqual({ color: TEAM_COLORS[1].value });
     expect(r.count).toBe(3);
   });
-  it('ignora votos inválidos (nomes livres, cores e modelos desconhecidos)', () => {
-    expect(cleanVote({ name: 'Palavrão', color: 123, model: 'x', extra: 1 })).toEqual({});
-    expect(cleanVote({ name: 'Tigres', color: TEAM_COLORS[0].value })).toEqual({ name: 'Tigres', color: TEAM_COLORS[0].value });
+  it('ignora votos inválidos (cores desconhecidas, nomes)', () => {
+    expect(cleanVote({ name: 'Palavrão', color: 123 })).toEqual({});
+    expect(cleanVote({ color: TEAM_COLORS[0].value })).toEqual({ color: TEAM_COLORS[0].value });
   });
-  it('lê estilos gravados e tolera lixo', () => {
+  it('lê estilos gravados (inclusive os antigos com nome/modelo) e tolera lixo', () => {
     expect(parseStyle(undefined)).toEqual(DEFAULT_STYLE);
-    expect(parseStyle({ name: '  Os   Craques ', color: TEAM_COLORS[3].value, model: 'cartype-van' })).toMatchObject({ color: TEAM_COLORS[3].value, model: 'cartype-van' });
+    expect(parseStyle({ name: 'X', model: 'cartype-van', color: TEAM_COLORS[3].value })).toEqual({ color: TEAM_COLORS[3].value });
+    expect(carKeyFor(TEAM_COLORS[1].value)).toBe('car-red');
   });
 });
 
 describe('temas', () => {
   it('cada pista tem um tema fixo e pistas desconhecidas ficam com relva', () => {
-    for (const t of TRACKS) expect(themeForTrack(t.id)).toBe(themeForTrack(t.id));
     expect(new Set(TRACKS.map((t) => themeForTrack(t.id).id)).size).toBe(THEMES.length);
     expect(themeForTrack('antiga').id).toBe('relva');
   });

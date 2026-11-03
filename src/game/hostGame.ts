@@ -12,7 +12,7 @@ import type { AnyEvent, EndMsg, FinalInfo, HostEvent, PublicBody, PublicQuestion
 import { grade, prepare, solutionOf, toCanonical, type Prepared } from '../lib/questions';
 import type { AnswerValue, PlayerRow, QuestionRow, SavedState, SessionRow } from '../lib/types';
 import { raceConfigFor } from './raceSettings';
-import { DEFAULT_STYLE, cleanName, cleanVote, parseStyle, tally, type StyleVote, type TeamStyle } from './teamStyle';
+import { DEFAULT_STYLE, TEAM_COLORS, TEAM_NAME, cleanVote, parseStyle, tally, type StyleVote, type TeamStyle } from './teamStyle';
 
 export type Phase = 'lobby' | 'countdown' | 'resume' | 'question' | 'ff' | 'reveal' | 'sprint' | 'finishing' | 'finished';
 
@@ -166,13 +166,16 @@ export class HostGame {
   private buildRace(): Race {
     const rng = mulberry32(this.seed);
     const team: Driver = {
-      id: 'team', name: this.style.name, kind: 'team', color: this.style.color, model: this.style.model,
+      id: 'team', name: TEAM_NAME, kind: 'team', color: this.style.color,
       outcome: (q) => this.outcomes[q] ?? { accuracy: 0, speedBonus: 0 },
     };
     const field = BOT_FIELDS[this.session.settings?.botField ?? 'medio'];
     // Os fantasmas ocupam o lugar dos bots mais fracos: o número de carros não muda.
     const ghosts = this.extras.ghosts.slice(0, 3).map((g) => makeGhost(`ghost-${g.session_id}`, ghostLabel(g), g.outcomes));
     const bots = field.slice(ghosts.length).map((skill, i) => makeBot(rng, i, skill));
+    // A turma é a única com a sua cor: o bot que a tinha passa para uma cor livre.
+    const free = TEAM_COLORS.map((c) => c.value).filter((c) => c !== this.style.color && !bots.some((b) => b.color === c));
+    for (const b of bots) if (b.color === this.style.color) b.color = free.shift() ?? 0x95a5a6;
     const race = new Race([team, ...bots, ...ghosts], this.track.length, this.config);
     // Pré-rolo: a resolução de cada pergunta coincide com o fim do tempo de resposta.
     race.time = this.config.overheadTime;
@@ -261,7 +264,7 @@ export class HostGame {
   private updateStyle(): void {
     const { style, count } = tally(this.votes.values());
     const f = this.fixedStyle;
-    this.style = { name: f.name ?? style.name, color: f.color ?? style.color, model: f.model ?? style.model };
+    this.style = { color: f.color ?? style.color };
     this.set({ team: this.style, fixed: { ...f }, voters: count });
     this.send({ event: 'lobby', payload: { count: this.snap.players.length, team: this.style } });
   }
@@ -270,14 +273,9 @@ export class HostGame {
   setStyle(patch: StyleVote): void {
     if (this.snap.phase !== 'lobby') return;
     const next = { ...this.fixedStyle };
-    for (const k of ['color', 'model', 'name'] as const) {
-      if (!(k in patch)) continue;
-      if (patch[k] === undefined) delete next[k];
-      else (next as Record<string, unknown>)[k] = patch[k];
-    }
-    if (next.name !== undefined) {
-      next.name = cleanName(next.name);
-      if (!next.name) delete next.name;
+    if ('color' in patch) {
+      if (patch.color === undefined) delete next.color;
+      else next.color = patch.color;
     }
     this.fixedStyle = next;
     this.updateStyle();
@@ -567,7 +565,6 @@ export class HostGame {
       ranking: top.map((s) => ({ nickname: nick(s.playerId), points: s.points, correct: s.correct, avatar: this.snap.avatars[s.playerId] })),
       awards: pickAwards(scores).map((a) => ({ emoji: a.emoji, title: a.title, nickname: nick(a.playerId), detail: a.detail })),
       teamPosition,
-      teamModel: this.style.model,
       totalQuestions: this.questions.length,
       ...this.ghostSummary(race),
     };

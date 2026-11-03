@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { BotField } from '../../engine/drivers';
-import { TRACKS } from '../../engine/track';
-import { themeForTrack } from '../../engine/theme';
 import { MAX_LAPS, maxQuestionsPerLap, raceConfigFor } from '../../game/raceSettings';
 import { errorMessage } from '../../lib/api';
 import { endSessions } from '../../lib/endSessions';
@@ -29,7 +27,6 @@ export function Jogar() {
   const [laps, setLaps] = useState(3);
   const [perLap, setPerLap] = useState(0); // 0 = todas
   const [time, setTime] = useState(0); // 0 = o do quiz
-  const [trackPick, setTrackPick] = useState(''); // '' = aleatória
   const [questions, setQuestions] = useState<QuestionRow[]>([]);
   const [records, setRecords] = useState<GhostRecord[]>([]);
   const [picked, setPicked] = useState<string[]>([]);
@@ -107,7 +104,6 @@ export function Jogar() {
     setError('');
     try {
       const settings: SessionSettings = { botField: field, laps: effLaps, questionsPerLap: effPer || null, questionTime: time || null };
-      if (trackPick) settings.trackId = trackPick;
       if (chosen.length) {
         settings.trackId = chosen[0].trackId;
         settings.ghosts = chosen.map((g) => ({ sessionId: g.session_id, name: ghostLabel(g) }));
@@ -206,12 +202,6 @@ export function Jogar() {
             <select value={time} onChange={(e) => setTime(Number(e.target.value))}>
               <option value={0}>O do quiz</option>
               {[10, 15, 20, 30, 45, 60].map((v) => <option key={v} value={v}>{v} s</option>)}
-            </select>
-          </label>
-          <label>Pista
-            <select value={chosen.length ? chosen[0].trackId : trackPick} disabled={chosen.length > 0} onChange={(e) => setTrackPick(e.target.value)}>
-              <option value="">Aleatória</option>
-              {TRACKS.map((t) => <option key={t.id} value={t.id}>{t.name} · {themeForTrack(t.id).name}</option>)}
             </select>
           </label>
           {quiz && <span className="muted">{used} perguntas no total{used < n ? ` (${n - used} ficam de fora)` : ''}.</span>}

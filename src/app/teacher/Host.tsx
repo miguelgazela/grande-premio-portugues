@@ -130,7 +130,7 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
             </p>
           )}
           <details className="carbox" open>
-            <summary>🏎️ Carro da turma{s.voters ? ` · ${s.voters} voto${s.voters > 1 ? 's' : ''}` : ''}</summary>
+            <summary>🏎️ Cor do carro da turma{s.voters ? ` · ${s.voters} voto${s.voters > 1 ? 's' : ''}` : ''}</summary>
             <TeamPicker host value={s.team} fixed={s.fixed} onPick={(v) => game.setStyle(v)} />
           </details>
           <div className="chips">
@@ -325,7 +325,7 @@ function Podium({ s, onExit }: { s: HostSnapshot; onExit(): void }) {
           <ol>
             {f.standings.map((c, i) => (
               <li key={i} className={c.kind === 'team' ? 'me' : ''}>
-                <span className="who"><Place index={i} />{c.kind === 'team' && <CarPreview model={f.teamModel ?? 'cartype-coupe'} color={c.color} size={44} />} {c.name}</span>
+                <span className="who"><Place index={i} />{c.kind === 'team' && <CarPreview color={c.color} size={44} />} {c.name}</span>
                 <small>{(c.timeMs / 1000).toFixed(1)}s</small>
               </li>
             ))}

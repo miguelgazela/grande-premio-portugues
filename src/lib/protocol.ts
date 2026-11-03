@@ -74,8 +74,6 @@ export interface FinalInfo {
   ranking: { nickname: string; points: number; correct: number; avatar?: string }[];
   awards: { emoji: string; title: string; nickname: string; detail: string }[];
   teamPosition: number;
-  /** Modelo do carro da turma (`cartype-*`), para o ecrã final. */
-  teamModel?: string;
   totalQuestions: number;
   /** Contra o fantasma mais relevante. `diffMs` > 0: a turma ganhou. */
   ghost?: { name: string; diffMs: number };
