@@ -261,17 +261,11 @@ export class HostGame {
       if (typeof a === 'string' && /^avatar-[a-z-]{1,30}$/.test(a) && this.snap.avatars[m.payload.player_id] !== a && Object.keys(this.snap.avatars).length < 200) {
         this.set({ avatars: { ...this.snap.avatars, [m.payload.player_id]: a } });
       }
+      this.recordVote(m.payload.player_id, m.payload);
       if (this.snap.phase === 'lobby') void this.refreshPlayers();
       this.resync();
     } else if (m.event === 'vote') {
-      if (this.snap.phase === 'lobby' && this.votes.size < 300) {
-        const vote = cleanVote(m.payload);
-        const prev = this.votes.get(m.payload.player_id);
-        this.votes.set(m.payload.player_id, vote);
-        // Só responde (com um 'lobby') se o voto mudou: o aluno repete o voto a cada 'lobby',
-        // por isso responder sempre criava um ciclo infinito que esgotava o Realtime.
-        if (!prev || JSON.stringify(prev) !== JSON.stringify(vote)) this.updateStyle();
-      }
+      this.recordVote(m.payload.player_id, m.payload);
     } else if (m.event === 'leave') {
       void this.onLeave(m.payload.player_id);
     } else if (m.event === 'answer') {
@@ -279,12 +273,22 @@ export class HostGame {
     }
   }
 
+  /** Guarda o voto de um aluno (vem num `vote` ou no `hello`); formatos antigos ou desconhecidos são ignorados. */
+  private recordVote(playerId: string, raw: unknown): void {
+    if (this.snap.phase !== 'lobby') return;
+    const vote = cleanVote(raw);
+    if (!vote.car || this.votes.get(playerId)?.car === vote.car) return;
+    if (!this.votes.has(playerId) && this.votes.size >= 300) return;
+    this.votes.set(playerId, vote);
+    this.updateStyle();
+  }
+
   /** O carro da turma é o mais votado pelos alunos (o por defeito, sem votos; sorteado, num empate). */
   private updateStyle(): void {
     const { style, count, tie } = tally(this.votes.values(), this.session.id);
     this.style = { car: style.car };
     this.set({ team: this.style, voters: count, tie });
-    this.send({ event: 'lobby', payload: { count: this.snap.players.length, team: this.style } });
+    this.send({ event: 'lobby', payload: { count: this.snap.players.length } });
   }
 
   async refreshPlayers(): Promise<void> {
@@ -295,7 +299,7 @@ export class HostGame {
         const changed = active.length !== this.snap.players.length || active.some((p, i) => this.snap.players[i]?.id !== p.id);
         if (changed) {
           this.set({ players: active });
-          this.send({ event: 'lobby', payload: { count: active.length, team: this.style } });
+          this.send({ event: 'lobby', payload: { count: active.length } });
         }
       }
     } catch (e) {
@@ -318,7 +322,7 @@ export class HostGame {
     this.dropFromRace(playerId);
     this.set({ players: this.snap.players.filter((p) => p.id !== playerId) });
     if (inLobby) this.updateStyle();
-    else this.send({ event: 'lobby', payload: { count: this.snap.players.length, team: this.style } });
+    else this.send({ event: 'lobby', payload: { count: this.snap.players.length } });
   }
 
   async kick(playerId: string): Promise<void> {
@@ -328,7 +332,7 @@ export class HostGame {
       this.votes.delete(playerId);
       this.dropFromRace(playerId);
       this.set({ players: this.snap.players.filter((p) => p.id !== playerId) });
-      this.send({ event: 'lobby', payload: { count: this.snap.players.length, team: this.style } });
+      this.send({ event: 'lobby', payload: { count: this.snap.players.length } });
     } catch (e) {
       this.notice(`Não consegui expulsar: ${(e as Error).message}`);
     }

@@ -71,8 +71,8 @@ Nunca usar `supabase db push` (projeto partilhado). Os alunos só chamam `join_s
 
 Os alunos não têm conta: entram via `join_session(pin, alcunha, device_token)` e falam com o projetor por Realtime (broadcast), no canal `corrida:<session_id>`.
 
-- Anfitrião → alunos: `lobby`, `question` (sem a resposta certa), `reveal`, `end`, `kicked`.
-- Aluno → anfitrião: `hello`, `answer {player_id, question_id, value}`.
+- Anfitrião → alunos: `lobby {count}` (nunca leva o carro), `question` (sem a resposta certa), `reveal`, `end`, `kicked`.
+- Aluno → anfitrião: `hello {player_id, avatar?, car?}`, `vote {player_id, car}` (voto no carro da turma; o aluno só envia, nunca recebe o carro), `answer {player_id, question_id, value}`.
 - O anfitrião mede o tempo pela hora de chegada, calcula com o motor, grava `answer` + `session.state` a cada pergunta e `race_record` no fim.
 
 ## Publicar (Vercel)
