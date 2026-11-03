@@ -21,13 +21,14 @@ Gerados com Higgsfield (`gpt_image_2_5`, `background: transparent`), a 2026-11-0
 - Modelos de carro (tintáveis, corpo cinzento claro, sem número, 256×128, virados para +x): `cartype-coupe`, `cartype-kart`, `cartype-pickup`, `cartype-van`, `cartype-rally`. Usar `sprite.tint`; o kart é mais escuro e tinge menos.
 - Lote 4 menus (JPEG 1920×1086): `menu-title` (centro livre para o logo), `menu-results` (centro livre para pódio/lista).
 - Lote 4 temas completos: `track-asphalt-desert|snow|city` (512, opacos), `track-curb-desert|snow|city` (512 de largura, horizontais), props `prop-rocks-desert`, `prop-tumbleweed`, `prop-snowman`, `prop-ice`, `prop-rooftop2`, `prop-fountain`.
+- Lote 5 props extra por tema (256 máx., anchor centro), prefixo `prop-g-` (relva), `prop-d-` (deserto), `prop-s-` (neve), `prop-c-` (cidade): g: cow, sheep, hay, pond, picnic, flowers, tractor, windmill; d: camel, oasis, pyramid, tent, cactus2, chest, fossil, balloon; s: igloo, penguins, polarbear, sled, pond, pine2, cabin, mound; c: glassroof, pool, helipad, foodtruck, bus, taxi, billboard, park. Veículos e animais com cabeça para +x (camelo, trator, urso, food truck, autocarro, táxi). Fracos: `prop-s-polarbear` (pouco legível) e `prop-d-camel` (achatado), candidatos a regenerar.
 - UI: `ui-logo`, `ui-trophy`, `ui-medal-gold/silver/bronze`, `ui-flame`, `ui-podium`.
 
 ## Processamento
 Originais (1024px, com halo) em `source/`. Script (fora do repo) corta alpha < 100 (remove o halo), recorta margens e redimensiona (Pillow, venv na scratchpad). Não foi preciso `remove_background`: o modelo gera transparência.
 
 ## Créditos
-Saldo inicial 174,75. Lote 1: 7,25 créditos (24 imagens). Lote 2: 5,5 (22 imagens). Lote 3: 10 (40 imagens). Modelos de carro: 2 (5 imagens). Lote 4 (menus + temas): 4 (14 imagens). Total 28,75; saldo final 146. Custo real ≈ 0,25–0,3/imagem.
+Saldo inicial 174,75. Lote 1: 7,25 créditos (24 imagens). Lote 2: 5,5 (22 imagens). Lote 3: 10 (40 imagens). Modelos de carro: 2 (5 imagens). Lote 4 (menus + temas): 4 (14 imagens). Lote 5 (32 props): 8. Total 36,75; saldo final 138. Custo real ≈ 0,25–0,3/imagem.
 
 ## Fica por fazer
 - Sem ícone "+1" (usar `ui-star` + texto do jogo). `track-asphalt`/`track-curb` não testados em tile.

@@ -1058,5 +1058,325 @@
       0.5
     ],
     "notes": "Prop do tema cidade"
+  },
+  "prop-c-billboard": {
+    "file": "prop-c-billboard.png",
+    "w": 256,
+    "h": 155,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema cidade: billboard"
+  },
+  "prop-c-bus": {
+    "file": "prop-c-bus.png",
+    "w": 256,
+    "h": 90,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema cidade: bus; virado para +x"
+  },
+  "prop-c-foodtruck": {
+    "file": "prop-c-foodtruck.png",
+    "w": 256,
+    "h": 167,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema cidade: foodtruck; virado para +x"
+  },
+  "prop-c-glassroof": {
+    "file": "prop-c-glassroof.png",
+    "w": 201,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema cidade: glassroof"
+  },
+  "prop-c-helipad": {
+    "file": "prop-c-helipad.png",
+    "w": 255,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema cidade: helipad"
+  },
+  "prop-c-park": {
+    "file": "prop-c-park.png",
+    "w": 247,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema cidade: park"
+  },
+  "prop-c-pool": {
+    "file": "prop-c-pool.png",
+    "w": 256,
+    "h": 242,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema cidade: pool"
+  },
+  "prop-c-taxi": {
+    "file": "prop-c-taxi.png",
+    "w": 256,
+    "h": 148,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema cidade: taxi; virado para +x"
+  },
+  "prop-d-balloon": {
+    "file": "prop-d-balloon.png",
+    "w": 254,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema deserto: balloon"
+  },
+  "prop-d-cactus2": {
+    "file": "prop-d-cactus2.png",
+    "w": 233,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema deserto: cactus2"
+  },
+  "prop-d-camel": {
+    "file": "prop-d-camel.png",
+    "w": 256,
+    "h": 96,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema deserto: camel; virado para +x"
+  },
+  "prop-d-chest": {
+    "file": "prop-d-chest.png",
+    "w": 228,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema deserto: chest"
+  },
+  "prop-d-fossil": {
+    "file": "prop-d-fossil.png",
+    "w": 256,
+    "h": 203,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema deserto: fossil"
+  },
+  "prop-d-oasis": {
+    "file": "prop-d-oasis.png",
+    "w": 243,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema deserto: oasis"
+  },
+  "prop-d-pyramid": {
+    "file": "prop-d-pyramid.png",
+    "w": 247,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema deserto: pyramid"
+  },
+  "prop-d-tent": {
+    "file": "prop-d-tent.png",
+    "w": 203,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema deserto: tent"
+  },
+  "prop-g-cow": {
+    "file": "prop-g-cow.png",
+    "w": 136,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema relva: cow"
+  },
+  "prop-g-flowers": {
+    "file": "prop-g-flowers.png",
+    "w": 245,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema relva: flowers"
+  },
+  "prop-g-hay": {
+    "file": "prop-g-hay.png",
+    "w": 243,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema relva: hay"
+  },
+  "prop-g-picnic": {
+    "file": "prop-g-picnic.png",
+    "w": 256,
+    "h": 240,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema relva: picnic"
+  },
+  "prop-g-pond": {
+    "file": "prop-g-pond.png",
+    "w": 256,
+    "h": 254,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema relva: pond"
+  },
+  "prop-g-sheep": {
+    "file": "prop-g-sheep.png",
+    "w": 236,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema relva: sheep"
+  },
+  "prop-g-tractor": {
+    "file": "prop-g-tractor.png",
+    "w": 256,
+    "h": 175,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema relva: tractor; virado para +x"
+  },
+  "prop-g-windmill": {
+    "file": "prop-g-windmill.png",
+    "w": 250,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema relva: windmill"
+  },
+  "prop-s-cabin": {
+    "file": "prop-s-cabin.png",
+    "w": 185,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema neve: cabin"
+  },
+  "prop-s-igloo": {
+    "file": "prop-s-igloo.png",
+    "w": 216,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema neve: igloo"
+  },
+  "prop-s-mound": {
+    "file": "prop-s-mound.png",
+    "w": 232,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema neve: mound"
+  },
+  "prop-s-penguins": {
+    "file": "prop-s-penguins.png",
+    "w": 256,
+    "h": 239,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema neve: penguins"
+  },
+  "prop-s-pine2": {
+    "file": "prop-s-pine2.png",
+    "w": 236,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema neve: pine2"
+  },
+  "prop-s-polarbear": {
+    "file": "prop-s-polarbear.png",
+    "w": 256,
+    "h": 186,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema neve: polarbear; virado para +x"
+  },
+  "prop-s-pond": {
+    "file": "prop-s-pond.png",
+    "w": 256,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema neve: pond"
+  },
+  "prop-s-sled": {
+    "file": "prop-s-sled.png",
+    "w": 148,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema neve: sled"
   }
 }
