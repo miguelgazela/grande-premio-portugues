@@ -27,24 +27,46 @@ describe('Track', () => {
 
 describe('Race', () => {
   it('finishes and ranks better accuracy first', () => {
-    const race = new Race([fixed('team', 0.6, 'team'), fixed('fast', 0.9), fixed('slow', 0.3)], track.length, { ...DEFAULT_CONFIG, rubberBand: 0 });
+    const race = new Race([fixed('team', 0.6, 'team'), fixed('fast', 0.9), fixed('slow', 0.3)], { ...DEFAULT_CONFIG, rubberBand: 0 });
     race.runToEnd();
     expect(race.finished).toBe(true);
     expect(race.standings().map((c) => c.driver.id)).toEqual(['fast', 'team', 'slow']);
     expect(race.events).toHaveLength(18);
   });
 
-  it('calibration: a 70% class finishes about when the last question ends', () => {
-    const race = new Race([fixed('team', 0.7, 'team')], track.length, DEFAULT_CONFIG);
-    race.runToEnd(0.05);
-    const end = race.questionCount * race.cycle;
-    expect(Math.abs(race.team!.finishTime! - end) / end).toBeLessThan(0.08);
+  it('nobody finishes before the last question ends, whatever the accuracy', () => {
+    for (const acc of [0.1, 0.5, 0.8, 1]) {
+      const race = new Race([fixed('team', acc, 'team')], DEFAULT_CONFIG);
+      race.runToEnd(0.05);
+      expect(race.team!.finishTime!).toBeGreaterThanOrEqual(race.questionCount * race.cycle);
+    }
+  });
+
+  it('a perfect class finishes right after the last question, a weak one later but within a minute or two', () => {
+    const end = (acc: number) => {
+      const race = new Race([fixed('team', acc, 'team')], DEFAULT_CONFIG);
+      race.runToEnd(0.05);
+      return race.team!.finishTime! - race.questionCount * race.cycle;
+    };
+    expect(end(1)).toBeLessThan(10);
+    expect(end(0.65)).toBeLessThan(40);
+    expect(end(0.2)).toBeLessThan(100);
+    expect(end(0.2)).toBeGreaterThan(end(1));
+  });
+
+  it('cruise speed is constant while students think', () => {
+    const race = new Race([fixed('team', 1, 'team')], DEFAULT_CONFIG);
+    race.time = race.cycle * 3 + DEFAULT_CONFIG.overheadTime + 1;
+    race.nextQuestion = 3;
+    const d0 = race.team!.distance;
+    race.step(2);
+    expect((race.team!.distance - d0) / 2).toBeCloseTo(DEFAULT_CONFIG.cruiseSpeed, 6);
   });
 
   it('spins stop the car and nitro fires after 3 turbos', () => {
     const seq = [1, 1, 1, 0.1];
     const d: Driver = { ...fixed('team', 0, 'team'), outcome: (q) => ({ accuracy: seq[q] ?? 0.5, speedBonus: 0 }) };
-    const race = new Race([d], track.length, DEFAULT_CONFIG);
+    const race = new Race([d], DEFAULT_CONFIG);
     const nitro: boolean[] = [];
     while (race.events.length < 4) {
       race.step(0.1);
@@ -58,7 +80,7 @@ describe('Race', () => {
   it('ghost replay is deterministic', () => {
     const rec = Array.from({ length: 18 }, (_, i) => ({ accuracy: (i % 5) / 5, speedBonus: 0.5 }));
     const run = () => {
-      const r = new Race([fixed('team', 0.6, 'team'), makeGhost('g', '9ºB', rec)], track.length, DEFAULT_CONFIG);
+      const r = new Race([fixed('team', 0.6, 'team'), makeGhost('g', '9ºB', rec)], DEFAULT_CONFIG);
       r.runToEnd();
       return r.cars[1].finishTime;
     };
@@ -88,7 +110,7 @@ describe('outcome & scoring', () => {
   });
 
   it('simulated race produces scores for every student', () => {
-    const { race, students, answersByQ } = buildRace(DEFAULT_CONFIG, DEFAULT_SIM, track.length, 42);
+    const { race, students, answersByQ } = buildRace(DEFAULT_CONFIG, DEFAULT_SIM, 42);
     race.runToEnd();
     const scores = scoreRace(students.map((s) => s.id), race.events.map((e) => ({ answers: answersByQ[e.q], teamAccuracy: e.results[0].accuracy })));
     expect(scores).toHaveLength(DEFAULT_SIM.classSize);
@@ -96,7 +118,7 @@ describe('outcome & scoring', () => {
 });
 
 describe('balance (Phase 0 targets)', () => {
-  const pos = (mean: number) => runBatch(DEFAULT_CONFIG, { ...DEFAULT_SIM, classMean: mean }, track.length, 150);
+  const pos = (mean: number) => runBatch(DEFAULT_CONFIG, { ...DEFAULT_SIM, classMean: mean }, 150);
   it('average class mostly finishes 2nd–4th', () => {
     const s = pos(0.65);
     expect(s.positionShare[1] + s.positionShare[2] + s.positionShare[3]).toBeGreaterThan(0.6);

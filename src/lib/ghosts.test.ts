@@ -14,20 +14,20 @@ const outcomes = (seed: number, n: number): QuestionOutcome[] => {
 };
 
 /** Como o HostGame: pré-rolo de `overheadTime` antes da primeira pergunta. */
-const run = (drivers: Driver[], lap: number) => {
-  const race = new Race(drivers, lap, config);
+const run = (drivers: Driver[]) => {
+  const race = new Race(drivers, config);
   race.time = config.overheadTime;
   race.runToEnd(0.25);
   return race;
 };
 
 describe('replay de fantasma', () => {
-  it('tem o mesmo tempo que a corrida original, mesmo noutra pista e com outros bots', () => {
+  it('tem o mesmo tempo que a corrida original, mesmo com outros bots', () => {
     const rec = outcomes(7, totalQuestions(config));
     const team: Driver = { id: 'team', name: 'Turma', kind: 'team', color: 1, outcome: (q) => rec[q] };
     const bots = (seed: number) => BOT_FIELDS.medio.map((s, i) => makeBot(mulberry32(seed), i, s));
-    const original = run([team, ...bots(1)], 3000);
-    const replay = run([{ ...team, id: 'me', outcome: () => ({ accuracy: 0.3, speedBonus: 0 }) }, makeGhost('g', '9ºB', rec), ...bots(2)], 4100);
+    const original = run([team, ...bots(1)]);
+    const replay = run([{ ...team, id: 'me', outcome: () => ({ accuracy: 0.3, speedBonus: 0 }) }, makeGhost('g', '9ºB', rec), ...bots(2)]);
     const ghost = replay.cars.find((c) => c.driver.kind === 'ghost')!;
     expect(ghost.finishTime).toBeCloseTo(original.team!.finishTime!, 6);
   });
@@ -94,7 +94,7 @@ describe('passos do motor', () => {
   it('um passo grande dá o mesmo que passos de 0,25 s', () => {
     const o = outcomes(11, totalQuestions(config));
     const mk = () => {
-      const race = new Race([{ id: 't', name: 'T', kind: 'team', color: 1, outcome: (q) => o[q] }], 3000, config);
+      const race = new Race([{ id: 't', name: 'T', kind: 'team', color: 1, outcome: (q) => o[q] }], config);
       race.time = config.overheadTime;
       return race;
     };

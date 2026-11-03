@@ -184,7 +184,7 @@ export class HostGame {
       b.car = cars[i]?.key;
       b.color = cars[i]?.color ?? b.color;
     });
-    const race = new Race([team, ...bots, ...ghosts], this.track.length, this.config);
+    const race = new Race([team, ...bots, ...ghosts], this.config);
     // Pré-rolo: a resolução de cada pergunta coincide com o fim do tempo de resposta.
     race.time = this.config.overheadTime;
     return race;

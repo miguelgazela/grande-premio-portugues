@@ -62,6 +62,42 @@ export function effectFor(c: RaceConfig, accuracy: number): Effect {
 }
 
 /**
+ * Fator de velocidade médio do ciclo seguinte à pergunta `q`: o efeito da resposta, já comprimido por `effectScale`.
+ * `streak` é o número de turbos seguidos *incluindo* esta pergunta; devolve também se o nitro disparou.
+ */
+export function questionMult(c: RaceConfig, q: number, accuracy: number, speedBonus: number, streak: number): { mult: number; nitro: boolean } {
+  const finalLap = q >= (c.laps - 1) * c.questionsPerLap;
+  let f = baseFactor(c, accuracy);
+  if (effectFor(c, accuracy) === 'spin') f *= c.spinPenaltyMult;
+  f *= 1 + c.speedBonusMax * speedBonus;
+  if (finalLap) f = 1 + (f - 1) * c.finalLapMult;
+  const nitro = streak >= c.nitroStreak;
+  if (nitro) f *= c.nitroMult;
+  return { mult: Math.max(0.2, 1 + c.effectScale * (f - 1)), nitro };
+}
+
+/** Ganho máximo (em segundos de cruzeiro) que um carro pode acumular até ao fim do ciclo da penúltima pergunta. */
+export function maxGain(c: RaceConfig): number {
+  const n = totalQuestions(c);
+  const cyc = cycleTime(c);
+  let gain = 0;
+  let streak = 0;
+  for (let q = 0; q < n - 1; q++) {
+    streak++;
+    const { mult, nitro } = questionMult(c, q, 1, 1, streak);
+    if (nitro) streak = 0;
+    gain += (mult - 1) * cyc;
+  }
+  return Math.max(0, gain);
+}
+
+/**
+ * Comprimento da corrida: o que um carro faz em `totalQuestions × ciclo` à velocidade de cruzeiro, mais o ganho máximo possível.
+ * Ninguém chega à meta antes de a última pergunta fechar, e o comprimento depende só da configuração (tempos comparáveis com fantasmas).
+ */
+export const raceLengthFor = (c: RaceConfig) => c.cruiseSpeed * (totalQuestions(c) * cycleTime(c) + maxGain(c));
+
+/**
  * Deterministic race simulation. Time advances with `step(dt)`; at the end of
  * each question cycle every driver's outcome sets its speed for the next cycle.
  */
@@ -69,6 +105,8 @@ export class Race {
   readonly cars: CarState[];
   readonly events: QuestionEvent[] = [];
   readonly raceLength: number;
+  /** Só para a rubber-band dos bots (diferença em "voltas"). */
+  private readonly lapLength: number;
   readonly baseSpeed: number;
   readonly questionCount: number;
   readonly cycle: number;
@@ -77,13 +115,13 @@ export class Race {
 
   constructor(
     drivers: Driver[],
-    readonly lapLength: number,
     readonly config: RaceConfig,
   ) {
     this.questionCount = totalQuestions(config);
     this.cycle = cycleTime(config);
-    this.raceLength = lapLength * config.laps;
-    this.baseSpeed = this.raceLength / (this.questionCount * this.cycle * baseFactor(config, config.calibrationAccuracy));
+    this.raceLength = raceLengthFor(config);
+    this.baseSpeed = config.cruiseSpeed;
+    this.lapLength = this.raceLength / config.laps;
     this.cars = drivers.map((driver) => ({
       driver,
       distance: 0,
@@ -124,14 +162,14 @@ export class Race {
   }
 
   /**
-   * Multiplicador de velocidade instantâneo. `car.mult` é a média do ciclo; a rajada no reveal é
-   * calculada para que a distância por ciclo seja a mesma de antes: cruise·questionTime + burst·overhead = mult·cycle.
+   * Multiplicador de velocidade instantâneo. `car.mult` é a média do ciclo; o efeito da resposta chega no reveal como uma
+   * subida e descida suaves (seno) com o mesmo integral, por isso a distância por ciclo é `mult × ciclo`. Fora do reveal, cruzeiro.
    */
   private speedMult(car: CarState): number {
-    const c = this.config;
     if (this.nextQuestion >= this.questionCount) return car.mult;
-    if (!this.bursting) return c.cruiseMult;
-    return Math.max(0.05, (car.mult * this.cycle - c.cruiseMult * c.questionTime) / c.overheadTime);
+    if (!this.bursting) return 1;
+    const x = clamp(this.cyclePhase / this.config.overheadTime, 0, 1);
+    return Math.max(0.05, 1 + (car.mult - 1) * (this.cycle / this.config.overheadTime) * (Math.PI / 2) * Math.sin(Math.PI * x));
   }
 
   /** 0..1 progress through the current question cycle. */
@@ -151,10 +189,6 @@ export class Race {
 
   rankOf(car: CarState): number {
     return this.standings().indexOf(car) + 1;
-  }
-
-  lapOf(car: CarState): number {
-    return Math.min(this.config.laps, Math.floor(car.distance / this.lapLength) + 1);
   }
 
   step(dt: number): void {
@@ -187,6 +221,8 @@ export class Race {
       }
       const speed = this.baseSpeed * m;
       car.distance += speed * dt;
+      // Rede de segurança (a rubber-band dos bots): ninguém passa a meta antes de a última pergunta fechar.
+      if (this.nextQuestion < this.questionCount) car.distance = Math.min(car.distance, this.raceLength - 1);
       if (car.distance >= this.raceLength) {
         const overshoot = car.distance - this.raceLength;
         car.finishTime = this.time - overshoot / speed;
@@ -215,23 +251,14 @@ export class Race {
     for (const car of this.cars) {
       const o = car.driver.outcome(q);
       const effect = effectFor(c, o.accuracy);
-      let f = baseFactor(c, o.accuracy);
       car.turboStreak = effect === 'turbo' ? car.turboStreak + 1 : 0;
-      if (effect === 'spin') {
-        f *= c.spinPenaltyMult;
-        car.spinLeft = c.spinDuration;
-      }
-      f *= 1 + c.speedBonusMax * o.speedBonus;
-      if (finalLap) f = 1 + (f - 1) * c.finalLapMult;
-      car.nitroActive = false;
-      if (car.turboStreak >= c.nitroStreak) {
-        f *= c.nitroMult;
-        car.nitroActive = true;
-        car.turboStreak = 0;
-      }
-      car.mult = Math.max(0.2, f);
+      if (effect === 'spin') car.spinLeft = c.spinDuration;
+      const { mult, nitro } = questionMult(c, q, o.accuracy, o.speedBonus, car.turboStreak);
+      if (nitro) car.turboStreak = 0;
+      car.nitroActive = nitro;
+      car.mult = mult;
       car.lastEffect = effect;
-      results.push({ driverId: car.driver.id, accuracy: o.accuracy, effect, mult: car.mult, nitro: car.nitroActive });
+      results.push({ driverId: car.driver.id, accuracy: o.accuracy, effect, mult: car.mult, nitro });
     }
 
     this.events.push({

@@ -19,12 +19,12 @@ export const DEFAULT_SIM: SimOptions = {
   botSkills: [...BOT_FIELDS.medio],
 };
 
-export function buildRace(config: RaceConfig, sim: SimOptions, lapLength: number, seed: number) {
+export function buildRace(config: RaceConfig, sim: SimOptions, seed: number) {
   const rng = mulberry32(seed);
   const students = makeClass(rng, sim.classSize, sim.classMean, sim.classSpread);
   const team = makeTeamDriver(rng, students, sim);
   const bots = sim.botSkills.map((skill, i) => makeBot(rng, i, skill));
-  const race = new Race([team.driver, ...bots], lapLength, config);
+  const race = new Race([team.driver, ...bots], config);
   return { race, students, answersByQ: team.answersByQ };
 }
 
@@ -40,7 +40,7 @@ export interface BatchStats {
   avgPositionsLost: number;
 }
 
-export function runBatch(config: RaceConfig, sim: SimOptions, lapLength: number, races: number, seed = 1): BatchStats {
+export function runBatch(config: RaceConfig, sim: SimOptions, races: number, seed = 1): BatchStats {
   const cars = sim.botSkills.length + 1;
   const counts = new Array(cars).fill(0);
   let posSum = 0;
@@ -50,7 +50,7 @@ export function runBatch(config: RaceConfig, sim: SimOptions, lapLength: number,
   let lost = 0;
 
   for (let r = 0; r < races; r++) {
-    const { race } = buildRace(config, sim, lapLength, seed + r * 7919);
+    const { race } = buildRace(config, sim, seed + r * 7919);
     race.runToEnd(0.25);
     race.finalizeEvents();
     const team = race.team!;

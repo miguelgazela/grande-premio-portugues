@@ -91,7 +91,7 @@ function renderMatrix() {
   const cars = sim.botSkills.length + 1;
   const head = `<tr><th>Nível</th><th>Acerto</th><th>Pos.</th>${Array.from({ length: cars }, (_, i) => `<th>${i + 1}º</th>`).join('')}<th>Renhida</th><th>Ultrap.</th></tr>`;
   const rows = LEVELS.map((mean) => {
-    const s = runBatch(config, { ...sim, classMean: mean }, track.length, 300);
+    const s = runBatch(config, { ...sim, classMean: mean }, 300);
     const cells = s.positionShare
       .map((p) => `<td class="cell"><i style="opacity:${Math.min(1, p * 1.6).toFixed(2)}"></i><b>${Math.round(p * 100)}%</b></td>`)
       .join('');
@@ -112,7 +112,7 @@ const EFFECT_LABEL: Record<Effect, string> = { turbo: '🔥 TURBO!', normal: 'Ri
 
 function startRace() {
   const seed = Math.floor(Math.random() * 1e9);
-  raceData = buildRace(config, sim, track.length, seed);
+  raceData = buildRace(config, sim, seed);
   race = raceData.race;
   view.reset();
   shownEvents = 0;
@@ -126,7 +126,7 @@ function updateHud() {
   if (!race) return;
   const team = race.team!;
   const q = race.currentQuestion;
-  $('#hud-q').textContent = q < race.questionCount ? `Pergunta ${q + 1}/${race.questionCount} · Volta ${race.lapOf(team)}/${config.laps}` : 'Sprint final';
+  $('#hud-q').textContent = q < race.questionCount ? `Pergunta ${q + 1}/${race.questionCount}` : 'Sprint final';
   $('#hud-pos').textContent = `${race.rankOf(team)}º lugar`;
 
   while (shownEvents < race.events.length) {
