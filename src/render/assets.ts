@@ -53,7 +53,10 @@ export async function loadRaceTextures(extra: string[] = []): Promise<RaceTextur
   return out;
 }
 
-/** Lista de avatares (chaves `avatar-*` do manifest). Vazia se não houver manifest. */
+/** Avatares retirados da escolha; continuam no manifest para quem ainda os tenha guardados. */
+const RETIRED_AVATARS = new Set(['avatar-pig', 'avatar-frog', 'avatar-owl', 'avatar-elephant']);
+
+/** Lista de avatares (chaves `avatar-*` do manifest, sem os retirados). Vazia se não houver manifest. */
 export async function loadAvatarKeys(): Promise<string[]> {
-  return Object.keys(await manifest()).filter((k) => k.startsWith('avatar-'));
+  return Object.keys(await manifest()).filter((k) => k.startsWith('avatar-') && !RETIRED_AVATARS.has(k));
 }
