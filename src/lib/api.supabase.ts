@@ -2,7 +2,7 @@ import { raceConfigFor } from '../game/raceSettings';
 import { parseTimeline, type GhostRecord } from './ghosts';
 import type { Api, Channel } from './api';
 import { toSaveShape } from './quizEdit';
-import { channelName, type AnyEvent } from './protocol';
+import { EVENT_NAMES, channelName, type AnyEvent } from './protocol';
 import { supabase } from './supabase';
 import type { AnswerRow, ClassRow, JoinResult, PlayerRow, QuestionRow, QuizRow, RaceRecordRow, RaceSummary, SaveQuizResult, SessionRow } from './types';
 
@@ -208,7 +208,7 @@ export const supabaseApi: Api = {
 
   openChannel(sessionId, onMessage, onStatus) {
     const ch = supabase.channel(channelName(sessionId), { config: { broadcast: { self: false, ack: false } } });
-    for (const event of ['hello', 'answer', 'lobby', 'question', 'reveal', 'end', 'kicked', 'aborted']) {
+    for (const event of EVENT_NAMES) {
       ch.on('broadcast', { event }, (m) => onMessage({ event, payload: m.payload } as AnyEvent));
     }
     let ready = false;

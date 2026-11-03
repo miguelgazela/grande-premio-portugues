@@ -107,4 +107,12 @@ export type StudentEvent =
 
 export type AnyEvent = HostEvent | StudentEvent;
 
+/**
+ * Todas as mensagens do canal. O Realtime do Supabase só entrega as mensagens cujo nome foi registado,
+ * por isso esta lista tem de as ter todas: o `satisfies` abaixo falha a compilar se faltar alguma.
+ */
+export const EVENT_NAMES = ['lobby', 'question', 'reveal', 'end', 'kicked', 'aborted', 'hello', 'vote', 'answer'] as const satisfies readonly AnyEvent['event'][];
+type MissingEvents = Exclude<AnyEvent['event'], (typeof EVENT_NAMES)[number]>;
+export const _allEventsListed: [MissingEvents] extends [never] ? true : never = true;
+
 export const channelName = (sessionId: string) => `corrida:${sessionId}`;
