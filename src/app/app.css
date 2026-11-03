@@ -369,7 +369,6 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
 @media (prefers-reduced-motion: reduce) { .step, .vote-done { animation: none; } }
 @media (max-width: 420px) { .colorgrid.n8 { grid-template-columns: repeat(3, 1fr); } .modelgrid { gap: 8px; } }
 
-<<<<<<< HEAD
 /* ---- importador de quizzes (portátil) ---- */
 .importer { max-width: 1000px; }
 .dropzone { display: grid; gap: 8px; justify-items: center; text-align: center; padding: 48px 24px; border: 3px dashed var(--panel2); border-radius: 22px; background: var(--panel); cursor: pointer; }
@@ -386,7 +385,7 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
 .imp-badge.warn { background: #ffb21a33; color: var(--gold); }
 .imp-badge.skip { background: #e74c3c33; color: #ff8a80; }
 .imp-foot { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0; }
-=======
+
 /* Jogar em landscape (iPad): duas colunas, ecrã todo, sem scroll da página */
 .jogar-cols { display: grid; gap: 22px; }
 .adv-area { display: grid; }
@@ -403,4 +402,3 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
   details.more summary { min-height: 52px; }
   .adv { gap: 12px; }
 }
->>>>>>> refs/heads/claude/ipad-bugs-52358e
