@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { errorMessage } from '../../lib/api';
-import { MAX_OPTIONS, MAX_TIME, MIN_TIME, blankQuestion, duplicateQuestion, moveItem, questionProblems, quizProblems, removeOption, renumber } from '../../lib/quizEdit';
+import { TYPE_LABEL } from '../../lib/questions';
+import { MAX_TIME, MIN_TIME, blankQuestion, duplicateQuestion, moveItem, questionProblems, quizProblems, renumber } from '../../lib/quizEdit';
 import type { QuestionRow } from '../../lib/types';
+import { Preview, QuestionForm } from './QuestionForm';
 import { useTeacher } from './TeacherGate';
-
-const LETTERS = ['A', 'B', 'C', 'D'];
 type EQ = QuestionRow & { key: string };
 interface Doc { title: string; year: number | null; topic: string; qs: EQ[] }
 type Status = 'saved' | 'dirty' | 'saving' | 'invalid' | 'error';
 
-const withKey = (q: QuestionRow): EQ => ({ ...q, key: crypto.randomUUID() });
+const withKey = (q: QuestionRow): EQ => ({ ...q, key: crypto.randomUUID() }) as EQ;
 const DEBOUNCE_MS = 800;
 
 export function Editor() {
@@ -91,8 +91,8 @@ export function Editor() {
 
   const idx = Math.min(sel, doc.qs.length - 1);
   const q = doc.qs[idx];
-  const setQ = (patch: Partial<EQ> | ((q: EQ) => EQ)) =>
-    edit((d) => ({ ...d, qs: d.qs.map((x, i) => (i === idx ? (typeof patch === 'function' ? patch(x) : { ...x, ...patch }) : x)) }));
+  const setQ = (next: QuestionRow | Partial<Pick<QuestionRow, 'time_limit' | 'explanation'>>) =>
+    edit((d) => ({ ...d, qs: d.qs.map((x, i) => (i === idx ? ({ ...x, ...next, key: x.key } as EQ) : x)) }));
   const add = () => {
     edit((d) => ({ ...d, qs: renumber([...d.qs, withKey(blankQuestion())]) as EQ[] }));
     setSel(doc.qs.length);
@@ -146,7 +146,7 @@ export function Editor() {
           {doc.qs.map((x, i) => (
             <div key={x.key} className={`qrow ${i === idx ? 'sel' : ''}`} onClick={() => setSel(i)}>
               <span className="num">{i + 1}</span>
-              <span className="txt">{x.prompt || <i className="muted">(sem enunciado)</i>}</span>
+              <span className="txt"><small className="muted">{TYPE_LABEL[x.type]} · </small>{x.prompt || <i className="muted">(sem enunciado)</i>}</span>
               {questionProblems(x).length > 0 && <span title={questionProblems(x).join('; ')}>⚠</span>}
               <span className="mini">
                 <button aria-label="Subir" disabled={i === 0} onClick={(e) => { e.stopPropagation(); move(i, i - 1); }}>↑</button>
@@ -168,27 +168,14 @@ export function Editor() {
                   <button onClick={() => del(idx)}>Apagar</button>
                 </div>
               </div>
-              <label>Enunciado
-                <textarea rows={3} value={q.prompt} onChange={(e) => setQ({ prompt: e.target.value })} />
-              </label>
-              <div>
-                <div className="lbl">Opções (marca a certa)</div>
-                {q.options.map((o, i) => (
-                  <div className="optrow" key={i}>
-                    <input type="radio" name="correct" aria-label={`Opção ${LETTERS[i]} é a certa`} checked={q.correct === i} onChange={() => setQ({ correct: i })} />
-                    <b className={`letter ${LETTERS[i]}`}>{LETTERS[i]}</b>
-                    <input className="grow" value={o} placeholder={`Opção ${LETTERS[i]}`} onChange={(e) => setQ((x) => ({ ...x, options: x.options.map((v, k) => (k === i ? e.target.value : v)) }))} />
-                    <button aria-label={`Remover opção ${LETTERS[i]}`} disabled={q.options.length <= 2} onClick={() => setQ((x) => removeOption(x, i) as EQ)}>✕</button>
-                  </div>
-                ))}
-                {q.options.length < MAX_OPTIONS && <button onClick={() => setQ((x) => ({ ...x, options: [...x.options, ''] }))}>＋ Opção</button>}
-              </div>
+              <QuestionForm q={q} onChange={setQ} />
               <label>Tempo ({MIN_TIME}–{MAX_TIME} s)
                 <input type="number" min={MIN_TIME} max={MAX_TIME} style={{ width: 120 }} value={q.time_limit} onChange={(e) => setQ({ time_limit: Number(e.target.value) })} />
               </label>
               <label>Explicação (mostrada depois da resposta)
                 <textarea rows={2} value={q.explanation ?? ''} onChange={(e) => setQ({ explanation: e.target.value || null })} />
               </label>
+              <Preview q={q} />
               {questionProblems(q).length > 0 && <ul className="warn">{questionProblems(q).map((p) => <li key={p}>{p}</li>)}</ul>}
             </>
           )}

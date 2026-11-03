@@ -9,9 +9,9 @@ import { endSessions } from '../../lib/endSessions';
 import { keepAwake, wakeLockSupported } from '../../lib/wakeLock';
 import { RaceView } from '../../render/raceView';
 import { Asset, Countdown, Flames, Place } from '../ui/Asset';
+import { HostBody } from '../ui/Question';
 import { useTeacher } from './TeacherGate';
 
-const LETTERS = ['A', 'B', 'C', 'D'];
 const EFFECT_TEXT = { turbo: 'TURBO!', normal: 'Bom ritmo', slow: '🐢 A abrandar', spin: '💫 DESPISTE!' } as const;
 
 export function Host() {
@@ -235,14 +235,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
           <div className={`timer ${low && inQuestion ? 'low' : ''}`}>
             <i style={{ width: `${inQuestion ? (s.timeLeft / s.questionTime) * 100 : showReveal ? 0 : 100}%` }} />
           </div>
-          <div className="opts">
-            {s.question.options.map((o, i) => {
-              const cls = showReveal ? (i === s.reveal!.correct_index ? 'right' : 'dim') : '';
-              return (
-                <div key={i} className={`opt ${LETTERS[i]} ${cls}`}><b>{LETTERS[i]}</b>{o}</div>
-              );
-            })}
-          </div>
+          <HostBody body={s.question.body} solution={showReveal ? s.reveal!.solution : undefined} />
           <div className="meta">
             <span>{inQuestion ? `${s.answered}/${s.players.length} responderam · ${Math.ceil(s.timeLeft)}s` : ''}</span>
             <span>{showReveal ? s.reveal!.explanation ?? '' : ''}</span>

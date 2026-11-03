@@ -4,7 +4,7 @@ import { blankQuestion, moveItem, questionProblems, removeOption } from './quizE
 import { buildReport, reportToCsv } from './report';
 import type { AnswerRow, QuestionRow } from './types';
 
-const q = (i: number, over: Partial<QuestionRow> = {}): QuestionRow => ({ id: `q${i}`, position: i + 1, prompt: `P${i}`, options: ['a', 'b', 'c', 'd'], correct: 1, time_limit: 20, explanation: null, ...over });
+const q = (i: number, over: Partial<QuestionRow> = {}): QuestionRow => ({ id: `q${i}`, position: i + 1, prompt: `P${i}`, type: 'multiple_choice', payload: { options: ['a', 'b', 'c', 'd'] }, correct: { index: 1 }, time_limit: 20, explanation: null, ...over }) as QuestionRow;
 const many = (n: number) => Array.from({ length: n }, (_, i) => q(i));
 
 describe('raceConfigFor', () => {
@@ -38,12 +38,14 @@ describe('validação do editor', () => {
     expect(questionProblems(q(0))).toEqual([]);
   });
   it('falta resposta certa', () => {
-    expect(questionProblems(q(0, { correct: -1 }))).toContain('falta marcar a resposta certa');
+    expect(questionProblems(q(0, { correct: { index: -1 } }))).toContain('falta marcar a resposta certa');
   });
   it('remover opção ajusta a certa', () => {
-    expect(removeOption(q(0, { correct: 2 }), 0).correct).toBe(1);
-    expect(removeOption(q(0, { correct: 1 }), 1).correct).toBe(-1);
-    expect(removeOption(q(0, { options: ['a', 'b'] }), 0).options).toHaveLength(2);
+    const idx = (x: QuestionRow) => (x.type === 'multiple_choice' ? x.correct.index : NaN);
+    expect(idx(removeOption(q(0, { correct: { index: 2 } }), 0))).toBe(1);
+    expect(idx(removeOption(q(0, { correct: { index: 1 } }), 1))).toBe(-1);
+    const two = removeOption(q(0, { payload: { options: ['a', 'b'] } }), 0);
+    expect(two.type === 'multiple_choice' && two.payload.options).toHaveLength(2);
   });
   it('moveItem', () => {
     expect(moveItem([1, 2, 3], 0, 2)).toEqual([2, 3, 1]);

@@ -1,6 +1,6 @@
 // Base de dados falsa (localStorage + BroadcastChannel) para testar o fluxo todo em várias abas, sem Supabase.
 // Só entra em desenvolvimento, com `?mock` no URL.
-import { EXAMPLE_QUIZZES } from '../data/exampleQuizzes';
+import { ALL_EXAMPLE_QUIZZES, toBody } from '../data/exampleQuizzes';
 import { raceConfigFor } from '../game/raceSettings';
 import { parseTimeline, type GhostRecord } from './ghosts';
 import type { Api } from './api';
@@ -22,10 +22,10 @@ const uid = () => crypto.randomUUID();
 
 function seed(): Db {
   const db: Db = { quizzes: [], questions: [], classes: [], sessions: [], players: [], answers: [], records: [] };
-  for (const q of EXAMPLE_QUIZZES) {
+  for (const q of ALL_EXAMPLE_QUIZZES) {
     const id = uid();
     db.quizzes.push({ id, title: q.title, year: q.year, topic: q.topic, version: 1 });
-    q.questions.forEach((x, i) => db.questions.push({ id: uid(), quiz_id: id, version: 1, position: i + 1, prompt: x.prompt, options: [...x.options], correct: x.correct, time_limit: 20, explanation: x.explanation ?? null }));
+    q.questions.forEach((x, i) => db.questions.push({ id: uid(), quiz_id: id, version: 1, position: i + 1, prompt: x.prompt, ...toBody(x), time_limit: x.time_limit ?? 20, explanation: x.explanation ?? null } as unknown as QuestionRow & { quiz_id: string }));
   }
   return db;
 }
@@ -126,7 +126,7 @@ export const mockApi: Api = {
       if (!q) throw new Error('Quiz não encontrado');
       const copy = { id: uid(), title: `${q.title} (cópia)`, year: q.year, topic: q.topic, version: 1 };
       db.quizzes.push(copy);
-      for (const x of questionsOf(db, q.id, q.version)) db.questions.push({ ...x, id: uid(), quiz_id: copy.id, version: 1, options: [...x.options] });
+      for (const x of questionsOf(db, q.id, q.version)) db.questions.push({ ...structuredClone(x), id: uid(), quiz_id: copy.id, version: 1 } as unknown as QuestionRow & { quiz_id: string });
       return quizRow(db, copy);
     });
   },
