@@ -105,6 +105,7 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
 function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [rank, setRank] = useState(0);
+  const [stageError, setStageError] = useState<string | null>(null);
   const qpl = game.config.questionsPerLap;
   const lap = Math.min(game.config.laps, Math.floor(s.qIndex / qpl) + 1);
   const inQuestion = s.phase === 'question' || s.phase === 'ff';
@@ -115,10 +116,17 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
     let mounted = false;
     let gone = false;
     let lastRank = 0;
-    void view.mount(stageRef.current!).then(() => {
-      if (gone) view.destroy();
-      else mounted = true;
-    });
+    view.mount(stageRef.current!).then(
+      () => {
+        if (gone) view.destroy();
+        else mounted = true;
+      },
+      (err: unknown) => {
+        // Without this a failed renderer leaves the stage silently dark.
+        console.error('RaceView mount failed', err);
+        if (!gone) setStageError(err instanceof Error ? err.message : String(err));
+      },
+    );
     const off = game.onFrame((clock) => {
       if (!mounted) return;
       view.render(game.race, clock);
@@ -156,6 +164,13 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
 
       <div className="stage">
         <div ref={stageRef} />
+        {stageError && (
+          <div className="notice" role="alert">
+            Não foi possível desenhar a pista. Recarrega a página.
+            <br />
+            <small>{stageError}</small>
+          </div>
+        )}
         {showReveal && (
           <div className={`banner ${s.reveal!.nitro ? 'nitro' : s.reveal!.effect}`}>
             {(s.reveal!.nitro || s.reveal!.effect === 'turbo') && <Asset name="ui-flame" className="banner-flame" />}
