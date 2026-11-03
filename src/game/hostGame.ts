@@ -35,10 +35,8 @@ export interface HostSnapshot {
   question: { prompt: string; body: PublicBody } | null;
   reveal: RevealMsg | null;
   final: EndMsg | null;
-  /** Aspeto atual do carro da turma (votos ou fixado pela professora). */
+  /** Carro da turma: o mais votado pelos alunos (o por defeito, sem votos). */
   team: TeamStyle;
-  /** Campos fixados pela professora. */
-  fixed: StyleVote;
   /** Alunos que já votaram. */
   voters: number;
   /** Aviso discreto (erros de rede a gravar, etc.). */
@@ -93,7 +91,6 @@ export class HostGame {
   private pollTimer = 0;
   private timeBucket = -1;
   private votes = new Map<string, StyleVote>();
-  private fixedStyle: StyleVote = {};
   private style: TeamStyle = DEFAULT_STYLE;
   private teacherPaused = false;
   private pageHidden = false;
@@ -117,7 +114,7 @@ export class HostGame {
     this.snap = {
       phase: 'lobby', paused: false, hidden: false, connected: false, players: [], qIndex: 0, total: this.questions.length, laps: config.laps,
       questionTime: config.questionTime, timeLeft: config.questionTime, count: 3, avatars: session.state?.avatars ?? {}, answered: 0, question: null, reveal: null, final: null, notice: null,
-      team: DEFAULT_STYLE, fixed: {}, voters: 0,
+      team: DEFAULT_STYLE, voters: 0,
     };
   }
 
@@ -264,24 +261,12 @@ export class HostGame {
     }
   }
 
+  /** O carro da turma é sempre o mais votado pelos alunos (o por defeito, enquanto ninguém vota). */
   private updateStyle(): void {
     const { style, count } = tally(this.votes.values());
-    const f = this.fixedStyle;
-    this.style = { car: f.car ?? style.car };
-    this.set({ team: this.style, fixed: { ...f }, voters: count });
+    this.style = { car: style.car };
+    this.set({ team: this.style, voters: count });
     this.send({ event: 'lobby', payload: { count: this.snap.players.length, team: this.style } });
-  }
-
-  /** A professora fixa (ou, com `undefined`, larga) campos do aspeto; sobrepõe-se à votação. */
-  setStyle(patch: StyleVote): void {
-    if (this.snap.phase !== 'lobby') return;
-    const next = { ...this.fixedStyle };
-    if ('car' in patch) {
-      if (patch.car === undefined) delete next.car;
-      else next.car = patch.car;
-    }
-    this.fixedStyle = next;
-    this.updateStyle();
   }
 
   async refreshPlayers(): Promise<void> {

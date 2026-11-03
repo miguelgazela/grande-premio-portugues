@@ -11,7 +11,8 @@ import { RaceView } from '../../render/raceView';
 import { isMuted, play, setMuted } from '../../lib/audio';
 import { assetUrl } from '../../render/assets';
 import { Asset, Countdown, Flames, Place } from '../ui/Asset';
-import { CarPreview, TeamPicker } from '../ui/TeamPicker';
+import { carDef } from '../../game/teamStyle';
+import { CarPreview } from '../ui/TeamPicker';
 import { HostBody } from '../ui/Question';
 import { useTeacher } from './TeacherGate';
 
@@ -129,10 +130,15 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
               👻 Fantasmas: {game.extras.ghosts.map((g) => `${g.class_name ?? 'Fantasma'} (${fmtTime(g.finish_time_ms)})`).join(', ')}
             </p>
           )}
-          <details className="carbox" open>
-            <summary>🏎️ Cor do carro da turma{s.voters ? ` · ${s.voters} voto${s.voters > 1 ? 's' : ''}` : ''}</summary>
-            <TeamPicker host value={s.team} fixed={s.fixed} onPick={(v) => game.setStyle(v)} />
-          </details>
+          <div className="carbox carshow" aria-live="polite">
+            <CarPreview car={s.team.car} size={110} />
+            <div>
+              <b>🏎️ Carro da turma: {carDef(s.team.car)?.label ?? ''}</b>
+              <div className="muted" style={{ fontSize: 'clamp(13px,2.2vmin,22px)' }}>
+                {s.voters ? `Mais votado · ${s.voters} voto${s.voters > 1 ? 's' : ''}` : 'Por defeito: os alunos podem votar no telemóvel'}
+              </div>
+            </div>
+          </div>
           <div className="chips">
             {s.players.length === 0 && <span className="muted" style={{ fontSize: 'clamp(16px,3vmin,28px)' }}>À espera dos alunos…</span>}
             {s.players.map((p) => (

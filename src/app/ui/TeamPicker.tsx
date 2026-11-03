@@ -9,22 +9,18 @@ export function CarPreview({ car, size = 120 }: { car: string; size?: number }) 
   return <img className="carprev" src={assetUrl(`${car}.png`)} alt={carDef(car)?.label ?? ''} draggable={false} style={{ width: size, height: size / 2 }} />;
 }
 
-/**
- * Modelo e cor do carro da turma. Nos alunos `onPick` é um voto; no anfitrião fixa o carro
- * (`fixed`), e "Voltar à votação" larga a escolha da professora.
- */
-export function TeamPicker({ value, fixed, onPick, host }: { value: TeamStyle; fixed?: StyleVote; onPick(v: StyleVote): void; host?: boolean }) {
+/** Modelo e cor do carro da turma: cada escolha de um aluno é um voto. */
+export function TeamPicker({ value, onPick }: { value: TeamStyle; onPick(v: StyleVote): void }) {
   const cur = carDef(value.car) ?? CARS[0];
   const [model, setModel] = useState(cur.model);
-  useEffect(() => setModel(cur.model), [cur.model]); // o carro pode mudar por fora (voto de outro aluno, professora)
+  useEffect(() => setModel(cur.model), [cur.model]); // o carro pode mudar por fora (voto de outro aluno)
   const colors = carsOfModel(model);
-  const isFixed = host && fixed?.car !== undefined;
   return (
     <div className="picker">
       <div className="row" style={{ justifyContent: 'center' }}>
-        <CarPreview car={cur.key} size={host ? 130 : 160} />
+        <CarPreview car={cur.key} size={160} />
       </div>
-      <div className={`opts${isFixed ? ' fixed' : ''}`}>
+      <div className="opts">
         {MODELS.map((m) => {
           const first = carsOfModel(m.id).find((c) => c.key === value.car) ?? carsOfModel(m.id)[0];
           return (
@@ -35,16 +31,11 @@ export function TeamPicker({ value, fixed, onPick, host }: { value: TeamStyle; f
           );
         })}
       </div>
-      <div className={`opts${isFixed ? ' fixed' : ''}`}>
+      <div className="opts">
         {colors.map((c) => (
           <button key={c.key} type="button" aria-label={c.label} className={`swatch ${value.car === c.key ? 'on' : ''}`} style={{ background: hex(c.color) }} onClick={() => onPick({ car: c.key })} />
         ))}
       </div>
-      {isFixed && (
-        <div className="row" style={{ justifyContent: 'center' }}>
-          <button type="button" onClick={() => onPick({ car: undefined })}>Voltar à votação</button>
-        </div>
-      )}
     </div>
   );
 }
