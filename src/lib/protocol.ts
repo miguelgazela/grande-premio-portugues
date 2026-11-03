@@ -43,7 +43,7 @@ export interface FinalStanding {
 
 export interface FinalInfo {
   standings: FinalStanding[];
-  ranking: { nickname: string; points: number; correct: number }[];
+  ranking: { nickname: string; points: number; correct: number; avatar?: string }[];
   awards: { emoji: string; title: string; nickname: string; detail: string }[];
   teamPosition: number;
   totalQuestions: number;
@@ -64,7 +64,7 @@ export type HostEvent =
 
 /** Aluno → anfitrião. */
 export type StudentEvent =
-  | { event: 'hello'; payload: { player_id: string } }
+  | { event: 'hello'; payload: { player_id: string; /** Chave do manifest, ex. `avatar-fox`. */ avatar?: string } }
   | { event: 'answer'; payload: { player_id: string; question_id: string; value: number } };
 
 export type AnyEvent = HostEvent | StudentEvent;

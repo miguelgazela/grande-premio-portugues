@@ -4,7 +4,8 @@ import type { Channel } from '../../lib/api';
 import { errorMessage } from '../../lib/api';
 import type { EndMsg, PublicQuestion, RevealMsg } from '../../lib/protocol';
 import { useApi } from '../useApi';
-import { clearPlayer, deviceToken, loadPlayer } from './session';
+import { Asset } from '../ui/Asset';
+import { clearPlayer, deviceToken, loadAvatar, loadPlayer } from './session';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
@@ -101,7 +102,7 @@ export function Play() {
               break;
           }
         },
-        (ok) => ok && ch?.send({ event: 'hello', payload: { player_id: player.player_id } }),
+        (ok) => ok && ch?.send({ event: 'hello', payload: { player_id: player.player_id, avatar: loadAvatar() ?? undefined } }),
       );
       channel.current = ch;
     })();
@@ -133,7 +134,7 @@ export function Play() {
 
   return (
     <div className="student">
-      <div className="who">{player.nickname}{problem && <span className="error"> · {problem}</span>}</div>
+      <div className="who">{loadAvatar() && <Asset name={loadAvatar()!} className="me-avatar" />}{player.nickname}{problem && <span className="error"> · {problem}</span>}</div>
       {view.k === 'wait' && (
         <div className="msg">
           <div>Estás dentro! 🏁<small>{view.count ? `${view.count} na corrida · ` : ''}À espera que a professora comece…</small></div>
@@ -175,7 +176,9 @@ function RevealView({ r, mine, me }: { r: RevealMsg; mine: number | undefined; m
   return (
     <div className="msg">
       <div>
-        <div className="big-result">{ok ? '✅' : answered ? '❌' : '⏱️'}</div>
+        <div className="big-result">
+          {ok ? <Asset name="ui-check" fallback="✅" /> : answered ? <Asset name="ui-cross" fallback="❌" /> : '⏱️'}
+        </div>
         {ok ? 'Certo!' : answered ? 'Errado' : 'Sem resposta'}
         <small>A resposta era {LETTERS[r.correct_index]}. {Math.round(r.accuracy * 100)}% da turma acertou.</small>
         {r.explanation && <small>{r.explanation}</small>}
@@ -193,7 +196,7 @@ function EndView({ e, me, onExit }: { e: EndMsg; me: string; onExit(): void }) {
         {p ? (
           <>
             <div className="stat"><span>Acertaste</span><b>{p.correct} / {e.final.totalQuestions}</b></div>
-            <div className="stat"><span>Maior série</span><b>{p.bestStreak} 🔥</b></div>
+            <div className="stat"><span>Maior série</span><b>{p.bestStreak} <Asset name="ui-flame" className="medal" fallback="🔥" /></b></div>
             <div className="stat"><span>Pontos para a equipa</span><b>{p.points}</b></div>
             {p.top && <div>⭐ Estás no top 5 de quem mais ajudou!</div>}
           </>

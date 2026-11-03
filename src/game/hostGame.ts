@@ -10,7 +10,7 @@ import { play, unlockAudio } from '../lib/audio';
 import type { AnyEvent, EndMsg, FinalInfo, HostEvent, PublicQuestion, RevealMsg } from '../lib/protocol';
 import type { PlayerRow, QuestionRow, SavedState, SessionRow } from '../lib/types';
 
-export type Phase = 'lobby' | 'resume' | 'question' | 'ff' | 'reveal' | 'sprint' | 'finishing' | 'finished';
+export type Phase = 'lobby' | 'countdown' | 'resume' | 'question' | 'ff' | 'reveal' | 'sprint' | 'finishing' | 'finished';
 
 export interface HostSnapshot {
   phase: Phase;
@@ -24,6 +24,9 @@ export interface HostSnapshot {
   laps: number;
   questionTime: number;
   timeLeft: number;
+  /** 3, 2, 1, 0 (VAI!) durante a contagem inicial. */
+  count: number;
+  avatars: Record<string, string>;
   answered: number;
   question: { prompt: string; options: string[] } | null;
   reveal: RevealMsg | null;
@@ -35,6 +38,7 @@ export interface HostSnapshot {
 const REVEAL_SECONDS = 5;
 const FINISH_HOLD = 2.5;
 const FF_SECONDS = 1.2;
+const COUNT_STEP = 0.9;
 const EPS = 0.0005;
 
 /** Cálculo da configuração a partir do número de perguntas: 3 voltas, perguntas por volta = n/3. */
@@ -75,6 +79,8 @@ export class HostGame {
   private qElapsed = 0;
   private revealT = 0;
   private holdT = 0;
+  private countT = 0;
+  private sprintRate = 0;
   private ffRate = 1;
   private roster: PlayerRow[] = [];
   private lastMsg: HostEvent | null = null;
@@ -94,9 +100,10 @@ export class HostGame {
     this.questions = questions.slice(0, used);
     this.seed = session.state?.seed ?? Math.floor(Math.random() * 2 ** 31);
     this.race = this.buildRace();
+    if (import.meta.env.DEV) (window as unknown as { __game?: HostGame }).__game = this; // só para depurar no browser
     this.snap = {
       phase: 'lobby', paused: false, hidden: false, connected: false, players: [], qIndex: 0, total: this.questions.length, laps: config.laps,
-      questionTime: config.questionTime, timeLeft: config.questionTime, answered: 0, question: null, reveal: null, final: null, notice: null,
+      questionTime: config.questionTime, timeLeft: config.questionTime, count: 3, avatars: session.state?.avatars ?? {}, answered: 0, question: null, reveal: null, final: null, notice: null,
     };
   }
 
@@ -215,6 +222,10 @@ export class HostGame {
 
   private onMessage(m: AnyEvent) {
     if (m.event === 'hello') {
+      const a = m.payload.avatar;
+      if (typeof a === 'string' && /^avatar-[a-z-]{1,30}$/.test(a) && this.snap.avatars[m.payload.player_id] !== a && Object.keys(this.snap.avatars).length < 200) {
+        this.set({ avatars: { ...this.snap.avatars, [m.payload.player_id]: a } });
+      }
       if (this.snap.phase === 'lobby') void this.refreshPlayers();
       this.resync();
     } else if (m.event === 'answer') {
@@ -283,8 +294,9 @@ export class HostGame {
     } catch (e) {
       this.notice(`Não consegui gravar o início: ${(e as Error).message}`);
     }
-    play('start');
-    this.startQuestion(0);
+    this.countT = 0;
+    this.set({ phase: 'countdown', count: 3 });
+    play('tick');
   }
 
   /** Depois de um refresh/regresso do Safari: continua a partir de `session.state`. */
@@ -366,7 +378,7 @@ export class HostGame {
   }
 
   private savedState(next: number): SavedState {
-    return { v: 1, seed: this.seed, next, outcomes: this.outcomes.slice(0, next) };
+    return { v: 1, seed: this.seed, next, outcomes: this.outcomes.slice(0, next), avatars: this.snap.avatars };
   }
 
   // ---------- Relógio ----------
@@ -383,7 +395,17 @@ export class HostGame {
   private tick(dt: number) {
     const race = this.race;
     const phase = this.snap.phase;
-    if (phase === 'question') {
+    if (phase === 'countdown') {
+      this.countT += dt;
+      const count = 3 - Math.floor(this.countT / COUNT_STEP);
+      if (count < 0) {
+        play('start');
+        this.startQuestion(0);
+      } else if (count !== this.snap.count) {
+        play(count === 0 ? 'start' : 'tick');
+        this.set({ count });
+      }
+    } else if (phase === 'question') {
       const cur = this.current!;
       const bound = this.boundary(cur.index) - EPS;
       race.step(Math.max(0, Math.min(dt, bound - race.time)));
@@ -414,10 +436,13 @@ export class HostGame {
         else this.set({ phase: 'sprint', question: null });
       }
     } else if (phase === 'sprint') {
-      // Uma turma fraca pode ficar muito longe da meta: acelera o sprint para durar ~20s no máximo.
+      // Uma turma fraca pode ficar muito longe da meta: acelera o sprint (taxa fixa) para durar ~20s.
       const t = race.team!;
-      const est = (race.raceLength - t.distance) / (race.baseSpeed * Math.max(0.3, t.mult));
-      const rate = Math.min(10, Math.max(1, est / 20));
+      if (this.sprintRate === 0) {
+        const est = (race.raceLength - t.distance) / (race.baseSpeed * Math.max(0.3, t.mult));
+        this.sprintRate = Math.min(40, Math.max(1, est / 20));
+      }
+      const rate = this.sprintRate;
       for (let left = dt * rate; left > 0; left -= 0.25) race.step(Math.min(0.25, left));
       if (race.team!.finishTime !== null || race.finished) {
         this.holdT = 0;
@@ -451,7 +476,7 @@ export class HostGame {
     const teamPosition = standings.indexOf(race.team!) + 1;
     const final: FinalInfo = {
       standings: standings.map((c) => ({ name: c.driver.name, kind: c.driver.kind, color: c.driver.color, timeMs: Math.round((c.finishTime ?? 0) * 1000) })),
-      ranking: top.map((s) => ({ nickname: nick(s.playerId), points: s.points, correct: s.correct })),
+      ranking: top.map((s) => ({ nickname: nick(s.playerId), points: s.points, correct: s.correct, avatar: this.snap.avatars[s.playerId] })),
       awards: pickAwards(scores).map((a) => ({ emoji: a.emoji, title: a.title, nickname: nick(a.playerId), detail: a.detail })),
       teamPosition,
       totalQuestions: this.questions.length,

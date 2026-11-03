@@ -5,10 +5,11 @@ import { HostGame, type HostSnapshot } from '../../game/hostGame';
 import { errorMessage } from '../../lib/api';
 import { keepAwake, wakeLockSupported } from '../../lib/wakeLock';
 import { RaceView } from '../../render/raceView';
+import { Asset, Countdown, Flames, Place } from '../ui/Asset';
 import { useTeacher } from './TeacherGate';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
-const EFFECT_TEXT = { turbo: '🔥 TURBO!', normal: 'Bom ritmo', slow: '🐢 A abrandar', spin: '💫 DESPISTE!' } as const;
+const EFFECT_TEXT = { turbo: 'TURBO!', normal: 'Bom ritmo', slow: '🐢 A abrandar', spin: '💫 DESPISTE!' } as const;
 
 export function Host() {
   const { id } = useParams();
@@ -67,6 +68,7 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
     <div className="host">
       <div className="lobby">
         <div className="join">
+          <Asset name="ui-logo" alt="Grande Prémio de Português" className="logo" />
           <div className="muted" style={{ fontSize: 'clamp(16px,3vmin,30px)' }}>Entra em</div>
           <div className="url">{location.host}{location.pathname.replace(/\/$/, '')}</div>
           <div className="pin">{pin}</div>
@@ -81,6 +83,7 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
             {s.players.length === 0 && <span className="muted" style={{ fontSize: 'clamp(16px,3vmin,28px)' }}>À espera dos alunos…</span>}
             {s.players.map((p) => (
               <span className="chip" key={p.id}>
+                {s.avatars[p.id] && <Asset name={s.avatars[p.id]} className="chip-avatar" />}
                 {p.nickname}
                 <button aria-label={`Expulsar ${p.nickname}`} onClick={() => void game.kick(p.id)}>✕</button>
               </span>
@@ -108,7 +111,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   const showReveal = s.phase === 'reveal' && s.reveal;
 
   useEffect(() => {
-    const view = new RaceView(game.track);
+    const view = new RaceView(game.track, { sprites: true });
     let mounted = false;
     let gone = false;
     let lastRank = 0;
@@ -139,7 +142,10 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
     <div className="host">
       <div className="hud">
         <span>{s.phase === 'sprint' || s.phase === 'finishing' || s.qIndex >= s.total ? '🏁 Sprint final' : `Pergunta ${s.qIndex + 1}/${s.total}`}</span>
-        <span>Volta {lap}/{game.config.laps}{finalLap ? ' · FINAL ×2' : ''}</span>
+        <span>
+          Volta {lap}/{game.config.laps}{finalLap ? ' · FINAL ×2' : ''}
+          <Flames streak={game.race.team?.turboStreak ?? 0} nitro={!!s.reveal?.nitro && s.phase === 'reveal'} />
+        </span>
         <span className="pos">{rank ? `${rank}º lugar` : ''}</span>
       </div>
 
@@ -152,7 +158,8 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
         <div ref={stageRef} />
         {showReveal && (
           <div className={`banner ${s.reveal!.nitro ? 'nitro' : s.reveal!.effect}`}>
-            {s.reveal!.nitro ? '⚡ NITRO!' : EFFECT_TEXT[s.reveal!.effect]} <small style={{ fontSize: '.5em' }}>{Math.round(s.reveal!.accuracy * 100)}% certas</small>
+            {(s.reveal!.nitro || s.reveal!.effect === 'turbo') && <Asset name="ui-flame" className="banner-flame" />}
+            {s.reveal!.nitro ? 'NITRO!' : EFFECT_TEXT[s.reveal!.effect]} <small style={{ fontSize: '.5em' }}>{Math.round(s.reveal!.accuracy * 100)}% certas</small>
           </div>
         )}
         {s.phase === 'finishing' && <div className="banner turbo">🏁 META!</div>}
@@ -179,6 +186,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
         </div>
       )}
 
+      {s.phase === 'countdown' && <Countdown value={s.count} />}
       {s.phase === 'resume' && (
         <div className="overlay">
           <div className="card">
@@ -205,17 +213,19 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
 
 function Podium({ s, onExit }: { s: HostSnapshot; onExit(): void }) {
   const f = s.final!.final;
-  const medals = ['🥇', '🥈', '🥉'];
   return (
     <div className="host">
       <div className="podium">
-        <h1>{f.teamPosition === 1 ? '🏆 Vitória da turma!' : `🏁 A turma acabou em ${f.teamPosition}º lugar`}</h1>
+        <h1>
+          {f.teamPosition === 1 && <Asset name="ui-trophy" className="title-icon" fallback="🏆 " />}
+          {f.teamPosition === 1 ? 'Vitória da turma!' : `🏁 A turma acabou em ${f.teamPosition}º lugar`}
+        </h1>
         <div className="box">
           <h2>Classificação</h2>
           <ol>
             {f.standings.map((c, i) => (
               <li key={i} className={c.kind === 'team' ? 'me' : ''}>
-                <span>{medals[i] ?? `${i + 1}º`} {c.name}</span>
+                <span className="who"><Place index={i} /> {c.name}</span>
                 <small>{(c.timeMs / 1000).toFixed(1)}s</small>
               </li>
             ))}
@@ -226,14 +236,14 @@ function Podium({ s, onExit }: { s: HostSnapshot; onExit(): void }) {
           <ol>
             {f.ranking.map((r, i) => (
               <li key={i}>
-                <span>{medals[i] ?? `${i + 1}º`} {r.nickname}</span>
+                <span className="who"><Place index={i} />{r.avatar && <Asset name={r.avatar} className="chip-avatar" />} {r.nickname}</span>
                 <small>{r.points} pts · {r.correct} certas</small>
               </li>
             ))}
           </ol>
           <div className="awards">
             {f.awards.map((a, i) => (
-              <div className="award" key={i}>{a.emoji} <b>{a.title}</b>{a.nickname}, {a.detail}</div>
+              <div className="award" key={i}><span className="award-emoji">{a.emoji}</span> <b>{a.title}</b>{a.nickname}, {a.detail}</div>
             ))}
           </div>
         </div>

@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { errorMessage } from '../../lib/api';
+import { loadAvatarKeys } from '../../render/assets';
+import { Asset } from '../ui/Asset';
 import { useApi } from '../useApi';
-import { deviceToken, loadPlayer, savePlayer } from './session';
+import { deviceToken, loadAvatar, loadPlayer, saveAvatar, savePlayer } from './session';
 
 export function Join() {
   const api = useApi();
@@ -14,6 +16,15 @@ export function Join() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const previous = loadPlayer();
+  const [avatars, setAvatars] = useState<string[]>([]);
+  const [avatar, setAvatar] = useState<string | null>(loadAvatar());
+
+  useEffect(() => {
+    void loadAvatarKeys().then((keys) => {
+      setAvatars(keys);
+      setAvatar((cur) => (cur && keys.includes(cur) ? cur : keys.length ? keys[Math.floor(Math.random() * keys.length)] : null));
+    });
+  }, []);
 
   const join = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +37,7 @@ export function Join() {
     setError('');
     try {
       const r = await api.joinSession(pin, nick.trim(), deviceToken());
+      if (avatar) saveAvatar(avatar);
       savePlayer({ session_id: r.session_id, player_id: r.player_id, nickname: r.nickname, pin });
       nav('/jogar');
     } catch (err) {
@@ -40,7 +52,7 @@ export function Join() {
   return (
     <div className="center">
       <form className="card" onSubmit={join}>
-        <h1 style={{ textAlign: 'center' }}>🏎️ Grande Prémio</h1>
+        <Asset name="ui-logo" alt="Grande Prémio de Português" className="join-logo" fallback={<h1 style={{ textAlign: 'center' }}>🏎️ Grande Prémio</h1>} />
         {step === 'pin' ? (
           <>
             <input inputMode="numeric" autoComplete="off" placeholder="PIN do jogo" value={pin} maxLength={6} autoFocus
@@ -53,6 +65,15 @@ export function Join() {
             <div className="muted" style={{ textAlign: 'center' }}>PIN {pin} · <a href="#/" onClick={(e) => { e.preventDefault(); setStep('pin'); }} style={{ color: 'inherit' }}>mudar</a></div>
             <input placeholder="A tua alcunha" value={nick} maxLength={20} autoFocus autoComplete="off" style={{ fontSize: '1.6rem', textAlign: 'center' }}
               onChange={(e) => setNick(e.target.value)} />
+            {avatars.length > 0 && (
+              <div className="avatars" aria-label="Escolhe um avatar">
+                {avatars.map((a) => (
+                  <button type="button" key={a} className={a === avatar ? 'on' : ''} onClick={() => setAvatar(a)}>
+                    <Asset name={a} alt="" />
+                  </button>
+                ))}
+              </div>
+            )}
             <button className="primary big" disabled={busy || !api || !nick.trim()}>{busy ? 'A entrar…' : 'Vamos!'}</button>
           </>
         )}

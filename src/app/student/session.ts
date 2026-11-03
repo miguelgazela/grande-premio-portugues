@@ -34,3 +34,17 @@ export function loadPlayer(): StoredPlayer | null {
 }
 export const savePlayer = (p: StoredPlayer) => localStorage.setItem(PLAYER, JSON.stringify(p));
 export const clearPlayer = () => localStorage.removeItem(PLAYER);
+
+const AVATAR = 'gpp.avatar' + suffix;
+export const loadAvatar = (): string | null => {
+  try {
+    return localStorage.getItem(AVATAR);
+  } catch {
+    return null;
+  }
+};
+export const saveAvatar = (a: string) => {
+  try {
+    localStorage.setItem(AVATAR, a);
+  } catch { /* sem armazenamento */ }
+};

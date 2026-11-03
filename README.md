@@ -39,7 +39,7 @@ src/engine/    motor puro (sem DOM), reutilizado no jogo real
   drivers.ts   bots, fantasmas, turma simulada
   scoring.ts   ranking "quem mais ajudou" + prémios
   batch.ts     corridas em lote para estatísticas
-src/render/    PixiJS (formas placeholder; sprites Higgsfield depois)
+src/render/    PixiJS: sprites do manifest (public/assets/manifest.json) com fallback para formas se faltarem
 src/sim/       página do simulador
 src/app/       ecrãs React (HashRouter): professora (login, quizzes, anfitrião) e aluno (PIN, jogo)
 src/game/      hostGame.ts: autoridade do jogo (respostas, motor, Realtime, gravação)

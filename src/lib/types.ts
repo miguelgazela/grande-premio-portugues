@@ -38,6 +38,8 @@ export interface SavedState {
   /** Próxima pergunta a fazer. */
   next: number;
   outcomes: { accuracy: number; speedBonus: number }[];
+  /** player_id → chave do avatar (vem do `hello` dos alunos). */
+  avatars?: Record<string, string>;
   /** Presente quando a corrida acabou. */
   final?: import('./protocol').EndMsg;
 }
