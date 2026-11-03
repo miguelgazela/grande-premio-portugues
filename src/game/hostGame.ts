@@ -255,8 +255,12 @@ export class HostGame {
       this.resync();
     } else if (m.event === 'vote') {
       if (this.snap.phase === 'lobby' && this.votes.size < 300) {
-        this.votes.set(m.payload.player_id, cleanVote(m.payload));
-        this.updateStyle();
+        const vote = cleanVote(m.payload);
+        const prev = this.votes.get(m.payload.player_id);
+        this.votes.set(m.payload.player_id, vote);
+        // Só responde (com um 'lobby') se o voto mudou: o aluno repete o voto a cada 'lobby',
+        // por isso responder sempre criava um ciclo infinito que esgotava o Realtime.
+        if (!prev || JSON.stringify(prev) !== JSON.stringify(vote)) this.updateStyle();
       }
     } else if (m.event === 'leave') {
       void this.onLeave(m.payload.player_id);
