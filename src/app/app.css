@@ -365,3 +365,20 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
 @keyframes stepin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .step, .vote-done { animation: none; } }
 @media (max-width: 420px) { .colorgrid.n8 { grid-template-columns: repeat(3, 1fr); } .modelgrid { gap: 8px; } }
+
+/* Jogar em landscape (iPad): duas colunas, ecrã todo, sem scroll da página */
+.jogar-cols { display: grid; gap: 22px; }
+.adv-area { display: grid; }
+@media (orientation: landscape) and (min-width: 900px) {
+  .jogar { padding: 14px 20px; }
+  .jogar .wide { width: 100%; height: 100%; padding: 20px 24px; gap: 14px; grid-template-rows: auto minmax(0, 1fr); }
+  .jogar-cols { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "hero pick" "adv pick" "act pick"; gap: 14px 24px; min-height: 0; }
+  .jogar-cols > .hero { grid-area: hero; padding: 16px 18px; gap: 10px; }
+  .jogar-cols > .pick { grid-area: pick; overflow-y: auto; align-content: start; min-height: 0; padding-right: 4px; }
+  .jogar-cols > .adv-area { grid-area: adv; overflow-y: auto; min-height: 0; align-content: start; }
+  .jogar-cols > .actionbar { grid-area: act; position: static; padding: 0; background: none; }
+  .jogar-cols > .actionbar button { width: 100%; }
+  .jogar .hero button.big { min-height: 64px; }
+  details.more summary { min-height: 52px; }
+  .adv { gap: 12px; }
+}
