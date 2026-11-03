@@ -63,14 +63,16 @@ export class RaceView {
   private stands: Sprite[] = [];
   private cheerT = 0;
   private normals: { x: number; y: number }[];
-  private raceLength: number;
+  /** Onde fica a meta; só existe depois de a última pergunta fechar (a pista "gera" a meta quando é preciso). */
+  private finishAt: number | null = null;
+  private progressLen = 1;
 
   constructor(
     private track: Road,
-    private opts: { sprites?: boolean; follow?: boolean; trackId?: string; raceLength?: number } = {},
+    private opts: { sprites?: boolean; follow?: boolean; trackId?: string } = {},
   ) {
     this.theme = themeForTrack(opts.trackId ?? '');
-    this.raceLength = opts.raceLength ?? track.length;
+    this.progressLen = track.length;
     const pts = track.points;
     const n = pts.length;
     this.normals = pts.map((_p, i) => {
@@ -161,7 +163,7 @@ export class RaceView {
 
   /** Cria os blocos à frente da câmara e deita fora os que ficaram para trás. */
   private ensureChunks(d: number): void {
-    const lastChunk = Math.floor(Math.min(this.track.length, this.raceLength + 600) / CHUNK);
+    const lastChunk = Math.floor(Math.min(this.track.length, (this.finishAt ?? this.track.length) + 600) / CHUNK);
     const cur = Math.floor(Math.max(0, d) / CHUNK);
     const lo = Math.max(0, cur - CHUNKS_BEHIND);
     const hi = Math.min(lastChunk, cur + CHUNKS_AHEAD);
@@ -246,7 +248,7 @@ export class RaceView {
     c.addChild(dashes);
 
     if (index === 0) this.addLine(c, 0);
-    if (this.raceLength >= d0 && this.raceLength < d0 + CHUNK) this.addLine(c, this.raceLength);
+    if (this.finishAt !== null && this.finishAt >= d0 && this.finishAt < d0 + CHUNK) this.addLine(c, this.finishAt);
     this.addProps(c, index, d0, d1);
     return c;
   }
@@ -323,9 +325,9 @@ export class RaceView {
         placed.push({ x, y, r: w / 2 });
       };
       if (index === 0) standAt(60, -1, 300);
-      if (this.raceLength >= d0 && this.raceLength < d0 + CHUNK) {
-        standAt(this.raceLength - 40, 1, 300);
-        standAt(this.raceLength + 260, -1, 230);
+      if (this.finishAt !== null && this.finishAt >= d0 && this.finishAt < d0 + CHUNK) {
+        standAt(this.finishAt - 40, 1, 300);
+        standAt(this.finishAt + 260, -1, 230);
       }
     }
 
@@ -426,6 +428,14 @@ export class RaceView {
   }
 
   render(race: Race, clock: number): void {
+    this.progressLen = race.raceLength;
+    if (race.finishLine !== null && race.finishLine !== this.finishAt) {
+      // A meta acaba de ser gerada: refaz os blocos para a desenhar (e as bancadas).
+      this.finishAt = race.finishLine;
+      for (const c of this.chunks.values()) c.destroy({ children: true });
+      this.chunks.clear();
+      this.stands = [];
+    }
     const dt = Math.min(0.1, Math.max(0, clock - this.lastRender));
     this.lastRender = clock;
     const n = race.cars.length;
@@ -550,7 +560,7 @@ export class RaceView {
       const node = this.cars.get(c.driver.id);
       if (!node) continue;
       const isTeam = c === team;
-      const x = Math.min(1, Math.max(0, c.distance / this.raceLength)) * this.miniW;
+      const x = Math.min(1, Math.max(0, c.distance / this.progressLen)) * this.miniW;
       const y = isTeam ? 0 : ((c.driver.kind === 'ghost' ? 1 : -1) * 7 * ((this.cars.size + order.indexOf(c)) % 2 ? 1 : -1));
       d.circle(x, y, isTeam ? 6 : 3.5).fill(c.driver.kind === 'ghost' ? 0xbfc5cc : c.driver.color || 0x95a5a6);
       if (isTeam) d.circle(x, y, 6).stroke({ width: 2, color: 0xffffff });
@@ -577,8 +587,8 @@ export class RaceView {
   }
 
   /** Nova corrida na mesma estrada (simulador): limpa os blocos e muda onde fica a meta. */
-  reset(raceLength?: number): void {
-    if (raceLength) this.raceLength = raceLength;
+  reset(): void {
+    this.finishAt = null;
     for (const c of this.chunks.values()) c.destroy({ children: true });
     this.chunks.clear();
     this.stands = [];

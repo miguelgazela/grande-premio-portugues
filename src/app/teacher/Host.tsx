@@ -182,11 +182,11 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   const [stageError, setStageError] = useState<string | null>(null);
   const qpl = game.config.questionsPerLap;
   const lap = Math.min(game.config.laps, Math.floor(s.qIndex / qpl) + 1);
-  const inQuestion = s.phase === 'question' || s.phase === 'ff';
+  const inQuestion = s.phase === 'question';
   const showReveal = s.phase === 'reveal' && s.reveal;
 
   useEffect(() => {
-    const view = new RaceView(game.track, { sprites: true, follow: true, trackId: game.trackId, raceLength: game.race.raceLength });
+    const view = new RaceView(game.track, { sprites: true, follow: true, trackId: game.trackId });
     let mounted = false;
     let gone = false;
     let lastRank = 0;
@@ -209,7 +209,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
       if (r !== lastRank) {
         const ph = game.getSnapshot().phase;
         // Só conta como ultrapassagem a corrida a sério (não a grelha de partida) e com intervalo entre avisos.
-        if (lastRank && r < lastRank && ['question', 'ff', 'reveal', 'sprint'].includes(ph) && clock - lastPop > 2) {
+        if (lastRank && r < lastRank && ['question', 'reveal', 'sprint'].includes(ph) && clock - lastPop > 2) {
           lastPop = clock;
           setPop((n) => n + 1);
           play('overtake');
