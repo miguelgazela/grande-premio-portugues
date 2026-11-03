@@ -73,6 +73,14 @@ V/F, toca na palavra, ordenar, completar, excerto + pergunta, correspondência.
 ### Fase 5: Arte final e game feel
 Sprites do Higgsfield, várias pistas, câmara, partículas, música, personalização do carro da turma, avatares.
 
+Assets já gerados (ver `assets/README.md` e `public/assets/manifest.json`), por integrar:
+- Carros: 8 com cor (`car-*`, número "1") e 5 modelos tintáveis sem número (`cartype-*`, usar `sprite.tint`), 256×128, virados para +x.
+- Pista e temas: `bg-grass`, `track-asphalt`, `track-curb`, mais deserto/neve/cidade (`bg-*`, `track-asphalt-*`, `track-curb-*`, props), rasto/óleo/confetti.
+- Efeitos: turbo, nitro, fumo (anchor no bocal, apontam para -x).
+- UI: logo, troféu, medalhas, pódio, certo/errado, estrela, semáforo e contagem 3-2-1/VAI!, power-ups escudo/nitro, fundos `menu-title` e `menu-results`.
+- Avatares de aluno (192×192): 16 animais, 12 robots, 12 super-heróis.
+- Por gerar (backlog em `assets/README.md`): curvas e partida em asfalto, mascote da turma, mais avatares.
+
 ### Fase 6: Pedagógico
 Modo revisão, evolução por tema, perguntas geradas com IA, modo trabalho de casa.
 

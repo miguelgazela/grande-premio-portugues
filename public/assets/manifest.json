@@ -868,5 +868,195 @@
       0.5
     ],
     "notes": "Avatar de aluno 192x192"
+  },
+  "cartype-coupe": {
+    "file": "cartype-coupe.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Modelo desportivo, corpo cinzento claro sem número, para pintar com tint no Pixi (sprite.tint); virado para +x, 256x128"
+  },
+  "cartype-kart": {
+    "file": "cartype-kart.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Modelo kart, corpo cinzento claro sem número, para pintar com tint no Pixi (sprite.tint); virado para +x, 256x128"
+  },
+  "cartype-pickup": {
+    "file": "cartype-pickup.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Modelo pick-up, corpo cinzento claro sem número, para pintar com tint no Pixi (sprite.tint); virado para +x, 256x128"
+  },
+  "cartype-van": {
+    "file": "cartype-van.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Modelo carrinha, corpo cinzento claro sem número, para pintar com tint no Pixi (sprite.tint); virado para +x, 256x128"
+  },
+  "cartype-rally": {
+    "file": "cartype-rally.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Modelo rally, corpo cinzento claro sem número, para pintar com tint no Pixi (sprite.tint); virado para +x, 256x128"
+  },
+  "menu-title": {
+    "file": "menu-title.jpg",
+    "w": 1920,
+    "h": 1086,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Fundo do ecrã de título; centro/céu livre para o logo. 1920x1086, JPEG"
+  },
+  "menu-results": {
+    "file": "menu-results.jpg",
+    "w": 1920,
+    "h": 1086,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Fundo do ecrã de resultados; centro livre para pódio/lista. 1920x1086, JPEG"
+  },
+  "track-asphalt-desert": {
+    "file": "track-asphalt-desert.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Asfalto tema deserto 512x512 (opaco)"
+  },
+  "track-curb-desert": {
+    "file": "track-curb-desert.png",
+    "w": 512,
+    "h": 65,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Curb tema deserto, horizontal"
+  },
+  "track-asphalt-snow": {
+    "file": "track-asphalt-snow.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Asfalto tema neve 512x512 (opaco)"
+  },
+  "track-curb-snow": {
+    "file": "track-curb-snow.png",
+    "w": 512,
+    "h": 68,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Curb tema neve, horizontal"
+  },
+  "track-asphalt-city": {
+    "file": "track-asphalt-city.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Asfalto tema cidade 512x512 (opaco)"
+  },
+  "track-curb-city": {
+    "file": "track-curb-city.png",
+    "w": 512,
+    "h": 61,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Curb tema cidade, horizontal"
+  },
+  "prop-rocks-desert": {
+    "file": "prop-rocks-desert.png",
+    "w": 256,
+    "h": 237,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop do tema deserto"
+  },
+  "prop-tumbleweed": {
+    "file": "prop-tumbleweed.png",
+    "w": 250,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop do tema deserto"
+  },
+  "prop-snowman": {
+    "file": "prop-snowman.png",
+    "w": 256,
+    "h": 209,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop do tema neve"
+  },
+  "prop-ice": {
+    "file": "prop-ice.png",
+    "w": 235,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop do tema neve"
+  },
+  "prop-rooftop2": {
+    "file": "prop-rooftop2.png",
+    "w": 240,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop do tema cidade"
+  },
+  "prop-fountain": {
+    "file": "prop-fountain.png",
+    "w": 243,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop do tema cidade"
   }
 }
