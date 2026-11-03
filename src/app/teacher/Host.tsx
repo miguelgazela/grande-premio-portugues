@@ -231,7 +231,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
       <div className="hud">
         <span>{s.phase === 'sprint' || s.phase === 'finishing' || s.qIndex >= s.total ? '🏁 Sprint final' : `Pergunta ${s.qIndex + 1}/${s.total}`}</span>
         <span>
-          Volta {lap}/{game.config.laps}{finalLap ? ' · FINAL ×2' : ''}
+          {finalLap ? 'RETA FINAL ×2' : ''}
           <Flames streak={game.race.team?.turboStreak ?? 0} nitro={!!s.reveal?.nitro && s.phase === 'reveal'} />
         </span>
         <span className="pos">{rank ? `${rank}º lugar` : ''}</span>
