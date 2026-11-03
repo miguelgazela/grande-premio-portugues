@@ -1,6 +1,6 @@
 import type { GhostRecord } from './ghosts';
 import type { AnyEvent } from './protocol';
-import type { AnswerRow, ClassRow, JoinResult, PlayerRow, QuestionRow, QuizInput, QuizRow, RaceRecordRow, RaceSummary, ReportData, SavedState, SaveQuizResult, SessionRow, SessionSettings, SessionStatus } from './types';
+import type { AnswerRow, ClassRow, JoinResult, PlayerRow, QuestionRow, QuizInput, QuizRow, RaceRecordRow, RaceSummary, ReportData, ReviewQuestion, ReviewSession, SavedState, SaveQuizResult, SessionRow, SessionSettings, SessionStatus } from './types';
 
 export type TeacherCheck = { ok: true; id: string; name: string } | { ok: false; reason: 'anon' | 'noaccess' };
 
@@ -38,6 +38,10 @@ export interface Api {
   createSession(quiz: QuizRow, classId: string | null, settings: SessionSettings): Promise<SessionRow>;
   getSession(id: string): Promise<SessionRow>;
   loadQuestions(quizId: string, version: number): Promise<QuestionRow[]>;
+  /** Perguntas por id (de vários quizzes/versões), pela ordem pedida; as que já não existem ficam de fora. */
+  loadQuestionsByIds(ids: string[]): Promise<ReviewQuestion[]>;
+  /** Modo revisão: as últimas `sessions` sessões terminadas da turma (opcionalmente só de uns quizzes), com respostas, e as perguntas respondidas. */
+  loadReviewPool(filter: { classId: string; quizIds?: string[]; sessions: number }): Promise<{ sessions: ReviewSession[]; questions: ReviewQuestion[] }>;
   listPlayers(sessionId: string): Promise<PlayerRow[]>;
   kickPlayer(playerId: string): Promise<void>;
   /** Apaga o aluno (saiu no lobby): pode voltar a entrar mais tarde. */

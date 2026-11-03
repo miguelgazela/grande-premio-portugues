@@ -122,6 +122,7 @@ export function Jogar() {
         <div className="row spread">
           <h1>🏎️ Olá, {teacher.name}</h1>
           <div className="row">
+            <button onClick={() => nav('/prof/revisao')}>🔁 Revisão</button>
             <button onClick={() => nav('/prof/preparar')}>✎ Preparar</button>
             <button onClick={signOut}>Sair</button>
           </div>

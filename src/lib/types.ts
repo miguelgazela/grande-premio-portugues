@@ -81,6 +81,42 @@ export interface SessionSettings {
   trackId?: string;
   /** Corridas anteriores que correm como fantasmas (0–3). */
   ghosts?: { sessionId: string; name: string }[];
+  /** Sessão de revisão: as perguntas vêm de `review.questionIds` (de vários quizzes), não do quiz da sessão. */
+  review?: ReviewSettings;
+}
+
+/** Perguntas falhadas a rever. Uma revisão nunca grava `race_record` (não é fantasma nem recorde). */
+export interface ReviewSettings {
+  /** Título mostrado em vez do do quiz, ex. "Revisão · 9ºB · 12 perguntas". */
+  title: string;
+  className: string | null;
+  /** Ordem da corrida; cada id é de uma versão de um quiz. */
+  questionIds: string[];
+  /** Limiar de "falhada" (0–1). */
+  threshold: number;
+  /** % de acerto (0–1) e nº de sessões antes desta revisão, por pergunta. */
+  before: Record<string, { pct: number; sessions: number }>;
+}
+
+/** Pergunta com o quiz de onde vem (a versão em que foi jogada). */
+export type ReviewQuestion = QuestionRow & { quiz_id: string; quiz_version: number; quiz_title: string; archived: boolean };
+
+/** Sessão terminada (ou não) com as respostas, para calcular falhas. */
+export interface ReviewSession {
+  id: string;
+  created_at: string;
+  status: SessionStatus;
+  quiz_id: string;
+  quiz_title: string;
+  /** Sessão de revisão (conta para as estatísticas, mas vem marcada). */
+  review: boolean;
+  answers: AnswerRow[];
+}
+
+/** Resultado da revisão, guardado em `session.state` para o ecrã final sobreviver a um refresh. */
+export interface ReviewResult {
+  threshold: number;
+  items: { id: string; prompt: string; before: number | null; after: number; sessions: number }[];
 }
 
 /** Estado gravado pelo anfitrião a cada pergunta, para retomar depois de sair do Safari. */
@@ -96,6 +132,8 @@ export interface SavedState {
   team?: import('../game/teamStyle').TeamStyle;
   /** Presente quando a corrida acabou. */
   final?: import('./protocol').EndMsg;
+  /** Só nas sessões de revisão, quando acabaram. */
+  review?: ReviewResult;
 }
 
 export interface SessionRow {

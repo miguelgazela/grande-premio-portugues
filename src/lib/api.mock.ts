@@ -5,7 +5,7 @@ import { raceConfigFor } from '../game/raceSettings';
 import { parseTimeline, type GhostRecord } from './ghosts';
 import type { Api } from './api';
 import { channelName, type AnyEvent } from './protocol';
-import type { AnswerRow, ClassRow, PlayerRow, QuestionRow, QuizRow, RaceRecordRow, RaceSummary, SessionRow } from './types';
+import type { AnswerRow, ClassRow, PlayerRow, QuestionRow, QuizRow, RaceRecordRow, RaceSummary, ReviewQuestion, ReviewSession, SessionRow } from './types';
 
 interface Db {
   quizzes: { id: string; title: string; year: number | null; topic: string | null; version: number; archived?: boolean }[];
@@ -53,6 +53,16 @@ const questionsOf = (db: Db, quizId: string, version: number): QuestionRow[] =>
     .filter((q) => q.quiz_id === quizId && (q.version ?? 1) === version)
     .sort((a, b) => a.position - b.position)
     .map(({ quiz_id: _q, version: _v, ...q }) => q);
+
+/** Perguntas por id, pela ordem pedida, com o quiz de onde vêm (as apagadas ficam de fora). */
+const refsOf = (db: Db, ids: string[]): ReviewQuestion[] =>
+  ids.flatMap((id): ReviewQuestion[] => {
+    const q = db.questions.find((x) => x.id === id);
+    if (!q) return [];
+    const { quiz_id, version, ...rest } = q;
+    const quiz = db.quizzes.find((z) => z.id === quiz_id);
+    return [{ ...rest, quiz_id, quiz_version: version ?? 1, quiz_title: quiz?.title ?? '', archived: !!quiz?.archived } as ReviewQuestion];
+  });
 
 const quizRow = (db: Db, q: Db['quizzes'][number]): QuizRow => ({
   id: q.id, title: q.title, year: q.year, topic: q.topic, version: q.version,
@@ -156,7 +166,7 @@ export const mockApi: Api = {
       const s = db.sessions.find((x) => x.id === sessionId);
       if (!s) throw new Error('Sessão não encontrada');
       const rec = db.records.find((r) => r.session_id === sessionId);
-      const all = questionsOf(db, s.quiz_id, s.quiz_version);
+      const all = s.settings.review ? refsOf(db, s.settings.review.questionIds) : questionsOf(db, s.quiz_id, s.quiz_version);
       return {
         race: rec ? raceOf(db, rec) : null,
         questions: all.slice(0, raceConfigFor(all, s.settings).used),
@@ -212,7 +222,7 @@ export const mockApi: Api = {
       let pin = '';
       do pin = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0');
       while (db.sessions.some((s) => s.pin === pin && (s.status === 'lobby' || s.status === 'running')));
-      const s: SessionRow = { id: uid(), teacher_id: 'mock-teacher', quiz_id: quiz.id, quiz_version: quiz.version, quiz_title: quiz.title, class_id: classId, pin, status: 'lobby', settings, state: null, created_at: new Date().toISOString() };
+      const s: SessionRow = { id: uid(), teacher_id: 'mock-teacher', quiz_id: quiz.id, quiz_version: quiz.version, quiz_title: settings.review?.title ?? quiz.title, class_id: classId, pin, status: 'lobby', settings, state: null, created_at: new Date().toISOString() };
       db.sessions.push(s);
       return s;
     });
@@ -226,6 +236,23 @@ export const mockApi: Api = {
   },
   async loadQuestions(quizId, version) {
     return tx((db) => questionsOf(db, quizId, version));
+  },
+  async loadQuestionsByIds(ids) {
+    return tx((db) => refsOf(db, ids));
+  },
+  async loadReviewPool({ classId, quizIds, sessions }) {
+    return tx((db) => {
+      const list = db.sessions
+        .filter((s) => s.status === 'finished' && s.class_id === classId && (!quizIds?.length || quizIds.includes(s.quiz_id)))
+        .sort((a, b) => (b.created_at ?? '').localeCompare(a.created_at ?? ''))
+        .slice(0, sessions)
+        .map((s): ReviewSession => ({
+          id: s.id, created_at: s.created_at ?? '', status: s.status, quiz_id: s.quiz_id, quiz_title: s.quiz_title, review: !!s.settings.review,
+          answers: db.answers.filter((a) => a.session_id === s.id),
+        }));
+      const qids = [...new Set(list.flatMap((s) => s.answers.map((a) => a.question_id)))];
+      return { sessions: list, questions: refsOf(db, qids) };
+    });
   },
   async listPlayers(sessionId) {
     return tx((db) => db.players.filter((p) => p.session_id === sessionId).map(({ id, nickname, kicked }) => ({ id, nickname, kicked })));
@@ -305,3 +332,39 @@ export const mockApi: Api = {
     };
   },
 };
+
+/**
+ * Dados de exemplo para testar o modo revisão: a turma "9ºB" com 3 sessões terminadas (2 quizzes), 8 alunos
+ * e perguntas com % de acerto variadas. Só existe em desenvolvimento (a base de dados falsa).
+ */
+export function seedReviewDemo(): void {
+  tx((db) => {
+    let cls = db.classes.find((c) => c.name === '9ºB');
+    if (!cls) {
+      cls = { id: uid(), name: '9ºB', year: 9 };
+      db.classes.push(cls);
+    }
+    const quizzes = db.quizzes.filter((q) => questionsOf(db, q.id, q.version).length >= 6).slice(0, 2);
+    const pcts = [0.2, 0.9, 0.5, 0.4, 0.8, 0.3, 0.7, 0.55, 0.1, 0.65];
+    const plan = [
+      { quiz: quizzes[0], days: 3, shift: 0 },
+      { quiz: quizzes[1] ?? quizzes[0], days: 2, shift: 3 },
+      { quiz: quizzes[0], days: 1, shift: 1 },
+    ];
+    for (const { quiz, days, shift } of plan) {
+      if (!quiz) continue;
+      const sid = uid();
+      const created = new Date(Date.now() - days * 86400_000).toISOString();
+      db.sessions.push({
+        id: sid, teacher_id: 'mock-teacher', quiz_id: quiz.id, quiz_version: quiz.version, quiz_title: quiz.title, class_id: cls.id, pin: '000000',
+        status: 'finished', settings: { botField: 'medio' }, state: null, created_at: created,
+      });
+      const players = Array.from({ length: 8 }, (_, i) => ({ id: uid(), session_id: sid, nickname: `Aluno${i + 1}`, device_token: uid(), kicked: false }));
+      db.players.push(...players);
+      questionsOf(db, quiz.id, quiz.version).slice(0, 10).forEach((q, qi) => {
+        const right = Math.round(pcts[(qi + shift) % pcts.length] * players.length);
+        players.forEach((p, pi) => db.answers.push({ session_id: sid, question_id: q.id, player_id: p.id, value: null, correct: pi < right, ms_taken: 4000 + pi * 500 }));
+      });
+    }
+  });
+}

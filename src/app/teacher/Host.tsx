@@ -3,6 +3,8 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { HostGame, type HostSnapshot } from '../../game/hostGame';
 import { raceConfigFor } from '../../game/raceSettings';
+import { improved, repeatSettings, reviewLaps, stillFailing } from '../../lib/review';
+import type { ReviewResult } from '../../lib/types';
 import { fmtSeconds, fmtTime, ghostMessage, trackRecord, usableRecords } from '../../lib/ghosts';
 import { errorMessage } from '../../lib/api';
 import { endSessions } from '../../lib/endSessions';
@@ -30,10 +32,12 @@ export function Host() {
     void (async () => {
       try {
         const session = await api.getSession(id!);
-        const questions = await api.loadQuestions(session.quiz_id, session.quiz_version);
-        if (!questions.length) throw new Error('Este quiz não tem perguntas.');
+        const review = session.settings?.review;
+        const questions = review ? await api.loadQuestionsByIds(review.questionIds) : await api.loadQuestions(session.quiz_id, session.quiz_version);
+        if (!questions.length) throw new Error(review ? 'Já não existem as perguntas desta revisão.' : 'Este quiz não tem perguntas.');
         const { config } = raceConfigFor(questions, session.settings);
-        const all = await api.listGhostRecords(session.quiz_id, session.quiz_version).catch(() => []);
+        // Uma revisão não tem fantasmas nem recorde.
+        const all = review ? [] : await api.listGhostRecords(session.quiz_id, session.quiz_version).catch(() => []);
         const usable = usableRecords(all);
         const ghosts = (session.settings?.ghosts ?? []).flatMap((x) => usable.filter((r) => r.session_id === x.sessionId));
         g = new HostGame(api, session, questions, { ghosts, record: trackRecord(all, config) });
@@ -61,7 +65,7 @@ function HostScreen({ game }: { game: HostGame }) {
   const s = useSyncExternalStore(game.subscribe, game.getSnapshot);
   const nav = useNavigate();
 
-  if (s.phase === 'finished') return <Podium s={s} onExit={() => nav('/prof')} />;
+  if (s.phase === 'finished') return <Podium game={game} s={s} onExit={() => nav('/prof')} />;
   if (s.phase === 'lobby') return <Lobby game={game} s={s} />;
   return <RaceScreen game={game} s={s} />;
 }
@@ -303,7 +307,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   );
 }
 
-function Podium({ s, onExit }: { s: HostSnapshot; onExit(): void }) {
+function Podium({ game, s, onExit }: { game: HostGame; s: HostSnapshot; onExit(): void }) {
   const f = s.final!.final;
   return (
     <div className="host menubg" style={{ backgroundImage: `url(${assetUrl('menu-results.jpg')})` }}>
@@ -353,10 +357,66 @@ function Podium({ s, onExit }: { s: HostSnapshot; onExit(): void }) {
             ))}
           </div>
         </div>
+        {s.review && <ReviewSummary game={game} />}
         <div style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
           <button className="primary big" onClick={onExit}>Voltar aos quizzes</button>
         </div>
       </div>
     </div>
+  );
+}
+
+const pctText = (v: number) => `${Math.round(v * 100)}%`;
+
+/** Fim de uma revisão: o que melhorou e o que continua falhado (só agregados da turma, nunca alunos). */
+function ReviewSummary({ game }: { game: HostGame }) {
+  const { api } = useTeacher();
+  const nav = useNavigate();
+  const r = game.getSnapshot().review!;
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const left = stillFailing(r);
+  const better = improved(r);
+  const next = game.session.settings.review ? repeatSettings(game.session.settings.review, r) : null;
+
+  const repeat = async () => {
+    if (!next) return;
+    setBusy(true);
+    try {
+      const anchor = { id: game.session.quiz_id, title: next.title, year: null, topic: null, version: game.session.quiz_version, questionCount: next.questionIds.length, lastPlayed: null };
+      const settings = { botField: game.session.settings.botField, laps: reviewLaps(next.questionIds.length), review: next };
+      const s = await api.createSession(anchor, game.session.class_id, settings);
+      nav(`/prof/jogo/${s.id}`);
+    } catch (e) {
+      setErr(errorMessage(e));
+      setBusy(false);
+    }
+  };
+
+  const row = (i: ReviewResult['items'][number]) => (
+    <li key={i.id} style={{ alignItems: 'center' }}>
+      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{i.prompt}</span>
+      <small style={{ whiteSpace: 'nowrap' }}>{i.before === null ? '' : `${pctText(i.before)} → `}{pctText(i.after)}</small>
+    </li>
+  );
+  return (
+    <>
+      <div className="box">
+        <h2>✅ Já subiram ({better.length})</h2>
+        <ol>{better.length ? better.map(row) : <li><span>Nenhuma desta vez.</span></li>}</ol>
+      </div>
+      <div className="box">
+        <h2>🔁 Ainda a trabalhar ({left.length})</h2>
+        <ol>{left.length ? left.map(row) : <li><span>Todas acima de {pctText(r.threshold)}. Muito bem!</span></li>}</ol>
+      </div>
+      {next && (
+        <div style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
+          <button className="primary big" disabled={busy} onClick={() => void repeat()}>
+            {busy ? 'A criar…' : `Repetir só as ${left.length} que ainda falham`}
+          </button>
+          {err && <p className="error">{err}</p>}
+        </div>
+      )}
+    </>
   );
 }

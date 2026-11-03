@@ -7,6 +7,7 @@ import { Host } from './teacher/Host';
 import { Classes } from './teacher/Classes';
 import { Editor } from './teacher/Editor';
 import { History } from './teacher/History';
+import { Revisao } from './teacher/Revisao';
 import { Jogar } from './teacher/Jogar';
 import { Library } from './teacher/Library';
 import { Prepare } from './teacher/Prepare';
@@ -19,6 +20,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/" element={<Join />} />
         <Route path="/jogar" element={<Play />} />
         <Route path="/prof" element={<TeacherGate><Jogar /></TeacherGate>} />
+        <Route path="/prof/revisao" element={<TeacherGate><Revisao /></TeacherGate>} />
         <Route path="/prof/preparar" element={<TeacherGate><Prepare /></TeacherGate>}>
           <Route index element={<Library />} />
           <Route path="quiz/:id" element={<Editor />} />

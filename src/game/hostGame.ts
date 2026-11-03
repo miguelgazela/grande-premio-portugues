@@ -8,9 +8,10 @@ import { TRACKS, Track, trackFor } from '../engine/track';
 import type { Api, Channel } from '../lib/api';
 import { music, play, unlockAudio } from '../lib/audio';
 import { ghostLabel, makeTimeline, type GhostRecord } from '../lib/ghosts';
+import { compareReview } from '../lib/review';
 import type { AnyEvent, EndMsg, FinalInfo, HostEvent, PublicBody, PublicQuestion, RevealMsg } from '../lib/protocol';
 import { grade, prepare, solutionOf, toCanonical, type Prepared } from '../lib/questions';
-import type { AnswerValue, PlayerRow, QuestionRow, SavedState, SessionRow } from '../lib/types';
+import type { AnswerValue, PlayerRow, QuestionRow, ReviewResult, SavedState, SessionRow } from '../lib/types';
 import { raceConfigFor } from './raceSettings';
 import { DEFAULT_STYLE, TEAM_NAME, botCars, carDef, cleanVote, parseStyle, tally, type StyleVote, type TeamStyle } from './teamStyle';
 
@@ -35,6 +36,8 @@ export interface HostSnapshot {
   question: { prompt: string; body: PublicBody } | null;
   reveal: RevealMsg | null;
   final: EndMsg | null;
+  /** Só nas revisões, no fim: o que melhorou e o que continua falhado (agregado da turma). */
+  review: ReviewResult | null;
   /** Carro da turma: o mais votado pelos alunos (o por defeito, sem votos). */
   team: TeamStyle;
   /** Alunos que já votaram. */
@@ -115,7 +118,7 @@ export class HostGame {
     if (import.meta.env.DEV) (window as unknown as { __game?: HostGame }).__game = this; // só para depurar no browser
     this.snap = {
       phase: 'lobby', paused: false, hidden: false, connected: false, players: [], qIndex: 0, total: this.questions.length, laps: config.laps,
-      questionTime: config.questionTime, timeLeft: config.questionTime, count: 3, avatars: session.state?.avatars ?? {}, answered: 0, question: null, reveal: null, final: null, notice: null,
+      questionTime: config.questionTime, timeLeft: config.questionTime, count: 3, avatars: session.state?.avatars ?? {}, answered: 0, question: null, reveal: null, final: null, review: null, notice: null,
       team: DEFAULT_STYLE, voters: 0, tie: false,
     };
   }
@@ -139,7 +142,7 @@ export class HostGame {
   async init(): Promise<void> {
     const s = this.session;
     if (s.status === 'finished' && s.state?.final) {
-      this.set({ phase: 'finished', final: s.state.final });
+      this.set({ phase: 'finished', final: s.state.final, review: s.state.review ?? null });
     } else if (s.status === 'running' && s.state) {
       await this.restore(s.state);
     }
@@ -544,7 +547,7 @@ export class HostGame {
   /** Mensagens do ecrã final: contra o fantasma mais rápido e contra o recorde da pista. */
   private ghostSummary(race: Race): Pick<FinalInfo, 'ghost' | 'record'> {
     const team = race.team!.finishTime;
-    if (team === null) return {};
+    if (team === null || this.session.settings?.review) return {}; // revisão: sem fantasmas nem recorde
     const out: Pick<FinalInfo, 'ghost' | 'record'> = {};
     const ghosts = race.cars.filter((c) => c.driver.kind === 'ghost' && c.finishTime !== null);
     const fastest = ghosts.sort((a, b) => a.finishTime! - b.finishTime!)[0];
@@ -588,14 +591,26 @@ export class HostGame {
     };
     this.send({ event: 'end', payload: end });
     if (teamPosition <= 3) play('cheer');
-    this.set({ phase: 'finished', final: end });
+    const rv = this.session.settings?.review;
+    let review: ReviewResult | undefined;
+    if (rv) {
+      // % de acerto da turma por pergunta nesta revisão (só entre quem respondeu), contra o que havia antes.
+      const after = new Map<string, number>();
+      this.questions.forEach((q, i) => {
+        const given = (this.answerLog[i] ?? []).filter((a) => a.answered);
+        if (given.length) after.set(q.id, given.reduce((t, a) => t + (a.credit ?? (a.correct ? 1 : 0)), 0) / given.length);
+      });
+      review = compareReview(rv, this.questions, after);
+    }
+    this.set({ phase: 'finished', final: end, review: review ?? null });
     const finishTime = Math.round((race.team!.finishTime ?? 0) * 1000);
     try {
-      await this.api.saveRaceRecord({
+      // Uma revisão tem outro conjunto de perguntas: não é fantasma nem recorde de nenhum quiz.
+      if (!rv) await this.api.saveRaceRecord({
         session_id: this.session.id, class_id: this.session.class_id, quiz_id: this.session.quiz_id, quiz_version: this.session.quiz_version,
         timeline: makeTimeline(this.trackId, this.config, this.outcomes), final_position: teamPosition, finish_time_ms: finishTime,
       });
-      await this.api.updateSession(this.session.id, { status: 'finished', finished: true, state: { ...this.savedState(this.questions.length), final: end } });
+      await this.api.updateSession(this.session.id, { status: 'finished', finished: true, state: { ...this.savedState(this.questions.length), final: end, review } });
     } catch (e) {
       this.notice(`Resultado por gravar: ${(e as Error).message}`);
     }
