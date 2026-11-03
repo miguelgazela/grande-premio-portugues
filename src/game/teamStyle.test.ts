@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { THEMES, themeForTrack, themeKeys } from '../engine/theme';
 import { TRACKS } from '../engine/track';
-import { CARS, DEFAULT_STYLE, botCars, carDef, cleanVote, parseStyle, tally } from './teamStyle';
+import { CARS, DEFAULT_STYLE, MODELS, botCars, carDef, carsOfModel, cleanVote, modelDef, modelShowcase, parseStyle, tally } from './teamStyle';
 
 describe('teamStyle', () => {
   it('sem votos dá o carro por defeito', () => {
@@ -64,5 +64,23 @@ describe('temas', () => {
   it('as chaves de textura seguem o manifest', () => {
     expect(themeKeys(THEMES[0])).toContain('bg-grass');
     expect(themeKeys(THEMES[1])).toEqual(expect.arrayContaining(['bg-desert', 'track-asphalt-desert', 'track-curb-desert']));
+  });
+});
+
+describe('escolha em 2 passos', () => {
+  it('cada modelo agrupa as suas cores e os carros somam o catálogo', () => {
+    for (const m of MODELS) {
+      const cars = carsOfModel(m.id);
+      expect(cars).toHaveLength(m.colors.length);
+      expect(cars.every((c) => c.model === m.id)).toBe(true);
+    }
+    expect(MODELS.reduce((n, m) => n + carsOfModel(m.id).length, 0)).toBe(CARS.length);
+    expect(carsOfModel('classico')).toHaveLength(8);
+    expect(carsOfModel('coupe')).toHaveLength(3);
+  });
+  it('a montra e o modelo de um voto vêm do catálogo', () => {
+    expect(modelShowcase('coupe')?.model).toBe('coupe');
+    expect(modelDef(carDef('car-coupe-red')?.model)?.label).toBe('Coupé');
+    expect(modelDef('x')).toBeUndefined();
   });
 });

@@ -29,6 +29,9 @@ export const CARS: CarDef[] = MODELS.flatMap((m) =>
 
 export const carDef = (key: string | undefined): CarDef | undefined => CARS.find((c) => c.key === key);
 export const carsOfModel = (model: string) => CARS.filter((c) => c.model === model);
+export const modelDef = (id: string | undefined) => MODELS.find((m) => m.id === id);
+/** Um carro por modelo para o passo 1 (o primeiro da lista serve de montra). */
+export const modelShowcase = (id: string): CarDef | undefined => carsOfModel(id)[0];
 
 /** Aspeto do carro da turma: um dos carros do catálogo, votado pelos alunos ou fixado pela professora. */
 export interface TeamStyle {
