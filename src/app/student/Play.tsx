@@ -6,8 +6,8 @@ import type { EndMsg, PublicBody, PublicQuestion, RevealMsg } from '../../lib/pr
 import type { AnswerValue } from '../../lib/types';
 import { useApi } from '../useApi';
 import { Asset } from '../ui/Asset';
-import { TeamPicker } from '../ui/TeamPicker';
-import { DEFAULT_STYLE, type StyleVote, type TeamStyle } from '../../game/teamStyle';
+import { CarGrid } from '../ui/TeamPicker';
+import { carDef } from '../../game/teamStyle';
 import { StudentInput, describeSolution } from '../ui/Question';
 import { clearPlayer, deviceToken, loadAvatar, loadPlayer, savePlayer } from './session';
 
@@ -20,8 +20,17 @@ function readEnd(sessionId: string): EndMsg | null {
   }
 }
 
+function readVote(playerId: string | undefined): string | null {
+  try {
+    const v = playerId ? localStorage.getItem(`gpp.vote.${playerId}`) : null;
+    return v && carDef(v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+
 type View =
-  | { k: 'wait'; count: number | null; team?: TeamStyle }
+  | { k: 'wait'; count: number | null }
   | { k: 'question'; q: PublicQuestion; at: number; full: number }
   | { k: 'reveal'; r: RevealMsg; body: PublicBody | null }
   | { k: 'end'; e: EndMsg }
@@ -42,14 +51,15 @@ export function Play() {
   const [problem, setProblem] = useState('');
   const [epoch, setEpoch] = useState(0);
   const channel = useRef<Channel | null>(null);
-  const voteRef = useRef<StyleVote | null>(null);
-  const [mine, setMine] = useState<StyleVote>({});
+  const [car, setCar] = useState<string | null>(() => readVote(player?.player_id));
+  const carRef = useRef(car);
   const [leaving, setLeaving] = useState(false);
-  const vote = (v: StyleVote) => {
-    const next = { ...voteRef.current, ...v };
-    voteRef.current = next;
-    setMine(next);
-    if (player) channel.current?.send({ event: 'vote', payload: { player_id: player.player_id, ...next } });
+  const vote = (next: string) => {
+    carRef.current = next;
+    setCar(next);
+    if (!player) return;
+    try { localStorage.setItem(`gpp.vote.${player.player_id}`, next); } catch { /* sem armazenamento */ }
+    channel.current?.send({ event: 'vote', payload: { player_id: player.player_id, car: next } });
   };
 
   useEffect(() => {
@@ -100,9 +110,7 @@ export function Play() {
         (m) => {
           switch (m.event) {
             case 'lobby':
-              if (viewRef.current.k === 'wait') setView({ k: 'wait', count: m.payload.count, team: m.payload.team });
-              // O anfitrião ainda pode não ter o meu voto (a lista de alunos atualiza-se aos poucos): repete-o.
-              if (voteRef.current) ch?.send({ event: 'vote', payload: { player_id: player.player_id, ...voteRef.current } });
+              if (viewRef.current.k === 'wait') setView({ k: 'wait', count: m.payload.count });
               break;
             case 'question': {
               const cur = viewRef.current;
@@ -138,7 +146,7 @@ export function Play() {
               break;
           }
         },
-        (ok) => ok && ch?.send({ event: 'hello', payload: { player_id: player.player_id, avatar: loadAvatar() ?? undefined } }),
+        (ok) => ok && ch?.send({ event: 'hello', payload: { player_id: player.player_id, avatar: loadAvatar() ?? undefined, car: carRef.current ?? undefined } }),
       );
       channel.current = ch;
     })();
@@ -204,8 +212,8 @@ export function Play() {
         <div className="msg">
           <div style={{ width: '100%', maxWidth: 520 }}>
             Estás dentro! 🏁<small>{view.count ? `${view.count} na corrida · ` : ''}À espera que a professora comece…</small>
-            <small>Vota no carro da turma (ganha o mais votado; num empate, sai um dos empatados à sorte):</small>
-            <TeamPicker value={{ ...(view.team ?? DEFAULT_STYLE), ...mine }} onPick={vote} />
+            <small>Toca num carro para votar: o mais votado é o da turma.</small>
+            <CarGrid value={car} onPick={vote} />
           </div>
         </div>
       )}

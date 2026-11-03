@@ -1,4 +1,4 @@
-// Real Realtime check: a student's `vote` must reach the host. Run: npx tsx --env-file=.env scripts/rt-vote-check.ts
+// Real Realtime check: a student's `vote` and a `hello` carrying a car must reach the host. Run: npx tsx --env-file=.env scripts/rt-vote-check.ts
 import { createClient } from '@supabase/supabase-js';
 import { EVENT_NAMES, channelName } from '../src/lib/protocol';
 
@@ -16,7 +16,10 @@ const sch = student.channel(name, { config: { broadcast: { self: false } } });
 const sub = (ch: ReturnType<typeof host.channel>) => new Promise<void>((res, rej) => { const t = setTimeout(() => rej(new Error('subscribe timeout')), 10000); ch.subscribe((s) => { if (s === 'SUBSCRIBED') { clearTimeout(t); res(); } }); });
 await sub(hch); await sub(sch);
 await sch.send({ type: 'broadcast', event: 'vote', payload: { player_id: 'p1', car: 'car-van-yellow' } });
+await sch.send({ type: 'broadcast', event: 'hello', payload: { player_id: 'p1', car: 'car-red' } });
 await new Promise((r) => setTimeout(r, 1500));
 console.log(got.length ? `OK, o anfitrião recebeu: ${got.join(' | ')}` : 'FALHOU: o anfitrião não recebeu nada');
 await host.removeAllChannels(); await student.removeAllChannels();
-process.exit(got.length ? 0 : 1);
+const ok = got.some((g) => g.startsWith('vote:') && g.includes('car-van-yellow')) && got.some((g) => g.startsWith('hello:') && g.includes('car-red'));
+console.log(ok ? 'PASSOU: vote e hello com carro chegaram' : 'FALHOU: faltou o vote ou o hello');
+process.exit(ok ? 0 : 1);

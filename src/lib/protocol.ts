@@ -1,5 +1,4 @@
 import type { Effect } from '../engine/race';
-import type { StyleVote, TeamStyle } from '../game/teamStyle';
 import type { AnswerValue } from './types';
 
 /** Material de uma pergunta tal como os alunos (e o projetor) o veem: nunca inclui a resposta certa. */
@@ -90,7 +89,7 @@ export interface EndMsg {
 
 /** Anfitrião → alunos. */
 export type HostEvent =
-  | { event: 'lobby'; payload: { count: number; /** Aspeto atual do carro da turma. */ team?: TeamStyle } }
+  | { event: 'lobby'; payload: { count: number } }
   | { event: 'question'; payload: PublicQuestion }
   | { event: 'reveal'; payload: RevealMsg }
   | { event: 'end'; payload: EndMsg }
@@ -102,9 +101,9 @@ export type HostEvent =
 
 /** Aluno → anfitrião. */
 export type StudentEvent =
-  | { event: 'hello'; payload: { player_id: string; /** Chave do manifest, ex. `avatar-fox`. */ avatar?: string } }
-  /** Voto no aspeto do carro da turma (lobby). */
-  | { event: 'vote'; payload: { player_id: string } & StyleVote }
+  | { event: 'hello'; payload: { player_id: string; /** Chave do manifest, ex. `avatar-fox`. */ avatar?: string; /** Voto atual no carro da turma (chave do catálogo), para o anfitrião o ter sem o pedir. */ car?: string } }
+  /** Voto no carro da turma (lobby). */
+  | { event: 'vote'; payload: { player_id: string; car: string } }
   | { event: 'answer'; payload: { player_id: string; question_id: string; value: AnswerValue } }
   /** O aluno saiu da sessão pelo botão "Sair". */
   | { event: 'leave'; payload: { player_id: string } };

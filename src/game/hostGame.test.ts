@@ -95,3 +95,23 @@ describe('HostGame: renomear', () => {
     expect(await g.rename('p1', 'Outra')).toBeNull();
   });
 });
+
+describe('HostGame: voto no carro', () => {
+  it('conta o voto do vote e do hello; ignora formatos antigos; o lobby não leva o carro', async () => {
+    const { g, priv, sent } = await setup();
+    priv.snap.phase = 'lobby';
+    priv.onMessage({ event: 'hello', payload: { player_id: 'p1', car: 'car-van-yellow' } });
+    expect(g.getSnapshot().team.car).toBe('car-van-yellow');
+    priv.onMessage({ event: 'vote', payload: { player_id: 'p2', car: 'car-red' } });
+    priv.onMessage({ event: 'vote', payload: { player_id: 'p3', car: 'car-red' } });
+    expect(g.getSnapshot().team.car).toBe('car-red');
+    expect(g.getSnapshot().voters).toBe(3);
+    const before = sent.length;
+    priv.onMessage({ event: 'vote', payload: { player_id: 'p3', car: 'car-red' } }); // repetido: nada
+    priv.onMessage({ event: 'vote', payload: { player_id: 'p4', color: 'red' } }); // formato antigo
+    priv.onMessage({ event: 'hello', payload: { player_id: 'p5', car: 'car-inexistente' } });
+    expect(g.getSnapshot().voters).toBe(3);
+    expect(sent.slice(before).filter((m) => (m as { event: string }).event === 'vote')).toEqual([]);
+    for (const m of sent as { event: string; payload: object }[]) if (m.event === 'lobby') expect(m.payload).toEqual({ count: expect.any(Number) });
+  });
+});
