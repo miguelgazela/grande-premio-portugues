@@ -1,4 +1,5 @@
 import type { BotField } from '../engine/drivers';
+import type { StoredTimeline } from './ghosts';
 
 export interface QuizRow {
   id: string;
@@ -37,6 +38,10 @@ export interface SessionSettings {
   questionsPerLap?: number | null;
   /** Tempo por pergunta em segundos, a substituir o do quiz. */
   questionTime?: number | null;
+  /** Pista escolhida (a dos fantasmas). Omitido: `trackFor(session.id)`. */
+  trackId?: string;
+  /** Corridas anteriores que correm como fantasmas (0–3). */
+  ghosts?: { sessionId: string; name: string }[];
 }
 
 /** Estado gravado pelo anfitrião a cada pergunta, para retomar depois de sair do Safari. */
@@ -94,7 +99,8 @@ export interface RaceRecordRow {
   class_id: string | null;
   quiz_id: string;
   quiz_version: number;
-  timeline: { accuracy: number; speedBonus: number }[];
+  /** Formato antigo (lista) ou `{ v: 2, trackId, config, outcomes }`. */
+  timeline: StoredTimeline;
   final_position: number;
   finish_time_ms: number;
 }

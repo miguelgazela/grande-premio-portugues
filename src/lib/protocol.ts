@@ -47,6 +47,10 @@ export interface FinalInfo {
   awards: { emoji: string; title: string; nickname: string; detail: string }[];
   teamPosition: number;
   totalQuestions: number;
+  /** Contra o fantasma mais relevante. `diffMs` > 0: a turma ganhou. */
+  ghost?: { name: string; diffMs: number };
+  /** Recorde da pista (entre as corridas da professora). */
+  record?: { holder: string | null; bestMs: number | null; newRecord: boolean; gapMs: number };
 }
 
 export interface EndMsg {

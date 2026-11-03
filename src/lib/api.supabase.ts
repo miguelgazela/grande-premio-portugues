@@ -1,4 +1,5 @@
 import { raceConfigFor } from '../game/raceSettings';
+import { parseTimeline, type GhostRecord } from './ghosts';
 import type { Api, Channel } from './api';
 import { channelName, type AnyEvent } from './protocol';
 import { supabase } from './supabase';
@@ -25,15 +26,16 @@ interface RawRace {
   quiz_version: number;
   class_id: string | null;
   final_position: number;
-  timeline: { accuracy: number }[];
+  timeline: unknown;
   quiz: { title: string } | { title: string }[] | null;
   class: { name: string } | { name: string }[] | null;
 }
 const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
+const avg = (o: { accuracy: number }[]) => (o.length ? o.reduce((s, t) => s + t.accuracy, 0) / o.length : 0);
 const toRace = (r: RawRace): RaceSummary => ({
   session_id: r.session_id, created_at: r.created_at, quiz_id: r.quiz_id, quiz_title: one(r.quiz)?.title ?? '', quiz_version: r.quiz_version,
   class_id: r.class_id, class_name: one(r.class)?.name ?? null, final_position: r.final_position,
-  avg_accuracy: r.timeline.length ? r.timeline.reduce((s, t) => s + t.accuracy, 0) / r.timeline.length : 0,
+  avg_accuracy: avg(parseTimeline(r.timeline).outcomes),
 });
 
 export const supabaseApi: Api = {
@@ -187,6 +189,17 @@ export const supabaseApi: Api = {
   async saveRaceRecord(row: RaceRecordRow) {
     const { data } = await supabase.auth.getSession();
     check(await supabase.from('race_record').upsert({ ...row, teacher_id: data.session?.user.id }, { onConflict: 'session_id' }));
+  },
+
+  async listGhostRecords(quizId, version) {
+    const rows = check(
+      await supabase.from('race_record').select('session_id, created_at, class_id, final_position, finish_time_ms, timeline, class(name)').eq('quiz_id', quizId).eq('quiz_version', version).order('created_at', { ascending: false }),
+    ) as unknown as { session_id: string; created_at: string; class_id: string | null; final_position: number; finish_time_ms: number; timeline: unknown; class: { name: string } | { name: string }[] | null }[];
+    return rows.flatMap((r): GhostRecord[] => {
+      const t = parseTimeline(r.timeline);
+      if (!t.trackId || !t.config) return [];
+      return [{ session_id: r.session_id, class_id: r.class_id, class_name: one(r.class)?.name ?? null, created_at: r.created_at, final_position: r.final_position, finish_time_ms: r.finish_time_ms, trackId: t.trackId, config: t.config, outcomes: t.outcomes }];
+    });
   },
 
   async joinSession(pin, nickname, deviceToken) {

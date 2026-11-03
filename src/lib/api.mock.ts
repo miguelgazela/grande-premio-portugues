@@ -2,6 +2,7 @@
 // Só entra em desenvolvimento, com `?mock` no URL.
 import { EXAMPLE_QUIZZES } from '../data/exampleQuizzes';
 import { raceConfigFor } from '../game/raceSettings';
+import { parseTimeline, type GhostRecord } from './ghosts';
 import type { Api } from './api';
 import { channelName, type AnyEvent } from './protocol';
 import type { AnswerRow, ClassRow, PlayerRow, QuestionRow, QuizRow, RaceRecordRow, RaceSummary, SessionRow } from './types';
@@ -59,11 +60,16 @@ const quizRow = (db: Db, q: Db['quizzes'][number]): QuizRow => ({
   lastPlayed: db.records.filter((r) => r.quiz_id === q.id).reduce<string | null>((m, r) => (r.created_at && (!m || r.created_at > m) ? r.created_at : m), null),
 });
 
+const avgAccuracy = (raw: unknown) => {
+  const o = parseTimeline(raw).outcomes;
+  return o.length ? o.reduce((s, t) => s + t.accuracy, 0) / o.length : 0;
+};
+
 const raceOf = (db: Db, r: Db['records'][number]): RaceSummary => ({
   session_id: r.session_id, created_at: r.created_at ?? new Date(0).toISOString(), quiz_id: r.quiz_id,
   quiz_title: db.quizzes.find((q) => q.id === r.quiz_id)?.title ?? '', quiz_version: r.quiz_version,
   class_id: r.class_id, class_name: db.classes.find((c) => c.id === r.class_id)?.name ?? null, final_position: r.final_position,
-  avg_accuracy: r.timeline.length ? r.timeline.reduce((s, t) => s + t.accuracy, 0) / r.timeline.length : 0,
+  avg_accuracy: avgAccuracy(r.timeline),
 });
 
 export const mockApi: Api = {
@@ -255,6 +261,16 @@ export const mockApi: Api = {
       db.records = db.records.filter((r) => r.session_id !== row.session_id);
       db.records.push({ ...row, created_at: new Date().toISOString() });
     });
+  },
+  async listGhostRecords(quizId, version) {
+    return tx((db) =>
+      db.records.flatMap((r): GhostRecord[] => {
+        if (r.quiz_id !== quizId || r.quiz_version !== version) return [];
+        const t = parseTimeline(r.timeline);
+        if (!t.trackId || !t.config) return [];
+        return [{ session_id: r.session_id, class_id: r.class_id, class_name: db.classes.find((c) => c.id === r.class_id)?.name ?? null, created_at: r.created_at ?? new Date(0).toISOString(), final_position: r.final_position, finish_time_ms: r.finish_time_ms, trackId: t.trackId, config: t.config, outcomes: t.outcomes }];
+      }),
+    );
   },
   async joinSession(pin, nickname, deviceToken) {
     return tx((db) => {

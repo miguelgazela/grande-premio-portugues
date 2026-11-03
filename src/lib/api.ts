@@ -1,3 +1,4 @@
+import type { GhostRecord } from './ghosts';
 import type { AnyEvent } from './protocol';
 import type { AnswerRow, ClassRow, JoinResult, PlayerRow, QuestionRow, QuizInput, QuizRow, RaceRecordRow, RaceSummary, ReportData, SavedState, SaveQuizResult, SessionRow, SessionSettings, SessionStatus } from './types';
 
@@ -43,6 +44,8 @@ export interface Api {
   loadAnswers(sessionId: string): Promise<AnswerRow[]>;
   updateSession(id: string, patch: { status?: SessionStatus; state?: SavedState | null; started?: boolean; finished?: boolean }): Promise<void>;
   saveRaceRecord(row: RaceRecordRow): Promise<void>;
+  /** Corridas gravadas de um quiz+versão com dados para replay (formato v2). */
+  listGhostRecords(quizId: string, version: number): Promise<GhostRecord[]>;
 
   joinSession(pin: string, nickname: string, deviceToken: string): Promise<JoinResult>;
   /** Liga ao canal; `onStatus` avisa quando fica ligado ou cai. */

@@ -2,6 +2,8 @@ import QRCode from 'qrcode';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { HostGame, type HostSnapshot } from '../../game/hostGame';
+import { raceConfigFor } from '../../game/raceSettings';
+import { fmtSeconds, fmtTime, ghostMessage, trackRecord, usableRecords } from '../../lib/ghosts';
 import { errorMessage } from '../../lib/api';
 import { endSessions } from '../../lib/endSessions';
 import { keepAwake, wakeLockSupported } from '../../lib/wakeLock';
@@ -26,7 +28,11 @@ export function Host() {
         const session = await api.getSession(id!);
         const questions = await api.loadQuestions(session.quiz_id, session.quiz_version);
         if (!questions.length) throw new Error('Este quiz não tem perguntas.');
-        g = new HostGame(api, session, questions);
+        const { config } = raceConfigFor(questions, session.settings);
+        const all = await api.listGhostRecords(session.quiz_id, session.quiz_version).catch(() => []);
+        const usable = usableRecords(all);
+        const ghosts = (session.settings?.ghosts ?? []).flatMap((x) => usable.filter((r) => r.session_id === x.sessionId));
+        g = new HostGame(api, session, questions, { ghosts, record: trackRecord(all, config) });
         await g.init();
         if (cancelled) g.destroy();
         else setGame(g);
@@ -110,6 +116,16 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
             <h2 style={{ fontSize: 'clamp(20px,4vmin,40px)' }}>{game.session.quiz_title}</h2>
             <span className="muted">{s.players.length} na corrida</span>
           </div>
+          {game.extras.record && (
+            <p className="muted" style={{ fontSize: 'clamp(14px,2.4vmin,24px)', margin: '4px 0' }}>
+              🏆 Recorde da pista: <b>{fmtTime(game.extras.record.finish_time_ms)}</b> ({game.extras.record.class_name ?? 'sem turma'})
+            </p>
+          )}
+          {game.extras.ghosts.length > 0 && (
+            <p className="muted" style={{ fontSize: 'clamp(14px,2.4vmin,24px)', margin: '4px 0' }}>
+              👻 Fantasmas: {game.extras.ghosts.map((g) => `${g.class_name ?? 'Fantasma'} (${fmtTime(g.finish_time_ms)})`).join(', ')}
+            </p>
+          )}
           <div className="chips">
             {s.players.length === 0 && <span className="muted" style={{ fontSize: 'clamp(16px,3vmin,28px)' }}>À espera dos alunos…</span>}
             {s.players.map((p) => (
@@ -273,6 +289,20 @@ function Podium({ s, onExit }: { s: HostSnapshot; onExit(): void }) {
           {f.teamPosition === 1 && <Asset name="ui-trophy" className="title-icon" fallback="🏆 " />}
           {f.teamPosition === 1 ? 'Vitória da turma!' : `🏁 A turma acabou em ${f.teamPosition}º lugar`}
         </h1>
+        {(f.ghost || f.record) && (
+          <div className="box ghostbox" style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
+            {f.ghost && <h2>{ghostMessage(f.ghost)}</h2>}
+            {f.record && (
+              <p style={{ fontSize: 'clamp(16px,3vmin,30px)', margin: '6px 0 0' }}>
+                {f.record.bestMs === null
+                  ? `Primeiro tempo desta corrida: ${fmtTime(f.standings.find((c) => c.kind === 'team')?.timeMs ?? 0)}`
+                  : f.record.newRecord
+                    ? `🏆 Novo recorde! Antes: ${fmtTime(f.record.bestMs)} (${f.record.holder ?? 'sem turma'})`
+                    : `Recorde da pista: ${fmtTime(f.record.bestMs)} (${f.record.holder ?? 'sem turma'}) · faltaram ${fmtSeconds(f.record.gapMs)}`}
+              </p>
+            )}
+          </div>
+        )}
         <div className="box">
           <h2>Classificação</h2>
           <ol>

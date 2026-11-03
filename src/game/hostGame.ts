@@ -1,12 +1,13 @@
 import type { RaceConfig } from '../engine/config';
-import { BOT_FIELDS, TEAM_COLOR, makeBot } from '../engine/drivers';
+import { BOT_FIELDS, TEAM_COLOR, makeBot, makeGhost } from '../engine/drivers';
 import { outcomeFromAnswers, type PlayerAnswer, type QuestionOutcome } from '../engine/outcome';
 import { Race, type Driver } from '../engine/race';
 import { mulberry32 } from '../engine/rng';
 import { pickAwards, scoreRace } from '../engine/scoring';
-import { Track, trackFor } from '../engine/track';
+import { TRACKS, Track, trackFor } from '../engine/track';
 import type { Api, Channel } from '../lib/api';
 import { play, unlockAudio } from '../lib/audio';
+import { ghostLabel, makeTimeline, type GhostRecord } from '../lib/ghosts';
 import type { AnyEvent, EndMsg, FinalInfo, HostEvent, PublicQuestion, RevealMsg } from '../lib/protocol';
 import type { PlayerRow, QuestionRow, SavedState, SessionRow } from '../lib/types';
 import { raceConfigFor } from './raceSettings';
@@ -52,6 +53,7 @@ type Listener = () => void;
  */
 export class HostGame {
   readonly track: Track;
+  readonly trackId: string;
   readonly config: RaceConfig;
   readonly questions: QuestionRow[];
   race: Race;
@@ -88,9 +90,12 @@ export class HostGame {
     private api: Api,
     readonly session: SessionRow,
     questions: QuestionRow[],
+    /** Fantasmas escolhidos e recorde da pista, carregados antes de criar o jogo. */
+    readonly extras: { ghosts: GhostRecord[]; record: GhostRecord | null } = { ghosts: [], record: null },
   ) {
     const { config, used } = raceConfigFor(questions, session.settings);
-    const def = trackFor(session.id);
+    const def = TRACKS.find((t) => t.id === session.settings?.trackId) ?? trackFor(session.id);
+    this.trackId = def.id;
     this.track = new Track(def.points, def.samples);
     this.config = config;
     this.questions = questions.slice(0, used);
@@ -151,8 +156,10 @@ export class HostGame {
       outcome: (q) => this.outcomes[q] ?? { accuracy: 0, speedBonus: 0 },
     };
     const field = BOT_FIELDS[this.session.settings?.botField ?? 'medio'];
-    const bots = field.map((skill, i) => makeBot(rng, i, skill));
-    const race = new Race([team, ...bots], this.track.length, this.config);
+    // Os fantasmas ocupam o lugar dos bots mais fracos: o número de carros não muda.
+    const ghosts = this.extras.ghosts.slice(0, 3).map((g) => makeGhost(`ghost-${g.session_id}`, ghostLabel(g), g.outcomes));
+    const bots = field.slice(ghosts.length).map((skill, i) => makeBot(rng, i, skill));
+    const race = new Race([team, ...bots, ...ghosts], this.track.length, this.config);
     // Pré-rolo: a resolução de cada pergunta coincide com o fim do tempo de resposta.
     race.time = this.config.overheadTime;
     return race;
@@ -454,6 +461,22 @@ export class HostGame {
 
   private finishing = false;
 
+  /** Mensagens do ecrã final: contra o fantasma mais rápido e contra o recorde da pista. */
+  private ghostSummary(race: Race): Pick<FinalInfo, 'ghost' | 'record'> {
+    const team = race.team!.finishTime;
+    if (team === null) return {};
+    const out: Pick<FinalInfo, 'ghost' | 'record'> = {};
+    const ghosts = race.cars.filter((c) => c.driver.kind === 'ghost' && c.finishTime !== null);
+    const fastest = ghosts.sort((a, b) => a.finishTime! - b.finishTime!)[0];
+    if (fastest) out.ghost = { name: fastest.driver.name, diffMs: Math.round((fastest.finishTime! - team) * 1000) };
+    const rec = this.extras.record;
+    const ms = Math.round(team * 1000);
+    out.record = rec
+      ? { holder: ghostLabel(rec), bestMs: rec.finish_time_ms, newRecord: ms < rec.finish_time_ms, gapMs: ms - rec.finish_time_ms }
+      : { holder: null, bestMs: null, newRecord: false, gapMs: 0 };
+    return out;
+  }
+
   private async finish() {
     if (this.finishing) return;
     this.finishing = true;
@@ -476,6 +499,7 @@ export class HostGame {
       awards: pickAwards(scores).map((a) => ({ emoji: a.emoji, title: a.title, nickname: nick(a.playerId), detail: a.detail })),
       teamPosition,
       totalQuestions: this.questions.length,
+      ...this.ghostSummary(race),
     };
     const end: EndMsg = {
       final,
@@ -487,7 +511,7 @@ export class HostGame {
     try {
       await this.api.saveRaceRecord({
         session_id: this.session.id, class_id: this.session.class_id, quiz_id: this.session.quiz_id, quiz_version: this.session.quiz_version,
-        timeline: this.outcomes.map((o) => ({ accuracy: o.accuracy, speedBonus: o.speedBonus })), final_position: teamPosition, finish_time_ms: finishTime,
+        timeline: makeTimeline(this.trackId, this.config, this.outcomes), final_position: teamPosition, finish_time_ms: finishTime,
       });
       await this.api.updateSession(this.session.id, { status: 'finished', finished: true, state: { ...this.savedState(this.questions.length), final: end } });
     } catch (e) {
