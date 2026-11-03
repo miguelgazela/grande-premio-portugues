@@ -56,10 +56,12 @@ let cached: Promise<Api> | null = null;
 
 export function getApi(): Promise<Api> {
   cached ??= (async () => {
-    if (import.meta.env.DEV && (new URLSearchParams(location.search).has('mock') || localStorage.getItem('gpp.mock') === '1')) {
-      localStorage.setItem('gpp.mock', '1');
+    // Mock only while `?mock` is in the address. It is deliberately not remembered:
+    // a sticky flag made other tabs of the same browser silently use the fake DB.
+    if (import.meta.env.DEV && new URLSearchParams(location.search).has('mock')) {
       return (await import('./api.mock')).mockApi;
     }
+    localStorage.removeItem('gpp.mock'); // flag left behind by older versions
     return (await import('./api.supabase')).supabaseApi;
   })();
   return cached;

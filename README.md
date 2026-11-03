@@ -28,7 +28,7 @@ npm run seed:sql     # regenera a migration de quizzes de exemplo
 
 ### Testar sem Supabase (modo mock, só em dev)
 
-`http://localhost:5173/?mock#/prof` usa uma base de dados falsa em `localStorage` + `BroadcastChannel`, com os 2 quizzes de exemplo. Qualquer email entra. Abre os alunos noutras abas com `?mock&tab=a#/`, `?mock&tab=b#/`… (o `tab` separa o armazenamento de cada aluno). Para sair do mock: `localStorage.removeItem('gpp.mock')`.
+`http://localhost:5173/?mock#/prof` usa uma base de dados falsa em `localStorage` + `BroadcastChannel`, com os 2 quizzes de exemplo. Qualquer email entra. Abre os alunos noutras abas com `?mock&tab=a#/`, `?mock&tab=b#/`… (o `tab` separa o armazenamento de cada aluno). O mock só está ativo enquanto `?mock` estiver no endereço (não fica guardado): para sair, abre o endereço sem `?mock`. Sem `?mock` a app usa sempre o Supabase real.
 
 ## Estrutura
 
