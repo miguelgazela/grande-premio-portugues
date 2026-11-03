@@ -7,7 +7,7 @@ export function versionLabel(version = __APP_VERSION__, built = __APP_BUILT__): 
   const d = new Date(built);
   if (Number.isNaN(d.getTime())) return `v ${version}`;
   const p = Object.fromEntries(fmt.formatToParts(d).map((x) => [x.type, x.value]));
-  return `v ${version} · ${p.day} ${MONTHS[Number(p.month) - 1]} ${p.hour}:${p.minute}`;
+  return `v ${version} · ${Number(p.day)} ${MONTHS[Number(p.month) - 1]} ${p.hour}:${p.minute}`;
 }
 
 export function VersionTag() {
