@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { errorMessage } from '../../lib/api';
 import { loadAvatarKeys } from '../../render/assets';
 import { Asset } from '../ui/Asset';
+import { AvatarPicker } from './AvatarPicker';
 import { useApi } from '../useApi';
 import { deviceToken, loadAvatar, loadPlayer, saveAvatar, savePlayer } from './session';
 
@@ -63,17 +64,11 @@ export function Join() {
         ) : (
           <>
             <div className="muted" style={{ textAlign: 'center' }}>PIN {pin} · <a href="#/" onClick={(e) => { e.preventDefault(); setStep('pin'); }} style={{ color: 'inherit' }}>mudar</a></div>
-            <input placeholder="A tua alcunha" value={nick} maxLength={20} autoFocus autoComplete="off" style={{ fontSize: '1.6rem', textAlign: 'center' }}
-              onChange={(e) => setNick(e.target.value)} />
-            {avatars.length > 0 && (
-              <div className="avatars" aria-label="Escolhe um avatar">
-                {avatars.map((a) => (
-                  <button type="button" key={a} className={a === avatar ? 'on' : ''} onClick={() => setAvatar(a)}>
-                    <Asset name={a} alt="" />
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="nick-row">
+              <AvatarPicker avatars={avatars} value={avatar} onChange={setAvatar} />
+              <input placeholder="A tua alcunha" value={nick} maxLength={20} autoFocus autoComplete="off" style={{ fontSize: '1.6rem', textAlign: 'center' }}
+                onChange={(e) => setNick(e.target.value)} />
+            </div>
             <button className="primary big" disabled={busy || !api || !nick.trim()}>{busy ? 'A entrar…' : 'Vamos!'}</button>
           </>
         )}
