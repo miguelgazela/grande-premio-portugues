@@ -4,9 +4,9 @@
  */
 export const PRIVACY_CONTACT = {
   /** Nome da professora e escola, ex.: "Mara Silva, Escola Secundária de …" */
-  responsavel: 'POR PREENCHER: nome da professora e da escola',
+  responsavel: 'Mara Ribeiro, Colégio Ribadouro',
   /** Email para pedidos dos encarregados de educação. */
-  email: 'POR PREENCHER: email de contacto',
+  email: 'mararibeiro@ribadouro.com',
   /** Dias até as alcunhas serem anonimizadas (tem de coincidir com o prazo usado em anonymize_old_players). */
   dias: 30,
 };
