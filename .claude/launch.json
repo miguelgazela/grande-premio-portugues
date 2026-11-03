@@ -39,6 +39,19 @@
         "--strictPort"
       ],
       "port": 5204
+    },
+    {
+      "name": "dev-fase5",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5215",
+        "--strictPort"
+      ],
+      "port": 5215
     }
   ]
 }

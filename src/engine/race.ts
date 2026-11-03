@@ -12,6 +12,8 @@ export interface Driver {
   name: string;
   kind: DriverKind;
   color: number;
+  /** Modelo de carro (chave `cartype-*`); só o carro da turma o define. */
+  model?: string;
   /** Result of question `q`. Called once per question, in order. */
   outcome(q: number): QuestionOutcome;
 }

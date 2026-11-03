@@ -1,4 +1,5 @@
 import type { Effect } from '../engine/race';
+import type { StyleVote, TeamStyle } from '../game/teamStyle';
 import type { AnswerValue } from './types';
 
 /** Material de uma pergunta tal como os alunos (e o projetor) o veem: nunca inclui a resposta certa. */
@@ -73,6 +74,8 @@ export interface FinalInfo {
   ranking: { nickname: string; points: number; correct: number; avatar?: string }[];
   awards: { emoji: string; title: string; nickname: string; detail: string }[];
   teamPosition: number;
+  /** Modelo do carro da turma (`cartype-*`), para o ecrã final. */
+  teamModel?: string;
   totalQuestions: number;
   /** Contra o fantasma mais relevante. `diffMs` > 0: a turma ganhou. */
   ghost?: { name: string; diffMs: number };
@@ -87,7 +90,7 @@ export interface EndMsg {
 
 /** Anfitrião → alunos. */
 export type HostEvent =
-  | { event: 'lobby'; payload: { count: number } }
+  | { event: 'lobby'; payload: { count: number; /** Aspeto atual do carro da turma. */ team?: TeamStyle } }
   | { event: 'question'; payload: PublicQuestion }
   | { event: 'reveal'; payload: RevealMsg }
   | { event: 'end'; payload: EndMsg }
@@ -98,6 +101,8 @@ export type HostEvent =
 /** Aluno → anfitrião. */
 export type StudentEvent =
   | { event: 'hello'; payload: { player_id: string; /** Chave do manifest, ex. `avatar-fox`. */ avatar?: string } }
+  /** Voto no aspeto do carro da turma (lobby). */
+  | { event: 'vote'; payload: { player_id: string } & StyleVote }
   | { event: 'answer'; payload: { player_id: string; question_id: string; value: AnswerValue } };
 
 export type AnyEvent = HostEvent | StudentEvent;

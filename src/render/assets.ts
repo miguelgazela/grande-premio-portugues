@@ -2,48 +2,58 @@ import { Assets, type Texture } from 'pixi.js';
 
 export const assetUrl = (file: string) => `${import.meta.env.BASE_URL}assets/${file}`;
 
-/** Texturas necessárias à corrida. As que faltarem (ou o manifest inteiro) ficam de fora e o render usa formas. */
-const RACE_KEYS = [
+/** Texturas que todas as corridas usam. As que faltarem (ou o manifest inteiro) ficam de fora e o render usa formas. */
+export const BASE_KEYS = [
   'car-team', 'car-red', 'car-orange', 'car-purple', 'car-teal', 'car-pink', 'car-grey', 'car-green',
-  'bg-grass', 'track-asphalt', 'track-curb',
-  'prop-tree', 'prop-bush', 'prop-cone', 'prop-tires', 'prop-grandstand', 'prop-startline',
+  'cartype-coupe', 'cartype-kart', 'cartype-pickup', 'cartype-van', 'cartype-rally',
+  'prop-cone', 'prop-tires', 'prop-grandstand', 'prop-startline',
   'fx-turbo', 'fx-nitro', 'fx-smoke',
 ];
 
 export type RaceTextures = Map<string, Texture>;
 
-let cached: Promise<RaceTextures> | null = null;
+type Manifest = Record<string, { file: string }>;
+let manifestP: Promise<Manifest> | null = null;
+const loaded = new Map<string, Promise<Texture | null>>();
 
-export function loadRaceTextures(): Promise<RaceTextures> {
-  cached ??= (async () => {
-    const out: RaceTextures = new Map();
+function manifest(): Promise<Manifest> {
+  manifestP ??= (async () => {
     try {
       const res = await fetch(assetUrl('manifest.json'));
-      if (!res.ok) return out;
-      const manifest = (await res.json()) as Record<string, { file: string }>;
-      await Promise.allSettled(
-        RACE_KEYS.filter((k) => manifest[k]).map(async (k) => {
-          const tex = await Assets.load<Texture>(assetUrl(manifest[k].file));
-          tex.source.autoGenerateMipmaps = true; // sprites 256px mostrados a ~32px: sem isto fica serrilhado
-          tex.source.scaleMode = 'linear';
-          out.set(k, tex);
-        }),
-      );
+      return res.ok ? ((await res.json()) as Manifest) : {};
     } catch {
-      /* sem manifest: placeholders */
+      return {};
     }
-    return out;
   })();
-  return cached;
+  return manifestP;
+}
+
+/** Carrega (uma só vez por chave) as texturas pedidas; as que faltarem ficam de fora. */
+export async function loadRaceTextures(extra: string[] = []): Promise<RaceTextures> {
+  const m = await manifest();
+  const out: RaceTextures = new Map();
+  await Promise.all(
+    [...new Set([...BASE_KEYS, ...extra])].filter((k) => m[k]).map(async (k) => {
+      let p = loaded.get(k);
+      if (!p) {
+        p = Assets.load<Texture>(assetUrl(m[k].file)).then(
+          (tex) => {
+            tex.source.autoGenerateMipmaps = true; // sprites 256px mostrados a ~32px: sem isto fica serrilhado
+            tex.source.scaleMode = 'linear';
+            return tex;
+          },
+          () => null,
+        );
+        loaded.set(k, p);
+      }
+      const tex = await p;
+      if (tex) out.set(k, tex);
+    }),
+  );
+  return out;
 }
 
 /** Lista de avatares (chaves `avatar-*` do manifest). Vazia se não houver manifest. */
 export async function loadAvatarKeys(): Promise<string[]> {
-  try {
-    const res = await fetch(assetUrl('manifest.json'));
-    if (!res.ok) return [];
-    return Object.keys((await res.json()) as Record<string, unknown>).filter((k) => k.startsWith('avatar-'));
-  } catch {
-    return [];
-  }
+  return Object.keys(await manifest()).filter((k) => k.startsWith('avatar-'));
 }
