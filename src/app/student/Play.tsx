@@ -9,7 +9,7 @@ import { Asset } from '../ui/Asset';
 import { TeamPicker } from '../ui/TeamPicker';
 import { DEFAULT_STYLE, type StyleVote, type TeamStyle } from '../../game/teamStyle';
 import { StudentInput, describeSolution } from '../ui/Question';
-import { clearPlayer, deviceToken, loadAvatar, loadPlayer } from './session';
+import { clearPlayer, deviceToken, loadAvatar, loadPlayer, savePlayer } from './session';
 
 
 function readEnd(sessionId: string): EndMsg | null {
@@ -31,6 +31,7 @@ export function Play() {
   const api = useApi();
   const nav = useNavigate();
   const player = useRef(loadPlayer()).current;
+  const [nickname, setNickname] = useState(player?.nickname ?? '');
   const [view, setView] = useState<View>({ k: 'wait', count: null });
   const [chosen, setChosen] = useState<Record<string, AnswerValue>>({});
   const chosenRef = useRef(chosen);
@@ -69,7 +70,11 @@ export function Play() {
     void (async () => {
       try {
         // Confirma que ainda estamos na sessão (e não fomos expulsos).
-        await api.joinSession(player.pin, player.nickname, deviceToken());
+        const r = await api.joinSession(player.pin, player.nickname, deviceToken());
+        if (r.nickname !== player.nickname) {
+          savePlayer({ ...player, nickname: r.nickname }); // a professora mudou-me a alcunha
+          setNickname(r.nickname);
+        }
       } catch (e) {
         if (closed) return;
         const msg = errorMessage(e);
@@ -118,6 +123,12 @@ export function Play() {
             case 'aborted':
               try { localStorage.setItem(`gpp.aborted.${player.session_id}`, '1'); } catch { /* sem armazenamento */ }
               setView({ k: 'aborted' });
+              break;
+            case 'renamed':
+              if (m.payload.player_id === player.player_id && typeof m.payload.nickname === 'string') {
+                savePlayer({ ...player, nickname: m.payload.nickname });
+                setNickname(m.payload.nickname);
+              }
               break;
             case 'kicked':
               if (m.payload.player_id === player.player_id) {
@@ -172,7 +183,7 @@ export function Play() {
         <span />
         <div className="me-id">
           {loadAvatar() && <Asset name={loadAvatar()!} className="me-avatar" />}
-          <span className="me-name">{player.nickname}</span>
+          <span className="me-name">{nickname}</span>
           {problem && <span className="error"> · {problem}</span>}
         </div>
         <button type="button" className="leave-btn" onClick={() => setLeaving(true)}>Sair</button>

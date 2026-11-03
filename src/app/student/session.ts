@@ -6,11 +6,15 @@ export interface StoredPlayer {
 }
 
 // `?tab=a` (só para testes em várias abas do mesmo browser) separa o armazenamento de cada aluno.
-const tabParam = new URLSearchParams(location.search).get('tab');
+// Só vale em desenvolvimento com `?mock`: em produção, várias abas do mesmo browser são o mesmo aluno.
+const params = new URLSearchParams(location.search);
+const tabParam = import.meta.env.DEV && params.has('mock') ? params.get('tab') : null;
 if (tabParam) sessionStorage.setItem('gpp.tab', tabParam);
 const suffix = sessionStorage.getItem('gpp.tab') ? `.${sessionStorage.getItem('gpp.tab')}` : '';
 const PLAYER = 'gpp.player' + suffix;
 const DEVICE = 'gpp.device' + suffix;
+
+let volatileToken = '';
 
 export function deviceToken(): string {
   try {
@@ -21,7 +25,8 @@ export function deviceToken(): string {
     }
     return t;
   } catch {
-    return 'volatile-' + Math.random().toString(36).slice(2);
+    volatileToken ||= 'volatile-' + crypto.randomUUID(); // sem armazenamento: o mesmo em toda a página
+    return volatileToken;
   }
 }
 

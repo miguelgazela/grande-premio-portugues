@@ -40,6 +40,8 @@ export interface Api {
   loadQuestions(quizId: string, version: number): Promise<QuestionRow[]>;
   listPlayers(sessionId: string): Promise<PlayerRow[]>;
   kickPlayer(playerId: string): Promise<void>;
+  /** A professora muda a alcunha de um aluno (o servidor aplica o filtro). Devolve a alcunha final. */
+  renamePlayer(playerId: string, nickname: string): Promise<string>;
   /** Apaga o aluno (saiu no lobby): pode voltar a entrar mais tarde. */
   removePlayer(playerId: string): Promise<void>;
   saveAnswers(rows: AnswerRow[]): Promise<void>;

@@ -26,6 +26,13 @@ npm run seed:sql     # regenera a migration de quizzes de exemplo
 - Se o Safari do anfitrião sair do ecrã, a corrida pausa sozinha e retoma ao voltar. Se a página recarregar, aparece **Retomar** (o estado está em `session.state`). Controlos discretos no canto: ⏸ pausa, ⏭ fecha a pergunta / salta a revelação.
 - Os alunos reconectam sozinhos (o `device_token` fica em `localStorage`).
 
+### Fase 7 (mínimo): proteção para alunos menores
+
+- **Alcunhas**: filtradas no servidor em `join_session` (lista em `src/data/nicknameBlocklist.ts`; `npm run gen:blocklist` gera o SQL para atualizar a tabela `nickname_blocklist`). A professora muda a alcunha no lobby (✎).
+- **Privacidade**: página `/#/privacidade`. **Preencher o responsável e o email em `src/app/privacyConfig.ts`** antes de usar.
+- **RGPD**: `select "grandePremioPortugues".anonymize_old_players();` (30 dias; `anonymize_old_players(14)` para outro prazo) anonimiza alcunhas e `device_token` de sessões acabadas. Não está agendada: correr à mão no SQL Editor ou ligar a um agendamento.
+- **Anti-batota**: máx. 60 alunos por sessão, 8 PINs errados/5 min por dispositivo, e o anfitrião ignora respostas inválidas, repetidas, fora de tempo ou em rajada.
+
 ### Testar sem Supabase (modo mock, só em dev)
 
 `http://localhost:5173/?mock#/prof` usa uma base de dados falsa em `localStorage` + `BroadcastChannel`, com os 2 quizzes de exemplo. Qualquer email entra. Abre os alunos noutras abas com `?mock&tab=a#/`, `?mock&tab=b#/`… (o `tab` separa o armazenamento de cada aluno). O mock só está ativo enquanto `?mock` estiver no endereço (não fica guardado): para sair, abre o endereço sem `?mock`. Sem `?mock` a app usa sempre o Supabase real.

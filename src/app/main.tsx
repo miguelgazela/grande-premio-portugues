@@ -1,6 +1,7 @@
 import { createRoot } from 'react-dom/client';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import './app.css';
+import { Privacidade } from './Privacidade';
 import { Join } from './student/Join';
 import { Play } from './student/Play';
 import { Host } from './teacher/Host';
@@ -17,6 +18,7 @@ createRoot(document.getElementById('root')!).render(
     <HashRouter>
       <Routes>
         <Route path="/" element={<Join />} />
+        <Route path="/privacidade" element={<Privacidade />} />
         <Route path="/jogar" element={<Play />} />
         <Route path="/prof" element={<TeacherGate><Jogar /></TeacherGate>} />
         <Route path="/prof/preparar" element={<TeacherGate><Prepare /></TeacherGate>}>

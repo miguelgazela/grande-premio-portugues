@@ -3,7 +3,9 @@
 import { ALL_EXAMPLE_QUIZZES, toBody } from '../data/exampleQuizzes';
 import { raceConfigFor } from '../game/raceSettings';
 import { parseTimeline, type GhostRecord } from './ghosts';
+import { MAX_PLAYERS } from '../game/guards';
 import type { Api } from './api';
+import { checkNickname } from './nickname';
 import { channelName, type AnyEvent } from './protocol';
 import type { AnswerRow, ClassRow, PlayerRow, QuestionRow, QuizRow, RaceRecordRow, RaceSummary, SessionRow } from './types';
 
@@ -236,6 +238,17 @@ export const mockApi: Api = {
       if (p) p.kicked = true;
     });
   },
+  async renamePlayer(playerId, nickname) {
+    return tx((db) => {
+      const p = db.players.find((x) => x.id === playerId);
+      if (!p) throw new Error('Sem permissão');
+      const c = checkNickname(nickname);
+      if (!c.ok) throw new Error(c.error);
+      if (db.players.some((x) => x.id !== p.id && x.session_id === p.session_id && x.nickname.toLowerCase() === c.nick.toLowerCase())) throw new Error('Alcunha já em uso');
+      p.nickname = c.nick;
+      return c.nick;
+    });
+  },
   async removePlayer(playerId) {
     tx((db) => {
       db.players = db.players.filter((x) => x.id !== playerId);
@@ -287,8 +300,10 @@ export const mockApi: Api = {
         return { session_id: s.id, player_id: existing.id, nickname: existing.nickname, status: s.status };
       }
       if (s.status !== 'lobby') throw new Error('A corrida já começou');
-      const nick = nickname.trim();
-      if (nick.length < 1 || nick.length > 20) throw new Error('Alcunha inválida');
+      const c = checkNickname(nickname);
+      if (!c.ok) throw new Error(c.error);
+      const nick = c.nick;
+      if (db.players.filter((p) => p.session_id === s.id && !p.kicked).length >= MAX_PLAYERS) throw new Error('A sessão está cheia');
       if (db.players.some((p) => p.session_id === s.id && p.nickname.toLowerCase() === nick.toLowerCase())) throw new Error('Alcunha já em uso');
       const p = { id: uid(), session_id: s.id, nickname: nick, device_token: deviceToken, kicked: false };
       db.players.push(p);

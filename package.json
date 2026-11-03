@@ -10,6 +10,7 @@
     "test": "vitest run",
     "calibrate": "tsx scripts/calibrate.ts",
     "seed:sql": "tsx scripts/gen-seed.ts",
+    "gen:blocklist": "tsx scripts/gen-blocklist.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -280,3 +280,12 @@ h1, h2, h3 { margin: 0 0 .5em; }
 .model { display: grid; justify-items: center; gap: 2px; padding: 6px 8px; background: #0004; border: 2px solid transparent; }
 .model.on { border-color: var(--gold); background: #ffffff22; }
 .picker .model small { font-size: 12px; }
+
+/* Privacidade */
+.privacy-link { text-align: center; color: var(--muted); font-size: .9rem; }
+.privacy h1, .privacy h2 { margin: 0; }
+.privacy h2 { font-size: 1.15rem; margin-top: 8px; }
+.privacy ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
+.privacy p { margin: 0; line-height: 1.5; }
+.privacy-contact, .privacy-todo { background: var(--panel2); border-radius: 12px; padding: 14px; display: grid; gap: 4px; }
+.privacy-todo { outline: 2px dashed #ff5a5a; }
