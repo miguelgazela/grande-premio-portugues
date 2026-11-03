@@ -12,18 +12,6 @@ const FOLLOW_ZOOM = 2.2;
 const LOOK_AHEAD = 70;
 const CURB_STRIPE = 18;
 
-/** Cor do bot → sprite de carro. */
-const CAR_BY_COLOR: Record<number, string> = {
-  0x2f6bff: 'car-team',
-  0xe74c3c: 'car-red',
-  0xf39c12: 'car-orange',
-  0x9b59b6: 'car-purple',
-  0x1abc9c: 'car-teal',
-  0xe84393: 'car-pink',
-  0x95a5a6: 'car-grey',
-  0x2ecc71: 'car-green',
-};
-
 interface CarNode {
   root: Container;
   /** Só existe com placeholders. */
@@ -377,7 +365,7 @@ export class RaceView {
 
   private carNode(car: CarState): CarNode {
     const root = new Container();
-    const tex = this.t(CAR_BY_COLOR[car.driver.kind === 'ghost' ? 0x95a5a6 : car.driver.color] ?? 'car-grey');
+    const tex = this.t(car.driver.car ?? 'car-grey');
     const node: CarNode = { root };
 
     if (tex) {

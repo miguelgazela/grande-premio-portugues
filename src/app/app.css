@@ -266,3 +266,7 @@ h1, h2, h3 { margin: 0 0 .5em; }
 .student .picker { margin-top: 12px; }
 .picker .picker .swatch { flex: none; }
 .menubg .podium h1 { justify-self: center; background: #14141cd9; border-radius: 18px; padding: .15em .7em; }
+
+.model { display: grid; justify-items: center; gap: 2px; padding: 6px 8px; background: #0004; border: 2px solid transparent; }
+.model.on { border-color: var(--gold); background: #ffffff22; }
+.picker .model small { font-size: 12px; }

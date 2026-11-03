@@ -23,11 +23,13 @@ Gerados com Higgsfield (`gpt_image_2_5`, `background: transparent`), a 2026-11-0
 - Lote 4 temas completos: `track-asphalt-desert|snow|city` (512, opacos), `track-curb-desert|snow|city` (512 de largura, horizontais), props `prop-rocks-desert`, `prop-tumbleweed`, `prop-snowman`, `prop-ice`, `prop-rooftop2`, `prop-fountain`.
 - UI: `ui-logo`, `ui-trophy`, `ui-medal-gold/silver/bronze`, `ui-flame`, `ui-podium`.
 
+- Lote 5 carros por modelo (15, 256×128, cores originais com riscas de corrida, sem número, nariz para +x): `car-coupe-red|yellow|teal`, `car-rally-blue|orange|white`, `car-pickup-green|red|purple`, `car-van-yellow|pink|blue`, `car-kart-orange|green|purple`. Gerados com `gpt_image_2_5` a partir de `cartype-*` como referência; originais em `source/car-<modelo>-<cor>.png`. O jogo usa estes (e os `car-*` clássicos), já não usa `cartype-*` com tint.
+
 ## Processamento
 Originais (1024px, com halo) em `source/`. Script (fora do repo) corta alpha < 100 (remove o halo), recorta margens e redimensiona (Pillow, venv na scratchpad). Não foi preciso `remove_background`: o modelo gera transparência.
 
 ## Créditos
-Saldo inicial 174,75. Lote 1: 7,25 créditos (24 imagens). Lote 2: 5,5 (22 imagens). Lote 3: 10 (40 imagens). Modelos de carro: 2 (5 imagens). Lote 4 (menus + temas): 4 (14 imagens). Total 28,75; saldo final 146. Custo real ≈ 0,25–0,3/imagem.
+Saldo inicial 174,75. Lote 1: 7,25 créditos (24 imagens). Lote 2: 5,5 (22 imagens). Lote 3: 10 (40 imagens). Modelos de carro: 2 (5 imagens). Lote 4 (menus + temas): 4 (14 imagens). Total 28,75; saldo final 146. Lote 5 (carros por modelo): 3,75 (15 imagens; saldo 134,25). Custo real ≈ 0,25–0,3/imagem.
 
 ## Fica por fazer
 - Sem ícone "+1" (usar `ui-star` + texto do jogo). `track-asphalt`/`track-curb` não testados em tile.

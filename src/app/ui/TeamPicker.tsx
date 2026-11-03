@@ -1,31 +1,48 @@
-import { TEAM_COLORS, carKeyFor, type StyleVote, type TeamStyle } from '../../game/teamStyle';
+import { useEffect, useState } from 'react';
+import { CARS, MODELS, carDef, carsOfModel, type StyleVote, type TeamStyle } from '../../game/teamStyle';
 import { assetUrl } from '../../render/assets';
 
 export const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
 
-/** O carro da cor escolhida (o asset original, com as listas e os pneus). */
-export function CarPreview({ color, size = 120 }: { color: number; size?: number }) {
-  return <img className="carprev" src={assetUrl(`${carKeyFor(color)}.png`)} alt="" draggable={false} style={{ width: size, height: size / 2 }} />;
+/** O carro escolhido (asset original, com as listas e os pneus). */
+export function CarPreview({ car, size = 120 }: { car: string; size?: number }) {
+  return <img className="carprev" src={assetUrl(`${car}.png`)} alt={carDef(car)?.label ?? ''} draggable={false} style={{ width: size, height: size / 2 }} />;
 }
 
 /**
- * Cor do carro da turma. Nos alunos `onPick` é um voto; no anfitrião fixa a cor
+ * Modelo e cor do carro da turma. Nos alunos `onPick` é um voto; no anfitrião fixa o carro
  * (`fixed`), e "Voltar à votação" larga a escolha da professora.
  */
 export function TeamPicker({ value, fixed, onPick, host }: { value: TeamStyle; fixed?: StyleVote; onPick(v: StyleVote): void; host?: boolean }) {
+  const cur = carDef(value.car) ?? CARS[0];
+  const [model, setModel] = useState(cur.model);
+  useEffect(() => setModel(cur.model), [cur.model]); // o carro pode mudar por fora (voto de outro aluno, professora)
+  const colors = carsOfModel(model);
+  const isFixed = host && fixed?.car !== undefined;
   return (
     <div className="picker">
       <div className="row" style={{ justifyContent: 'center' }}>
-        <CarPreview color={value.color} size={host ? 130 : 150} />
+        <CarPreview car={cur.key} size={host ? 130 : 160} />
       </div>
-      <div className={`opts${host && fixed?.color !== undefined ? ' fixed' : ''}`}>
-        {TEAM_COLORS.map((c) => (
-          <button key={c.value} type="button" aria-label={c.label} className={`swatch ${value.color === c.value ? 'on' : ''}`} style={{ background: hex(c.value) }} onClick={() => onPick({ color: c.value })} />
+      <div className={`opts${isFixed ? ' fixed' : ''}`}>
+        {MODELS.map((m) => {
+          const first = carsOfModel(m.id).find((c) => c.key === value.car) ?? carsOfModel(m.id)[0];
+          return (
+            <button key={m.id} type="button" className={`model ${model === m.id ? 'on' : ''}`} onClick={() => { setModel(m.id); onPick({ car: first.key }); }}>
+              <CarPreview car={first.key} size={64} />
+              <small>{m.label}</small>
+            </button>
+          );
+        })}
+      </div>
+      <div className={`opts${isFixed ? ' fixed' : ''}`}>
+        {colors.map((c) => (
+          <button key={c.key} type="button" aria-label={c.label} className={`swatch ${value.car === c.key ? 'on' : ''}`} style={{ background: hex(c.color) }} onClick={() => onPick({ car: c.key })} />
         ))}
       </div>
-      {host && fixed?.color !== undefined && (
+      {isFixed && (
         <div className="row" style={{ justifyContent: 'center' }}>
-          <button type="button" onClick={() => onPick({ color: undefined })}>Voltar à votação</button>
+          <button type="button" onClick={() => onPick({ car: undefined })}>Voltar à votação</button>
         </div>
       )}
     </div>

@@ -325,7 +325,7 @@ function Podium({ s, onExit }: { s: HostSnapshot; onExit(): void }) {
           <ol>
             {f.standings.map((c, i) => (
               <li key={i} className={c.kind === 'team' ? 'me' : ''}>
-                <span className="who"><Place index={i} />{c.kind === 'team' && <CarPreview color={c.color} size={44} />} {c.name}</span>
+                <span className="who"><Place index={i} />{c.kind === 'team' && <CarPreview car={f.teamCar ?? "car-team"} size={44} />} {c.name}</span>
                 <small>{(c.timeMs / 1000).toFixed(1)}s</small>
               </li>
             ))}

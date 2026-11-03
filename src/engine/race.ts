@@ -12,6 +12,8 @@ export interface Driver {
   name: string;
   kind: DriverKind;
   color: number;
+  /** Chave do manifest do carro (`car-*`); sem ela usa-se o cinzento. */
+  car?: string;
   /** Result of question `q`. Called once per question, in order. */
   outcome(q: number): QuestionOutcome;
 }

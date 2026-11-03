@@ -1,10 +1,11 @@
 import { Assets, type Texture } from 'pixi.js';
+import { CARS } from '../game/teamStyle';
 
 export const assetUrl = (file: string) => `${import.meta.env.BASE_URL}assets/${file}`;
 
 /** Texturas que todas as corridas usam. As que faltarem (ou o manifest inteiro) ficam de fora e o render usa formas. */
 export const BASE_KEYS = [
-  'car-team', 'car-red', 'car-orange', 'car-purple', 'car-teal', 'car-pink', 'car-grey', 'car-green',
+  'car-grey', ...CARS.map((c) => c.key),
   'prop-cone', 'prop-tires', 'prop-grandstand', 'prop-startline',
   'fx-turbo', 'fx-nitro', 'fx-smoke',
 ];

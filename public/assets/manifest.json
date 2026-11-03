@@ -1058,5 +1058,155 @@
       0.5
     ],
     "notes": "Prop do tema cidade"
+  },
+  "car-coupe-red": {
+    "file": "car-coupe-red.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Coupé vermelho (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-coupe-teal": {
+    "file": "car-coupe-teal.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Coupé turquesa (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-coupe-yellow": {
+    "file": "car-coupe-yellow.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Coupé amarelo (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-kart-green": {
+    "file": "car-kart-green.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Kart verde (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-kart-orange": {
+    "file": "car-kart-orange.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Kart laranja (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-kart-purple": {
+    "file": "car-kart-purple.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Kart roxo (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-pickup-green": {
+    "file": "car-pickup-green.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Pickup verde (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-pickup-purple": {
+    "file": "car-pickup-purple.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Pickup roxo (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-pickup-red": {
+    "file": "car-pickup-red.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Pickup vermelho (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-rally-blue": {
+    "file": "car-rally-blue.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Rali azul (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-rally-orange": {
+    "file": "car-rally-orange.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Rali laranja (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-rally-white": {
+    "file": "car-rally-white.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Rali branco (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-van-blue": {
+    "file": "car-van-blue.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Carrinha azul (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-van-pink": {
+    "file": "car-van-pink.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Carrinha rosa (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "car-van-yellow": {
+    "file": "car-van-yellow.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Carrinha amarelo (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
   }
 }
