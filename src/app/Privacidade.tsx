@@ -1,3 +1,4 @@
+import { VersionTag } from './ui/VersionTag';
 import { PRIVACY_CONTACT, isPlaceholder } from './privacyConfig';
 
 /** Política de privacidade em linguagem simples (alunos e encarregados de educação). */
@@ -6,6 +7,7 @@ export function Privacidade() {
   const missing = isPlaceholder(responsavel) || isPlaceholder(email);
   return (
     <div className="center" style={{ alignItems: 'start' }}>
+      <VersionTag />
       <article className="card privacy" style={{ width: 'min(100%, 720px)' }}>
         <h1>Privacidade</h1>
         <p className="muted">Grande Prémio de Português, um jogo de perguntas para a aula.</p>

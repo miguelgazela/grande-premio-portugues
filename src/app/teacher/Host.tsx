@@ -1,4 +1,5 @@
 import QRCode from 'qrcode';
+import { VersionTag } from '../ui/VersionTag';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { HostGame, type HostSnapshot } from '../../game/hostGame';
@@ -111,6 +112,7 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
 
   return (
     <div className="host menubg" style={{ backgroundImage: `url(${assetUrl('menu-title.jpg')})` }}>
+      <VersionTag />
       <div className="lobby">
         <div className="join">
           <Asset name="ui-logo" alt="Grande Prémio de Português" className="logo" />
