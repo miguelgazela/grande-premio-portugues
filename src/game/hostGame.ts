@@ -1,17 +1,18 @@
 import type { RaceConfig } from '../engine/config';
-import { BOT_FIELDS, TEAM_COLOR, makeBot, makeGhost } from '../engine/drivers';
+import { BOT_FIELDS, makeBot, makeGhost } from '../engine/drivers';
 import { outcomeFromAnswers, type PlayerAnswer, type QuestionOutcome } from '../engine/outcome';
 import { Race, type Driver } from '../engine/race';
 import { mulberry32 } from '../engine/rng';
 import { pickAwards, scoreRace } from '../engine/scoring';
 import { TRACKS, Track, trackFor } from '../engine/track';
 import type { Api, Channel } from '../lib/api';
-import { play, unlockAudio } from '../lib/audio';
+import { music, play, unlockAudio } from '../lib/audio';
 import { ghostLabel, makeTimeline, type GhostRecord } from '../lib/ghosts';
 import type { AnyEvent, EndMsg, FinalInfo, HostEvent, PublicBody, PublicQuestion, RevealMsg } from '../lib/protocol';
 import { grade, prepare, solutionOf, toCanonical, type Prepared } from '../lib/questions';
 import type { AnswerValue, PlayerRow, QuestionRow, SavedState, SessionRow } from '../lib/types';
 import { raceConfigFor } from './raceSettings';
+import { DEFAULT_STYLE, TEAM_NAME, botCars, carDef, cleanVote, parseStyle, tally, type StyleVote, type TeamStyle } from './teamStyle';
 
 export type Phase = 'lobby' | 'countdown' | 'resume' | 'question' | 'ff' | 'reveal' | 'sprint' | 'finishing' | 'finished';
 
@@ -34,6 +35,12 @@ export interface HostSnapshot {
   question: { prompt: string; body: PublicBody } | null;
   reveal: RevealMsg | null;
   final: EndMsg | null;
+  /** Aspeto atual do carro da turma (votos ou fixado pela professora). */
+  team: TeamStyle;
+  /** Campos fixados pela professora. */
+  fixed: StyleVote;
+  /** Alunos que já votaram. */
+  voters: number;
   /** Aviso discreto (erros de rede a gravar, etc.). */
   notice: string | null;
 }
@@ -85,6 +92,9 @@ export class HostGame {
   private lastResync = 0;
   private pollTimer = 0;
   private timeBucket = -1;
+  private votes = new Map<string, StyleVote>();
+  private fixedStyle: StyleVote = {};
+  private style: TeamStyle = DEFAULT_STYLE;
   private teacherPaused = false;
   private pageHidden = false;
 
@@ -107,6 +117,7 @@ export class HostGame {
     this.snap = {
       phase: 'lobby', paused: false, hidden: false, connected: false, players: [], qIndex: 0, total: this.questions.length, laps: config.laps,
       questionTime: config.questionTime, timeLeft: config.questionTime, count: 3, avatars: session.state?.avatars ?? {}, answered: 0, question: null, reveal: null, final: null, notice: null,
+      team: DEFAULT_STYLE, fixed: {}, voters: 0,
     };
   }
 
@@ -145,6 +156,7 @@ export class HostGame {
 
   destroy(): void {
     this.stopped = true;
+    music.stop();
     cancelAnimationFrame(this.raf);
     clearInterval(this.pollTimer);
     document.removeEventListener('visibilitychange', this.onVisibility);
@@ -154,13 +166,19 @@ export class HostGame {
   private buildRace(): Race {
     const rng = mulberry32(this.seed);
     const team: Driver = {
-      id: 'team', name: 'Turma', kind: 'team', color: TEAM_COLOR,
+      id: 'team', name: TEAM_NAME, kind: 'team', color: carDef(this.style.car)?.color ?? 0x2f6bff, car: this.style.car,
       outcome: (q) => this.outcomes[q] ?? { accuracy: 0, speedBonus: 0 },
     };
     const field = BOT_FIELDS[this.session.settings?.botField ?? 'medio'];
     // Os fantasmas ocupam o lugar dos bots mais fracos: o número de carros não muda.
     const ghosts = this.extras.ghosts.slice(0, 3).map((g) => makeGhost(`ghost-${g.session_id}`, ghostLabel(g), g.outcomes));
     const bots = field.slice(ghosts.length).map((skill, i) => makeBot(rng, i, skill));
+    // Cada bot tem um carro diferente (modelo e cor), nunca da cor da turma.
+    const cars = botCars(this.style.car, bots.length);
+    bots.forEach((b, i) => {
+      b.car = cars[i]?.key;
+      b.color = cars[i]?.color ?? b.color;
+    });
     const race = new Race([team, ...bots, ...ghosts], this.track.length, this.config);
     // Pré-rolo: a resolução de cada pergunta coincide com o fim do tempo de resposta.
     race.time = this.config.overheadTime;
@@ -168,6 +186,8 @@ export class HostGame {
   }
 
   private async restore(state: SavedState): Promise<void> {
+    this.style = parseStyle(state.team);
+    this.set({ team: this.style });
     this.outcomes = state.outcomes.slice(0, state.next);
     this.race = this.buildRace();
     for (let q = 0; q < state.next; q++) {
@@ -234,9 +254,34 @@ export class HostGame {
       }
       if (this.snap.phase === 'lobby') void this.refreshPlayers();
       this.resync();
+    } else if (m.event === 'vote') {
+      if (this.snap.phase === 'lobby' && this.votes.size < 300) {
+        this.votes.set(m.payload.player_id, cleanVote(m.payload));
+        this.updateStyle();
+      }
     } else if (m.event === 'answer') {
       this.onAnswer(m.payload.player_id, m.payload.question_id, m.payload.value);
     }
+  }
+
+  private updateStyle(): void {
+    const { style, count } = tally(this.votes.values());
+    const f = this.fixedStyle;
+    this.style = { car: f.car ?? style.car };
+    this.set({ team: this.style, fixed: { ...f }, voters: count });
+    this.send({ event: 'lobby', payload: { count: this.snap.players.length, team: this.style } });
+  }
+
+  /** A professora fixa (ou, com `undefined`, larga) campos do aspeto; sobrepõe-se à votação. */
+  setStyle(patch: StyleVote): void {
+    if (this.snap.phase !== 'lobby') return;
+    const next = { ...this.fixedStyle };
+    if ('car' in patch) {
+      if (patch.car === undefined) delete next.car;
+      else next.car = patch.car;
+    }
+    this.fixedStyle = next;
+    this.updateStyle();
   }
 
   async refreshPlayers(): Promise<void> {
@@ -247,7 +292,7 @@ export class HostGame {
         const changed = active.length !== this.snap.players.length || active.some((p, i) => this.snap.players[i]?.id !== p.id);
         if (changed) {
           this.set({ players: active });
-          this.send({ event: 'lobby', payload: { count: active.length } });
+          this.send({ event: 'lobby', payload: { count: active.length, team: this.style } });
         }
       }
     } catch (e) {
@@ -260,7 +305,7 @@ export class HostGame {
       await this.api.kickPlayer(playerId);
       this.channel?.send({ event: 'kicked', payload: { player_id: playerId } });
       this.set({ players: this.snap.players.filter((p) => p.id !== playerId) });
-      this.send({ event: 'lobby', payload: { count: this.snap.players.length } });
+      this.send({ event: 'lobby', payload: { count: this.snap.players.length, team: this.style } });
     } catch (e) {
       this.notice(`Não consegui expulsar: ${(e as Error).message}`);
     }
@@ -275,12 +320,14 @@ export class HostGame {
   private onVisibility = () => {
     if (document.visibilityState === 'hidden') {
       this.pageHidden = true;
+      music.stop();
       this.set({ hidden: true, paused: true });
     } else {
       this.pageHidden = false;
       this.lastTs = performance.now();
       this.connect(); // o Safari suspende os websockets em segundo plano
       this.set({ hidden: false, paused: this.teacherPaused });
+      if (!this.teacherPaused && this.inRace()) music.start();
     }
   };
 
@@ -288,6 +335,12 @@ export class HostGame {
     this.teacherPaused = !this.teacherPaused;
     this.lastTs = performance.now();
     this.set({ paused: this.teacherPaused || this.pageHidden });
+    if (this.teacherPaused) music.stop();
+    else if (this.inRace()) music.start();
+  }
+
+  private inRace(): boolean {
+    return ['question', 'ff', 'reveal', 'sprint'].includes(this.snap.phase);
   }
 
   // ---------- Fluxo ----------
@@ -295,6 +348,7 @@ export class HostGame {
     unlockAudio();
     if (!this.snap.players.length) return;
     this.roster = [...this.snap.players];
+    this.race = this.buildRace(); // o carro da turma já tem o aspeto final
     try {
       await this.api.updateSession(this.session.id, { status: 'running', started: true, state: this.savedState(0) });
     } catch (e) {
@@ -309,12 +363,14 @@ export class HostGame {
   resume(): void {
     unlockAudio();
     play('start');
+    music.start();
     if (this.snap.qIndex >= this.questions.length) this.set({ phase: 'sprint' });
     else this.startQuestion(this.snap.qIndex);
   }
 
   private startQuestion(index: number) {
     const q = this.questions[index];
+    music.setFinalLap(Math.floor(index / this.config.questionsPerLap) + 1 >= this.config.laps);
     const prep = prepare(q, this.seed);
     this.current = { index, q, prep };
     this.answers = new Map();
@@ -390,7 +446,7 @@ export class HostGame {
   }
 
   private savedState(next: number): SavedState {
-    return { v: 1, seed: this.seed, next, outcomes: this.outcomes.slice(0, next), avatars: this.snap.avatars };
+    return { v: 1, seed: this.seed, next, outcomes: this.outcomes.slice(0, next), avatars: this.snap.avatars, team: this.style };
   }
 
   // ---------- Relógio ----------
@@ -412,6 +468,7 @@ export class HostGame {
       const count = 3 - Math.floor(this.countT / COUNT_STEP);
       if (count < 0) {
         play('start');
+        music.start();
         this.startQuestion(0);
       } else if (count !== this.snap.count) {
         play(count === 0 ? 'start' : 'tick');
@@ -445,7 +502,10 @@ export class HostGame {
       if (this.revealT >= REVEAL_SECONDS) {
         const next = this.current!.index + 1;
         if (next < this.questions.length) this.startQuestion(next);
-        else this.set({ phase: 'sprint', question: null });
+        else {
+          music.setFinalLap(true);
+          this.set({ phase: 'sprint', question: null });
+        }
       }
     } else if (phase === 'sprint') {
       // Uma turma fraca pode ficar muito longe da meta: acelera o sprint (taxa fixa) para durar ~20s.
@@ -459,6 +519,7 @@ export class HostGame {
       if (race.team!.finishTime !== null || race.finished) {
         this.holdT = 0;
         play('finish');
+        music.stop();
         this.set({ phase: 'finishing' });
       }
     } else if (phase === 'finishing') {
@@ -507,6 +568,7 @@ export class HostGame {
       ranking: top.map((s) => ({ nickname: nick(s.playerId), points: s.points, correct: s.correct, avatar: this.snap.avatars[s.playerId] })),
       awards: pickAwards(scores).map((a) => ({ emoji: a.emoji, title: a.title, nickname: nick(a.playerId), detail: a.detail })),
       teamPosition,
+      teamCar: this.style.car,
       totalQuestions: this.questions.length,
       ...this.ghostSummary(race),
     };
@@ -515,6 +577,7 @@ export class HostGame {
       players: Object.fromEntries(scores.map((s) => [s.playerId, { points: s.points, correct: s.correct, answered: s.answered, bestStreak: s.bestStreak, top: topIds.has(s.playerId) }])),
     };
     this.send({ event: 'end', payload: end });
+    if (teamPosition <= 3) play('cheer');
     this.set({ phase: 'finished', final: end });
     const finishTime = Math.round((race.team!.finishTime ?? 0) * 1000);
     try {

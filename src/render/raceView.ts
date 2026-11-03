@@ -2,33 +2,25 @@ import { Application, Container, Graphics, Sprite, Text, TilingSprite, type Text
 import { mulberry32 } from '../engine/rng';
 import { CURB_W, ROAD_W, WORLD_H, WORLD_W, type Track } from '../engine/track';
 import type { CarState, Race } from '../engine/race';
+import { themeForTrack, themeKeys, type Theme } from '../engine/theme';
 import { loadRaceTextures, type RaceTextures } from './assets';
+import { Particles } from './particles';
 
 const CAR_LEN = 34;
 /** Zoom da câmara em relação ao "caber o mundo antigo (1000 de largura) no ecrã". */
 const FOLLOW_ZOOM = 2.2;
 const LOOK_AHEAD = 70;
 const CURB_STRIPE = 18;
-const CURB_ORANGE = 0xf26b1d;
-const CURB_WHITE = 0xf5f5f5;
-
-/** Cor do bot → sprite de carro. */
-const CAR_BY_COLOR: Record<number, string> = {
-  0x2f6bff: 'car-team',
-  0xe74c3c: 'car-red',
-  0xf39c12: 'car-orange',
-  0x9b59b6: 'car-purple',
-  0x1abc9c: 'car-teal',
-  0xe84393: 'car-pink',
-  0x95a5a6: 'car-grey',
-  0x2ecc71: 'car-green',
-};
 
 interface CarNode {
   root: Container;
   /** Só existe com placeholders. */
   fx?: Graphics;
   turbo?: Sprite;
+  finished?: boolean;
+  skidT?: number;
+  puffT?: number;
+  sparkT?: number;
   nitro?: Sprite;
   smoke?: Sprite;
 }
@@ -52,11 +44,17 @@ export class RaceView {
   private miniScale = 1;
   private miniLabels = new Map<string, Text>();
   private clearancePts: Float32Array;
+  private theme: Theme;
+  private particles = new Particles();
+  private lastRender = 0;
+  private stands: Sprite[] = [];
+  private cheerT = 0;
 
   constructor(
     private track: Track,
-    private opts: { sprites?: boolean; follow?: boolean } = {},
+    private opts: { sprites?: boolean; follow?: boolean; trackId?: string } = {},
   ) {
+    this.theme = themeForTrack(opts.trackId ?? '');
     const pts = track.points.slice(0, -1);
     this.clearancePts = new Float32Array(pts.length * 2);
     pts.forEach((p, i) => {
@@ -66,18 +64,19 @@ export class RaceView {
   }
 
   async mount(el: HTMLElement): Promise<void> {
-    if (this.opts.sprites) this.tex = await loadRaceTextures();
-    await this.app.init({ background: 0x5cb85c, antialias: true, resizeTo: el, resolution: Math.min(window.devicePixelRatio || 1, 2), autoDensity: true });
+    if (this.opts.sprites) this.tex = await loadRaceTextures(themeKeys(this.theme));
+    await this.app.init({ background: this.theme.background, antialias: true, resizeTo: el, resolution: Math.min(window.devicePixelRatio || 1, 2), autoDensity: true });
     if (this.destroyed) return;
     el.appendChild(this.app.canvas);
     this.app.stage.addChild(this.world);
     this.drawTrack();
-    this.world.addChild(this.carLayer);
+    this.world.addChild(this.particles.under, this.carLayer, this.particles.over);
     if (this.opts.follow) {
       this.app.stage.addChild(this.mini);
       this.mini.addChild(this.miniDots);
     }
     const fit = () => {
+      if (this.destroyed) return;
       // `resizeTo` só reage ao resize da janela; a pista muda de altura quando a pergunta aparece/desaparece.
       if (el.clientWidth && el.clientHeight) this.app.renderer.resize(el.clientWidth, el.clientHeight);
       this.view = { w: el.clientWidth, h: el.clientHeight };
@@ -139,7 +138,7 @@ export class RaceView {
 
   private drawTrack(): void {
     // Fundo: relva em tile, muito além do mundo (o canvas pode ter margens).
-    const grass = this.t('bg-grass');
+    const grass = this.t(`bg-${this.theme.suffix || 'grass'}`);
     if (grass) {
       const bg = new TilingSprite({ texture: grass, width: 4000, height: 3000 });
       bg.position.set(-1500, -1200);
@@ -149,7 +148,7 @@ export class RaceView {
 
     this.drawCurbs();
     const road = new Graphics();
-    const asphalt = this.t('track-asphalt');
+    const asphalt = this.t(`track-asphalt${this.theme.suffix ? '-' + this.theme.suffix : ''}`);
     if (asphalt) {
       // Asfalto em tile, recortado pela forma da estrada.
       const mask = this.path(new Graphics()).stroke({ width: ROAD_W, color: 0xffffff, join: 'round' });
@@ -183,7 +182,7 @@ export class RaceView {
    */
   private drawCurbs(): void {
     const g = new Graphics();
-    this.path(g).stroke({ width: ROAD_W + CURB_W * 2, color: CURB_ORANGE, join: 'round' });
+    this.path(g).stroke({ width: ROAD_W + CURB_W * 2, color: this.theme.curbA, join: 'round' });
     const pts = this.track.points.slice(0, -1);
     const n = pts.length;
     const cum = this.track.cum;
@@ -212,7 +211,7 @@ export class RaceView {
         const poly: number[] = [];
         for (let k = i; k <= end; k++) poly.push(pts[k].x + normals[k].x * outer * side, pts[k].y + normals[k].y * outer * side);
         for (let k = end; k >= i; k--) poly.push(pts[k].x + normals[k].x * inner * side, pts[k].y + normals[k].y * inner * side);
-        g.poly(poly).fill(CURB_WHITE);
+        g.poly(poly).fill(this.theme.curbB);
         i = j + 1;
       }
     }
@@ -319,6 +318,7 @@ export class RaceView {
         s.position.set(x, y);
         s.zIndex = y;
         layer.addChild(s);
+        this.stands.push(s);
         placed.push({ x, y, r: w / 2 });
         return true;
       };
@@ -335,7 +335,7 @@ export class RaceView {
       }
     }
 
-    const place = (key: string, size: number, count: number, margin: number, nearRoad: boolean) => {
+    const place = (key: string, size: number, count: number, margin: number, nearRoad: boolean, spin = false) => {
       const tex = this.t(key);
       if (!tex) return;
       const r = size / 2;
@@ -355,20 +355,17 @@ export class RaceView {
         if (placed.some((o) => Math.hypot(o.x - x, o.y - y) < (o.r + r) * 0.9)) continue;
         placed.push({ x, y, r });
         const k = size / Math.max(tex.width, tex.height);
-        add(tex, x, y, tex.width * k, tex.height * k, key === 'prop-tree' || key === 'prop-bush' ? rng() * Math.PI * 2 : 0);
+        add(tex, x, y, tex.width * k, tex.height * k, spin ? rng() * Math.PI * 2 : 0);
         n++;
       }
     };
-    place('prop-tree', 70, 42, 10, false);
-    place('prop-bush', 40, 26, 8, false);
-    place('prop-tires', 28, 14, 8, true);
-    place('prop-cone', 18, 20, 6, true);
+    for (const pr of this.theme.props) place(pr.key, pr.size, pr.count, pr.margin, pr.nearRoad, pr.spin);
     this.world.addChild(layer);
   }
 
   private carNode(car: CarState): CarNode {
     const root = new Container();
-    const tex = this.t(CAR_BY_COLOR[car.driver.kind === 'ghost' ? 0x95a5a6 : car.driver.color] ?? 'car-grey');
+    const tex = this.t(car.driver.car ?? 'car-grey');
     const node: CarNode = { root };
 
     if (tex) {
@@ -412,7 +409,7 @@ export class RaceView {
     // Fantasma semi-transparente; o nome fica legível.
     if (car.driver.kind === 'ghost') for (const c of root.children) c.alpha = 0.45;
     if (car.driver.kind === 'team' || car.driver.kind === 'ghost') {
-      const label = new Text({ text: car.driver.kind === 'ghost' ? `👻 ${car.driver.name}` : 'Turma', style: { fontFamily: 'system-ui', fontSize: car.driver.kind === 'ghost' ? 12 : 14, fontWeight: '800', fill: 0xffffff, stroke: { color: 0x1b1b24, width: 4 } } });
+      const label = new Text({ text: car.driver.kind === 'ghost' ? `👻 ${car.driver.name}` : car.driver.name, style: { fontFamily: 'system-ui', fontSize: car.driver.kind === 'ghost' ? 12 : 14, fontWeight: '800', fill: 0xffffff, stroke: { color: 0x1b1b24, width: 4 } } });
       label.anchor.set(0.5, 1);
       label.position.set(0, -14);
       label.label = 'label';
@@ -423,7 +420,14 @@ export class RaceView {
     return node;
   }
 
+  /** Público a festejar durante ~1,6 s (ultrapassagem, meta). */
+  cheer(): void {
+    this.cheerT = 1.6;
+  }
+
   render(race: Race, clock: number): void {
+    const dt = Math.min(0.1, Math.max(0, clock - this.lastRender));
+    this.lastRender = clock;
     const n = race.cars.length;
     race.cars.forEach((car, i) => {
       const node = this.cars.get(car.driver.id) ?? this.carNode(car);
@@ -455,17 +459,61 @@ export class RaceView {
         node.nitro.visible = nitroOn;
         node.nitro.scale.x = (42 / node.nitro.texture.width) * flicker;
       }
+      this.emit(node, car, sprite, pose.angle, { spinning, nitroOn, turboOn }, dt);
       if (node.smoke) {
         node.smoke.visible = spinning;
         node.smoke.rotation = -sprite.rotation + clock * 2; // o fumo não roda com o carro
         node.smoke.alpha = 0.7 + 0.3 * Math.sin(clock * 12);
       }
     });
+    this.particles.update(dt);
+    if (this.cheerT > 0) {
+      this.cheerT = Math.max(0, this.cheerT - dt);
+      for (const [k, st] of this.stands.entries()) st.scale.y = st.scale.x * (1 + (this.cheerT > 0 ? 0.06 * Math.abs(Math.sin(clock * 14 + k)) : 0));
+    }
     // Carro da turma por cima.
     const team = race.team;
     const teamNode = team && this.cars.get(team.driver.id);
     if (teamNode) this.carLayer.setChildIndex(teamNode.root, this.carLayer.children.length - 1);
     if (this.opts.follow && team && teamNode) this.followCamera(race, team, teamNode.root, clock);
+  }
+
+  /** Rasto de pneus, fumo no despiste, faíscas no nitro, confetti na meta. Tudo limitado pelo pool de partículas. */
+  private emit(node: CarNode, car: CarState, sprite: Container, heading: number, st: { spinning: boolean; nitroOn: boolean; turboOn: boolean }, dt: number): void {
+    const isTeam = car.driver.kind === 'team';
+    const P = this.particles;
+    const cos = Math.cos(heading);
+    const sin = Math.sin(heading);
+    if (st.spinning) {
+      node.puffT = (node.puffT ?? 0) - dt;
+      if (node.puffT <= 0) {
+        node.puffT = 0.05;
+        P.smoke(sprite.x, sprite.y);
+      }
+      node.skidT = (node.skidT ?? 0) - dt;
+      if (node.skidT <= 0) {
+        node.skidT = 0.06;
+        P.skid(sprite.x, sprite.y, sprite.rotation);
+      }
+    } else if (isTeam && (st.nitroOn || st.turboOn)) {
+      node.skidT = (node.skidT ?? 0) - dt;
+      if (node.skidT <= 0) {
+        node.skidT = 0.07;
+        for (const side of [-1, 1]) P.skid(sprite.x - cos * 12 - sin * 7 * side, sprite.y - sin * 12 + cos * 7 * side, heading);
+      }
+    }
+    if (st.nitroOn || (isTeam && st.turboOn)) {
+      node.sparkT = (node.sparkT ?? 0) - dt;
+      if (node.sparkT <= 0) {
+        node.sparkT = st.nitroOn ? 0.03 : 0.07;
+        P.spark(sprite.x - cos * CAR_LEN * 0.55, sprite.y - sin * CAR_LEN * 0.55, heading, st.nitroOn ? (Math.random() < 0.5 ? 0x7fe0ff : 0xffffff) : 0xffb21a);
+      }
+    }
+    if (isTeam && car.finishTime !== null && !node.finished) {
+      node.finished = true;
+      for (let k = 0; k < 70; k++) P.confetti(sprite.x, sprite.y);
+      this.cheer();
+    }
   }
 
   /** Segue o carro da turma: lerp com look-ahead, zoom-out no turbo/nitro, tremor no despiste. Sem rodar. */
@@ -527,6 +575,7 @@ export class RaceView {
   reset(): void {
     this.carLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.cars.clear();
+    this.particles.clear();
     this.miniLabels.forEach((t) => t.destroy());
     this.miniLabels.clear();
   }

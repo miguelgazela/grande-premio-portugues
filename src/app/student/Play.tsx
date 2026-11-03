@@ -6,6 +6,8 @@ import type { EndMsg, PublicBody, PublicQuestion, RevealMsg } from '../../lib/pr
 import type { AnswerValue } from '../../lib/types';
 import { useApi } from '../useApi';
 import { Asset } from '../ui/Asset';
+import { TeamPicker } from '../ui/TeamPicker';
+import { DEFAULT_STYLE, type StyleVote, type TeamStyle } from '../../game/teamStyle';
 import { StudentInput, describeSolution } from '../ui/Question';
 import { clearPlayer, deviceToken, loadAvatar, loadPlayer } from './session';
 
@@ -19,7 +21,7 @@ function readEnd(sessionId: string): EndMsg | null {
 }
 
 type View =
-  | { k: 'wait'; count: number | null }
+  | { k: 'wait'; count: number | null; team?: TeamStyle }
   | { k: 'question'; q: PublicQuestion; at: number; full: number }
   | { k: 'reveal'; r: RevealMsg; body: PublicBody | null }
   | { k: 'end'; e: EndMsg }
@@ -39,6 +41,14 @@ export function Play() {
   const [problem, setProblem] = useState('');
   const [epoch, setEpoch] = useState(0);
   const channel = useRef<Channel | null>(null);
+  const voteRef = useRef<StyleVote | null>(null);
+  const [mine, setMine] = useState<StyleVote>({});
+  const vote = (v: StyleVote) => {
+    const next = { ...voteRef.current, ...v };
+    voteRef.current = next;
+    setMine(next);
+    if (player) channel.current?.send({ event: 'vote', payload: { player_id: player.player_id, ...next } });
+  };
 
   useEffect(() => {
     if (!player) nav('/', { replace: true });
@@ -84,7 +94,9 @@ export function Play() {
         (m) => {
           switch (m.event) {
             case 'lobby':
-              if (viewRef.current.k === 'wait') setView({ k: 'wait', count: m.payload.count });
+              if (viewRef.current.k === 'wait') setView({ k: 'wait', count: m.payload.count, team: m.payload.team });
+              // O anfitrião ainda pode não ter o meu voto (a lista de alunos atualiza-se aos poucos): repete-o.
+              if (voteRef.current) ch?.send({ event: 'vote', payload: { player_id: player.player_id, ...voteRef.current } });
               break;
             case 'question': {
               const cur = viewRef.current;
@@ -149,7 +161,11 @@ export function Play() {
       <div className="who">{loadAvatar() && <Asset name={loadAvatar()!} className="me-avatar" />}{player.nickname}{problem && <span className="error"> · {problem}</span>}</div>
       {view.k === 'wait' && (
         <div className="msg">
-          <div>Estás dentro! 🏁<small>{view.count ? `${view.count} na corrida · ` : ''}À espera que a professora comece…</small></div>
+          <div style={{ width: '100%', maxWidth: 520 }}>
+            Estás dentro! 🏁<small>{view.count ? `${view.count} na corrida · ` : ''}À espera que a professora comece…</small>
+            <small>Escolhe a cor do carro da turma (conta a mais votada):</small>
+            <TeamPicker value={{ ...(view.team ?? DEFAULT_STYLE), ...mine }} onPick={vote} />
+          </div>
         </div>
       )}
       {view.k === 'question' && <QuestionView q={view.q} at={view.at} full={view.full} mine={chosen[view.q.question_id]} onPick={answer} />}

@@ -8,7 +8,10 @@ import { errorMessage } from '../../lib/api';
 import { endSessions } from '../../lib/endSessions';
 import { keepAwake, wakeLockSupported } from '../../lib/wakeLock';
 import { RaceView } from '../../render/raceView';
+import { isMuted, play, setMuted } from '../../lib/audio';
+import { assetUrl } from '../../render/assets';
 import { Asset, Countdown, Flames, Place } from '../ui/Asset';
+import { CarPreview, TeamPicker } from '../ui/TeamPicker';
 import { HostBody } from '../ui/Question';
 import { useTeacher } from './TeacherGate';
 
@@ -102,7 +105,7 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
   }, [url]);
 
   return (
-    <div className="host">
+    <div className="host menubg" style={{ backgroundImage: `url(${assetUrl('menu-title.jpg')})` }}>
       <div className="lobby">
         <div className="join">
           <Asset name="ui-logo" alt="Grande Prémio de Português" className="logo" />
@@ -126,6 +129,10 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
               👻 Fantasmas: {game.extras.ghosts.map((g) => `${g.class_name ?? 'Fantasma'} (${fmtTime(g.finish_time_ms)})`).join(', ')}
             </p>
           )}
+          <details className="carbox" open>
+            <summary>🏎️ Cor do carro da turma{s.voters ? ` · ${s.voters} voto${s.voters > 1 ? 's' : ''}` : ''}</summary>
+            <TeamPicker host value={s.team} fixed={s.fixed} onPick={(v) => game.setStyle(v)} />
+          </details>
           <div className="chips">
             {s.players.length === 0 && <span className="muted" style={{ fontSize: 'clamp(16px,3vmin,28px)' }}>À espera dos alunos…</span>}
             {s.players.map((p) => (
@@ -153,6 +160,8 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
 function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [rank, setRank] = useState(0);
+  const [pop, setPop] = useState(0);
+  const [muted, setMutedState] = useState(isMuted());
   const [exiting, setExiting] = useState(false);
   const [stageError, setStageError] = useState<string | null>(null);
   const qpl = game.config.questionsPerLap;
@@ -161,10 +170,11 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   const showReveal = s.phase === 'reveal' && s.reveal;
 
   useEffect(() => {
-    const view = new RaceView(game.track, { sprites: true, follow: true });
+    const view = new RaceView(game.track, { sprites: true, follow: true, trackId: game.trackId });
     let mounted = false;
     let gone = false;
     let lastRank = 0;
+    let lastPop = -10;
     view.mount(stageRef.current!).then(
       () => {
         if (gone) view.destroy();
@@ -181,6 +191,14 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
       view.render(game.race, clock);
       const r = game.race.rankOf(game.race.team!);
       if (r !== lastRank) {
+        const ph = game.getSnapshot().phase;
+        // Só conta como ultrapassagem a corrida a sério (não a grelha de partida) e com intervalo entre avisos.
+        if (lastRank && r < lastRank && ['question', 'ff', 'reveal', 'sprint'].includes(ph) && clock - lastPop > 2) {
+          lastPop = clock;
+          setPop((n) => n + 1);
+          play('overtake');
+          view.cheer();
+        }
         lastRank = r;
         setRank(r);
       }
@@ -209,6 +227,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
       <div className="ctl">
         <button onClick={() => game.togglePause()} aria-label="Pausar">{s.paused && !s.hidden ? '▶' : '⏸'}</button>
         {(s.phase === 'question' || s.phase === 'reveal') && <button onClick={() => game.skip()} aria-label="Avançar">⏭</button>}
+        <button className="soundbtn" onClick={() => { setMuted(!muted); setMutedState(!muted); }} aria-label={muted ? 'Ligar o som' : 'Desligar o som'}>{muted ? '🔇' : '🔊'}</button>
       </div>
 
       <div className="stage">
@@ -224,6 +243,11 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
           <div className={`banner ${s.reveal!.nitro ? 'nitro' : s.reveal!.effect}`}>
             {(s.reveal!.nitro || s.reveal!.effect === 'turbo') && <Asset name="ui-flame" className="banner-flame" />}
             {s.reveal!.nitro ? 'NITRO!' : EFFECT_TEXT[s.reveal!.effect]} <small style={{ fontSize: '.5em' }}>{Math.round(s.reveal!.accuracy * 100)}% certas</small>
+          </div>
+        )}
+        {pop > 0 && (
+          <div key={pop} className="overtake" style={{ backgroundImage: `url(${assetUrl('ui-banner.png')})` }}>
+            <Asset name="ui-star" className="star" fallback="⭐" /> +1 POSIÇÃO!
           </div>
         )}
         {s.phase === 'finishing' && <div className="banner turbo">🏁 META!</div>}
@@ -276,7 +300,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
 function Podium({ s, onExit }: { s: HostSnapshot; onExit(): void }) {
   const f = s.final!.final;
   return (
-    <div className="host">
+    <div className="host menubg" style={{ backgroundImage: `url(${assetUrl('menu-results.jpg')})` }}>
       <div className="podium">
         <h1>
           {f.teamPosition === 1 && <Asset name="ui-trophy" className="title-icon" fallback="🏆 " />}
@@ -301,7 +325,7 @@ function Podium({ s, onExit }: { s: HostSnapshot; onExit(): void }) {
           <ol>
             {f.standings.map((c, i) => (
               <li key={i} className={c.kind === 'team' ? 'me' : ''}>
-                <span className="who"><Place index={i} /> {c.name}</span>
+                <span className="who"><Place index={i} />{c.kind === 'team' && <CarPreview car={f.teamCar ?? "car-team"} size={44} />} {c.name}</span>
                 <small>{(c.timeMs / 1000).toFixed(1)}s</small>
               </li>
             ))}

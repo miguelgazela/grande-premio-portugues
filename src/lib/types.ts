@@ -92,6 +92,8 @@ export interface SavedState {
   outcomes: { accuracy: number; speedBonus: number }[];
   /** player_id → chave do avatar (vem do `hello` dos alunos). */
   avatars?: Record<string, string>;
+  /** Aspeto do carro da turma, fixado ao começar. */
+  team?: import('../game/teamStyle').TeamStyle;
   /** Presente quando a corrida acabou. */
   final?: import('./protocol').EndMsg;
 }

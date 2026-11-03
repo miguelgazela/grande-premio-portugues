@@ -24,11 +24,13 @@ Gerados com Higgsfield (`gpt_image_2_5`, `background: transparent`), a 2026-11-0
 - Lote 5 props extra por tema (256 máx., anchor centro), prefixo `prop-g-` (relva), `prop-d-` (deserto), `prop-s-` (neve), `prop-c-` (cidade): g: cow, sheep, hay, pond, picnic, flowers, tractor, windmill; d: camel, oasis, pyramid, tent, cactus2, chest, fossil, balloon; s: igloo, penguins, polarbear, sled, pond, pine2, cabin, mound; c: glassroof, pool, helipad, foodtruck, bus, taxi, billboard, park. Veículos e animais com cabeça para +x (camelo, trator, urso, food truck, autocarro, táxi). Fracos: `prop-s-polarbear` (pouco legível) e `prop-d-camel` (achatado), candidatos a regenerar.
 - UI: `ui-logo`, `ui-trophy`, `ui-medal-gold/silver/bronze`, `ui-flame`, `ui-podium`.
 
+- Lote 5 carros por modelo (15, 256×128, cores originais com riscas de corrida, sem número, nariz para +x): `car-coupe-red|yellow|teal`, `car-rally-blue|orange|white`, `car-pickup-green|red|purple`, `car-van-yellow|pink|blue`, `car-kart-orange|green|purple`. Gerados com `gpt_image_2_5` a partir de `cartype-*` como referência; originais em `source/car-<modelo>-<cor>.png`. O jogo usa estes (e os `car-*` clássicos), já não usa `cartype-*` com tint.
+
 ## Processamento
 Originais (1024px, com halo) em `source/`. Script (fora do repo) corta alpha < 100 (remove o halo), recorta margens e redimensiona (Pillow, venv na scratchpad). Não foi preciso `remove_background`: o modelo gera transparência.
 
 ## Créditos
-Saldo inicial 174,75. Lote 1: 7,25 créditos (24 imagens). Lote 2: 5,5 (22 imagens). Lote 3: 10 (40 imagens). Modelos de carro: 2 (5 imagens). Lote 4 (menus + temas): 4 (14 imagens). Lote 5 (32 props): 8. Total 36,75; saldo final 138. Custo real ≈ 0,25–0,3/imagem.
+Saldo inicial 174,75. Lote 1: 7,25 créditos (24 imagens). Lote 2: 5,5 (22 imagens). Lote 3: 10 (40 imagens). Modelos de carro: 2 (5 imagens). Lote 4 (menus + temas): 4 (14 imagens). Lote 5 (32 props): 8. Lote 6 (carros por modelo): 3,75 (15 imagens). Total 40,5; saldo final 134,25. Custo real ≈ 0,25–0,3/imagem.
 
 ## Fica por fazer
 - Sem ícone "+1" (usar `ui-star` + texto do jogo). `track-asphalt`/`track-curb` não testados em tile.
