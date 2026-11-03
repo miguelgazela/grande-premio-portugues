@@ -79,6 +79,7 @@ function ExitDialog({ game, onClose }: { game: HostGame; onClose(): void }) {
   const end = async () => {
     setBusy(true);
     try {
+      game.announceAborted();
       await endSessions(api, [game.session.id]);
       nav('/prof');
     } catch (e) {

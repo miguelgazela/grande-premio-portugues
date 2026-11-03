@@ -96,6 +96,8 @@ export type HostEvent =
   | { event: 'kicked'; payload: { player_id: string } }
   /** A professora mudou a alcunha de um aluno. */
   | { event: 'renamed'; payload: { player_id: string; nickname: string } }
+  /** A professora pôs o jogo em pausa (ou retomou); `time` = segundos que sobram à pergunta atual. */
+  | { event: 'pause'; payload: { paused: boolean; time: number } }
   /** A professora terminou a sessão a meio. */
   | { event: 'aborted'; payload: Record<string, never> };
 
@@ -114,7 +116,7 @@ export type AnyEvent = HostEvent | StudentEvent;
  * Todas as mensagens do canal. O Realtime do Supabase só entrega as mensagens cujo nome foi registado,
  * por isso esta lista tem de as ter todas: o `satisfies` abaixo falha a compilar se faltar alguma.
  */
-export const EVENT_NAMES = ['lobby', 'question', 'reveal', 'end', 'kicked', 'renamed', 'aborted', 'hello', 'vote', 'answer', 'leave'] as const satisfies readonly AnyEvent['event'][];
+export const EVENT_NAMES = ['lobby', 'question', 'reveal', 'end', 'kicked', 'renamed', 'pause', 'aborted', 'hello', 'vote', 'answer', 'leave'] as const satisfies readonly AnyEvent['event'][];
 type MissingEvents = Exclude<AnyEvent['event'], (typeof EVENT_NAMES)[number]>;
 export const _allEventsListed: [MissingEvents] extends [never] ? true : never = true;
 
