@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from './config';
-import { Track, DEFAULT_TRACK_POINTS, TRACKS, ROAD_W, CURB_W, type Vec } from './track';
-import { Race, type Driver } from './race';
+import { Track, Road, roadSeed, DEFAULT_TRACK_POINTS, TRACKS, ROAD_W, CURB_W, type Vec } from './track';
+import { Race, raceLengthFor, type Driver } from './race';
 import { makeGhost } from './drivers';
 import { outcomeFromAnswers } from './outcome';
 import { pickAwards, scoreRace } from './scoring';
@@ -168,5 +168,47 @@ describe.each(TRACKS)('Track geometry: $name', ({ points, samples }) => {
       }
     }
     expect(min).toBeGreaterThan(2 * half + 40);
+  });
+});
+
+describe('Road (pista aberta gerada)', () => {
+  const need = raceLengthFor(DEFAULT_CONFIG);
+  const half = ROAD_W / 2 + CURB_W;
+
+  it('is deterministic per seed and long enough for the race', () => {
+    const a = new Road(roadSeed('sessao-1'), need);
+    const b = new Road(roadSeed('sessao-1'), need);
+    const c = new Road(roadSeed('sessao-2'), need);
+    expect(a.length).toBeGreaterThanOrEqual(need);
+    expect(a.points).toEqual(b.points);
+    expect(a.points).not.toEqual(c.points);
+  });
+
+  it('never doubles back: distant stretches keep clear of each other and curves are gentle', () => {
+    for (const seed of [1, 2, 3, 99]) {
+      const r = new Road(seed, need);
+      const pts = r.points;
+      let min = Infinity;
+      for (let i = 0; i < pts.length; i++) {
+        for (let j = i + 1; j < pts.length; j++) {
+          if (pts[j].x - pts[i].x > 600) break; // avança sempre em x: o resto está mais longe
+          if (r.cum[j] - r.cum[i] < 300) continue;
+          min = Math.min(min, Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y));
+        }
+      }
+      expect(min).toBeGreaterThan(2 * half + 40);
+      // Raio de curvatura mínimo aproximado, a partir de 3 pontos a ~100 de distância.
+      let worst = Infinity;
+      for (let i = 0; i < pts.length; i++) {
+        const a = r.indexAt(r.cum[i] - 100);
+        const b = r.indexAt(r.cum[i] + 100);
+        if (a === i || b === i || r.cum[b] - r.cum[i] < 90) continue;
+        const [p, q, s] = [pts[a], pts[i], pts[b]];
+        const area = Math.abs((q.x - p.x) * (s.y - p.y) - (q.y - p.y) * (s.x - p.x)) / 2;
+        const radius = (Math.hypot(q.x - p.x, q.y - p.y) * Math.hypot(s.x - q.x, s.y - q.y) * Math.hypot(s.x - p.x, s.y - p.y)) / (4 * area || 1e-9);
+        worst = Math.min(worst, radius);
+      }
+      expect(worst).toBeGreaterThan(half + 30);
+    }
   });
 });
