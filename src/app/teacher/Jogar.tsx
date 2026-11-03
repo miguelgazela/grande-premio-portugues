@@ -49,6 +49,19 @@ function writeLast(v: LastGame) {
   }
 }
 
+/** iPad na horizontal: o layout passa a duas colunas sem scroll. */
+const LANDSCAPE_Q = '(orientation: landscape) and (min-width: 900px)';
+function useLandscape() {
+  const [v, setV] = useState(() => window.matchMedia(LANDSCAPE_Q).matches);
+  useEffect(() => {
+    const m = window.matchMedia(LANDSCAPE_Q);
+    const on = () => setV(m.matches);
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
+  return v;
+}
+
 /** Área "Jogar" (iPad): repetir o último jogo, ou escolher quiz e turma, e abrir a sala. */
 export function Jogar() {
   const { api, teacher, signOut } = useTeacher();
@@ -68,6 +81,7 @@ export function Jogar() {
   const [picked, setPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const landscape = useLandscape();
 
   useEffect(() => {
     void (async () => {
@@ -178,6 +192,7 @@ export function Jogar() {
           </div>
         </div>
 
+        <div className="jogar-cols">
         {last && lastQuiz && (
           <section className="hero" aria-labelledby="again-h">
             <div className="muted" id="again-h">Repetir o último jogo</div>
@@ -191,7 +206,7 @@ export function Jogar() {
           </section>
         )}
 
-        <section className="group">
+        <section className="group pick">
           <h2 className="sec">{last && lastQuiz ? 'Ou escolher outro jogo' : 'Novo jogo'}</h2>
           <div className="group" role="radiogroup" aria-label="Quiz">
             <b>Quiz</b>
@@ -226,7 +241,10 @@ export function Jogar() {
             {classes.length === 0 && <span className="muted">As turmas criam-se em “Preparar → Turmas”.</span>}
           </div>
 
-          <details className="more">
+        </section>
+
+        <div className="adv-area">
+          <details className="more" open={landscape || undefined} key={landscape ? 'l' : 'p'}>
             <summary>
               <span>Ajustar corrida</span>
               <span className="sum">Bots {botLabel(field).toLowerCase()} · {effLaps} voltas{time ? ` · ${timeLabel(time)}` : ''}{validPicked.length ? ` · ${validPicked.length} 👻` : ''}</span>
@@ -278,10 +296,7 @@ export function Jogar() {
               )}
             </div>
           </details>
-        </section>
-
-        {error && <div className="error">{error}</div>}
-      </div>
+        </div>
 
       {showBar && (
         <div className="actionbar">
@@ -290,6 +305,9 @@ export function Jogar() {
           </button>
         </div>
       )}
+        </div>
+        {error && <div className="error">{error}</div>}
+      </div>
     </div>
   );
 }
