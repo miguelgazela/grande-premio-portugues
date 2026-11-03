@@ -2,6 +2,8 @@ import { clamp } from './rng';
 import { cycleTime, totalQuestions, type RaceConfig } from './config';
 import type { QuestionOutcome } from './outcome';
 
+const MAX_STEP = 0.25;
+
 export type DriverKind = 'team' | 'bot' | 'ghost';
 export type Effect = 'turbo' | 'normal' | 'slow' | 'spin';
 
@@ -154,6 +156,13 @@ export class Race {
   }
 
   step(dt: number): void {
+    // Passos grandes (avanço rápido do anfitrião) dão resultados diferentes dos do simulador:
+    // parte-os, para o mesmo conjunto de respostas dar sempre o mesmo tempo (fantasmas justos).
+    if (dt > MAX_STEP) {
+      const n = Math.ceil(dt / MAX_STEP);
+      for (let i = 0; i < n && !this.finished; i++) this.step(dt / n);
+      return;
+    }
     if (this.finished) return;
     this.time += dt;
 

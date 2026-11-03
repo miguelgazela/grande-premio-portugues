@@ -50,6 +50,7 @@ export class RaceView {
   private mini = new Container();
   private miniDots = new Graphics();
   private miniScale = 1;
+  private miniLabels = new Map<string, Text>();
   private clearancePts: Float32Array;
 
   constructor(
@@ -120,7 +121,8 @@ export class RaceView {
     bg.closePath().stroke({ width: 5, color: 0xffffff, alpha: 0.85, join: 'round' });
     const start = this.track.poseAt(0);
     bg.circle(start.x * this.miniScale, start.y * this.miniScale, 3).fill(0xffd23f);
-    this.mini.children.filter((c) => c !== this.miniDots).forEach((c) => c.destroy());
+    const labels = new Set<unknown>(this.miniLabels.values());
+    this.mini.children.filter((c) => c !== this.miniDots && !labels.has(c)).forEach((c) => c.destroy());
     this.mini.addChildAt(bg, 0);
   }
 
@@ -407,9 +409,10 @@ export class RaceView {
       node.fx = new Graphics();
       root.addChild(node.fx, body);
     }
-    if (car.driver.kind === 'ghost') root.alpha = 0.45;
-    if (car.driver.kind === 'team') {
-      const label = new Text({ text: 'Turma', style: { fontFamily: 'system-ui', fontSize: 14, fontWeight: '800', fill: 0xffffff, stroke: { color: 0x1b1b24, width: 4 } } });
+    // Fantasma semi-transparente; o nome fica legível.
+    if (car.driver.kind === 'ghost') for (const c of root.children) c.alpha = 0.45;
+    if (car.driver.kind === 'team' || car.driver.kind === 'ghost') {
+      const label = new Text({ text: car.driver.kind === 'ghost' ? `👻 ${car.driver.name}` : 'Turma', style: { fontFamily: 'system-ui', fontSize: car.driver.kind === 'ghost' ? 12 : 14, fontWeight: '800', fill: 0xffffff, stroke: { color: 0x1b1b24, width: 4 } } });
       label.anchor.set(0.5, 1);
       label.position.set(0, -14);
       label.label = 'label';
@@ -499,6 +502,16 @@ export class RaceView {
       const y = node.root.y * this.miniScale;
       d.circle(x, y, isTeam ? 6 : 3.5).fill(c.driver.kind === 'ghost' ? 0xbfc5cc : c.driver.color || 0x95a5a6);
       if (isTeam) d.circle(x, y, 6).stroke({ width: 2, color: 0xffffff });
+      if (c.driver.kind === 'ghost') {
+        let t = this.miniLabels.get(c.driver.id);
+        if (!t) {
+          t = new Text({ text: c.driver.name, style: { fontFamily: 'system-ui', fontSize: 10, fontWeight: '800', fill: 0xffffff, stroke: { color: 0x1b1b24, width: 3 } } });
+          t.anchor.set(0.5, 1);
+          this.mini.addChild(t);
+          this.miniLabels.set(c.driver.id, t);
+        }
+        t.position.set(x, y - 5);
+      }
     }
   }
 
@@ -514,5 +527,7 @@ export class RaceView {
   reset(): void {
     this.carLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.cars.clear();
+    this.miniLabels.forEach((t) => t.destroy());
+    this.miniLabels.clear();
   }
 }

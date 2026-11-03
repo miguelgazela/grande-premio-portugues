@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { BotField } from '../../engine/drivers';
-import { MAX_LAPS, maxQuestionsPerLap } from '../../game/raceSettings';
+import { MAX_LAPS, maxQuestionsPerLap, raceConfigFor } from '../../game/raceSettings';
 import { errorMessage } from '../../lib/api';
 import { endSessions } from '../../lib/endSessions';
-import type { ClassRow, QuizRow, SessionRow, SessionSettings } from '../../lib/types';
+import { bestPerClass, compatibleRecords, fmtTime, ghostLabel, sameTrackAs, trackRecord, type GhostRecord } from '../../lib/ghosts';
+import type { ClassRow, QuestionRow, QuizRow, SessionRow, SessionSettings } from '../../lib/types';
 import { useTeacher } from './TeacherGate';
 
 const FIELDS: { key: BotField; label: string }[] = [
@@ -26,6 +27,9 @@ export function Jogar() {
   const [laps, setLaps] = useState(3);
   const [perLap, setPerLap] = useState(0); // 0 = todas
   const [time, setTime] = useState(0); // 0 = o do quiz
+  const [questions, setQuestions] = useState<QuestionRow[]>([]);
+  const [records, setRecords] = useState<GhostRecord[]>([]);
+  const [picked, setPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -53,6 +57,36 @@ export function Jogar() {
   const effPer = perLap && perLap <= maxPer ? perLap : 0;
   const used = effLaps * (effPer || maxPer);
 
+  // Corridas anteriores do quiz escolhido (para fantasmas e recorde).
+  useEffect(() => {
+    setPicked([]);
+    setRecords([]);
+    setQuestions([]);
+    if (!quiz) return;
+    let gone = false;
+    void Promise.all([api.loadQuestions(quiz.id, quiz.version), api.listGhostRecords(quiz.id, quiz.version)])
+      .then(([qs, rs]) => {
+        if (gone) return;
+        setQuestions(qs);
+        setRecords(rs);
+      })
+      .catch(() => undefined);
+    return () => {
+      gone = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [api, quizId, quizzes]);
+
+  const shape = raceConfigFor(questions, { botField: field, laps: effLaps, questionsPerLap: effPer || null, questionTime: time || null }).config;
+  const compat = compatibleRecords(records, shape);
+  const chosen = picked.flatMap((id) => compat.filter((g) => g.session_id === id));
+  const shown = sameTrackAs(compat, chosen);
+  const stars = bestPerClass(compat);
+  const record = trackRecord(records, shape);
+  const togglePick = (id: string) => setPicked((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length < 3 ? [...cur, id] : cur));
+  // Se mudar a configuração, descarta os fantasmas que deixaram de ser compatíveis.
+  const validPicked = chosen.map((g) => g.session_id);
+
   const terminate = async (ids: string[]) => {
     const what = ids.length > 1 ? `Terminar as ${ids.length} sessões em curso?` : 'Terminar esta sessão?';
     if (!window.confirm(`${what} Os alunos ficam sem corrida e nada é guardado no histórico.`)) return;
@@ -70,6 +104,10 @@ export function Jogar() {
     setError('');
     try {
       const settings: SessionSettings = { botField: field, laps: effLaps, questionsPerLap: effPer || null, questionTime: time || null };
+      if (chosen.length) {
+        settings.trackId = chosen[0].trackId;
+        settings.ghosts = chosen.map((g) => ({ sessionId: g.session_id, name: ghostLabel(g) }));
+      }
       const s = await api.createSession(quiz, classId || null, settings);
       nav(`/prof/jogo/${s.id}`);
     } catch (e) {
@@ -167,6 +205,27 @@ export function Jogar() {
             </select>
           </label>
           {quiz && <span className="muted">{used} perguntas no total{used < n ? ` (${n - used} ficam de fora)` : ''}.</span>}
+        </section>
+
+        <section>
+          <h3>5. Fantasmas de outras turmas (opcional)</h3>
+          {record && <p className="muted">🏆 Recorde desta corrida: <b>{fmtTime(record.finish_time_ms)}</b> ({ghostLabel(record)}, {new Date(record.created_at).toLocaleDateString('pt-PT')})</p>}
+          {compat.length === 0 && <p className="muted">Ainda não há corridas compatíveis (mesmo quiz, versão, voltas, perguntas por volta e tempo). Depois de jogares uma, ela aparece aqui.</p>}
+          <div style={{ display: 'grid', gap: 8 }}>
+            {shown.map((g) => {
+              const on = validPicked.includes(g.session_id);
+              return (
+                <div key={g.session_id} className={`quiz ${on ? 'sel' : ''}`} style={!on && validPicked.length >= 3 ? { opacity: 0.5 } : undefined} onClick={() => togglePick(g.session_id)}>
+                  <span>
+                    <b>{ghostLabel(g)}</b> {stars.has(g.session_id) && <span title="Melhor desta turma">⭐ melhor</span>}{' '}
+                    <span className="muted">{new Date(g.created_at).toLocaleDateString('pt-PT')} · {g.final_position}º lugar · {fmtTime(g.finish_time_ms)}</span>
+                  </span>
+                  {on && <span>✓</span>}
+                </div>
+              );
+            })}
+          </div>
+          {validPicked.length > 0 && <p className="muted">{validPicked.length} fantasma(s) no lugar de bots; a pista é a deles.{shown.length < compat.length ? ' (Só aparecem os que partilham a mesma pista.)' : ''}</p>}
         </section>
 
         {error && <div className="error">{error}</div>}
