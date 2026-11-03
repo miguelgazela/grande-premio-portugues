@@ -1,4 +1,4 @@
-import { DEFAULT_CONFIG, type RaceConfig } from '../engine/config';
+import type { RaceConfig } from '../engine/config';
 import { BOT_FIELDS, TEAM_COLOR, makeBot } from '../engine/drivers';
 import { outcomeFromAnswers, type PlayerAnswer, type QuestionOutcome } from '../engine/outcome';
 import { Race, type Driver } from '../engine/race';
@@ -9,6 +9,7 @@ import type { Api, Channel } from '../lib/api';
 import { play, unlockAudio } from '../lib/audio';
 import type { AnyEvent, EndMsg, FinalInfo, HostEvent, PublicQuestion, RevealMsg } from '../lib/protocol';
 import type { PlayerRow, QuestionRow, SavedState, SessionRow } from '../lib/types';
+import { raceConfigFor } from './raceSettings';
 
 export type Phase = 'lobby' | 'resume' | 'question' | 'ff' | 'reveal' | 'sprint' | 'finishing' | 'finished';
 
@@ -37,14 +38,7 @@ const FINISH_HOLD = 2.5;
 const FF_SECONDS = 1.2;
 const EPS = 0.0005;
 
-/** Cálculo da configuração a partir do número de perguntas: 3 voltas, perguntas por volta = n/3. */
-export function raceConfigFor(questions: QuestionRow[]): { config: RaceConfig; used: number } {
-  const n = questions.length;
-  const laps = n >= 3 ? DEFAULT_CONFIG.laps : 1;
-  const questionsPerLap = Math.max(1, Math.floor(n / laps));
-  const questionTime = Math.min(60, Math.max(5, questions[0]?.time_limit ?? DEFAULT_CONFIG.questionTime));
-  return { config: { ...DEFAULT_CONFIG, laps, questionsPerLap, questionTime }, used: laps * questionsPerLap };
-}
+export { raceConfigFor };
 
 type Listener = () => void;
 
@@ -89,7 +83,7 @@ export class HostGame {
     readonly session: SessionRow,
     questions: QuestionRow[],
   ) {
-    const { config, used } = raceConfigFor(questions);
+    const { config, used } = raceConfigFor(questions, session.settings);
     this.config = config;
     this.questions = questions.slice(0, used);
     this.seed = session.state?.seed ?? Math.floor(Math.random() * 2 ** 31);

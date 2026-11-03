@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { BotField } from '../../engine/drivers';
+import { MAX_LAPS, maxQuestionsPerLap } from '../../game/raceSettings';
 import { errorMessage } from '../../lib/api';
-import type { ClassRow, QuizRow, SessionRow } from '../../lib/types';
+import type { ClassRow, QuizRow, SessionRow, SessionSettings } from '../../lib/types';
 import { useTeacher } from './TeacherGate';
 
 const FIELDS: { key: BotField; label: string }[] = [
@@ -11,7 +12,8 @@ const FIELDS: { key: BotField; label: string }[] = [
   { key: 'dificil', label: 'Difícil' },
 ];
 
-export function Quizzes() {
+/** Área "Jogar" (iPad): escolher quiz, turma e definições, e criar a sessão. */
+export function Jogar() {
   const { api, teacher, signOut } = useTeacher();
   const nav = useNavigate();
   const [quizzes, setQuizzes] = useState<QuizRow[] | null>(null);
@@ -20,7 +22,9 @@ export function Quizzes() {
   const [quizId, setQuizId] = useState('');
   const [classId, setClassId] = useState('');
   const [field, setField] = useState<BotField>('medio');
-  const [newClass, setNewClass] = useState('');
+  const [laps, setLaps] = useState(3);
+  const [perLap, setPerLap] = useState(0); // 0 = todas
+  const [time, setTime] = useState(0); // 0 = o do quiz
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -31,7 +35,8 @@ export function Quizzes() {
         setQuizzes(q);
         setClasses(c);
         setOpen(o);
-        if (q.length) setQuizId(q[0].id);
+        const first = q.find((x) => x.questionCount > 0);
+        if (first) setQuizId(first.id);
       } catch (e) {
         setError(errorMessage(e));
         setQuizzes([]);
@@ -40,27 +45,20 @@ export function Quizzes() {
   }, [api]);
 
   const quiz = quizzes?.find((q) => q.id === quizId);
-
-  const addClass = async () => {
-    const name = newClass.trim();
-    if (!name) return;
-    try {
-      const year = Number(/\d+/.exec(name)?.[0]) || 9;
-      const c = await api.createClass(name, Math.min(12, Math.max(5, year)));
-      setClasses((cs) => [...cs, c]);
-      setClassId(c.id);
-      setNewClass('');
-    } catch (e) {
-      setError(errorMessage(e));
-    }
-  };
+  const n = quiz?.questionCount ?? 0;
+  const maxLaps = Math.max(1, Math.min(MAX_LAPS, n));
+  const effLaps = Math.min(laps, maxLaps);
+  const maxPer = maxQuestionsPerLap(n, effLaps);
+  const effPer = perLap && perLap <= maxPer ? perLap : 0;
+  const used = effLaps * (effPer || maxPer);
 
   const create = async () => {
     if (!quiz) return;
     setBusy(true);
     setError('');
     try {
-      const s = await api.createSession(quiz, classId || null, { botField: field });
+      const settings: SessionSettings = { botField: field, laps: effLaps, questionsPerLap: effPer || null, questionTime: time || null };
+      const s = await api.createSession(quiz, classId || null, settings);
       nav(`/prof/jogo/${s.id}`);
     } catch (e) {
       setError(errorMessage(e));
@@ -73,7 +71,10 @@ export function Quizzes() {
       <div className="card wide">
         <div className="row spread">
           <h1>🏎️ Olá, {teacher.name}</h1>
-          <button onClick={signOut}>Sair</button>
+          <div className="row">
+            <button onClick={() => nav('/prof/preparar')}>✎ Preparar</button>
+            <button onClick={signOut}>Sair</button>
+          </div>
         </div>
 
         {open.length > 0 && (
@@ -95,10 +96,10 @@ export function Quizzes() {
         <section>
           <h3>1. Escolhe o quiz</h3>
           {quizzes === null && <p className="muted">A carregar…</p>}
-          {quizzes?.length === 0 && <p className="muted">Ainda não há quizzes. Aplica a seed de exemplo (ver README).</p>}
+          {quizzes?.length === 0 && <p className="muted">Ainda não há quizzes. Cria um em “Preparar”.</p>}
           <div style={{ display: 'grid', gap: 8 }}>
             {quizzes?.map((q) => (
-              <div key={q.id} className={`quiz ${q.id === quizId ? 'sel' : ''}`} onClick={() => setQuizId(q.id)}>
+              <div key={q.id} className={`quiz ${q.id === quizId ? 'sel' : ''}`} style={q.questionCount === 0 ? { opacity: 0.5 } : undefined} onClick={() => q.questionCount > 0 && setQuizId(q.id)}>
                 <span>
                   <b>{q.title}</b> <span className="muted">{q.year ? `${q.year}º ano · ` : ''}{q.questionCount} perguntas</span>
                 </span>
@@ -116,10 +117,7 @@ export function Quizzes() {
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
-          <div className="row">
-            <input style={{ flex: 1 }} placeholder="Nova turma, ex.: 9ºA" value={newClass} onChange={(e) => setNewClass(e.target.value)} />
-            <button onClick={() => void addClass()} disabled={!newClass.trim()}>Adicionar</button>
-          </div>
+          {classes.length === 0 && <span className="muted">As turmas criam-se em “Preparar → Turmas”.</span>}
         </section>
 
         <section>
@@ -131,8 +129,30 @@ export function Quizzes() {
           </div>
         </section>
 
+        <section className="settings">
+          <h3>4. Corrida</h3>
+          <label>Voltas
+            <select value={effLaps} onChange={(e) => { setLaps(Number(e.target.value)); setPerLap(0); }}>
+              {Array.from({ length: maxLaps }, (_, i) => i + 1).map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </label>
+          <label>Perguntas por volta
+            <select value={effPer} onChange={(e) => setPerLap(Number(e.target.value))}>
+              <option value={0}>Todas ({maxPer})</option>
+              {Array.from({ length: maxPer }, (_, i) => i + 1).map((v) => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </label>
+          <label>Tempo por pergunta
+            <select value={time} onChange={(e) => setTime(Number(e.target.value))}>
+              <option value={0}>O do quiz</option>
+              {[10, 15, 20, 30, 45, 60].map((v) => <option key={v} value={v}>{v} s</option>)}
+            </select>
+          </label>
+          {quiz && <span className="muted">{used} perguntas no total{used < n ? ` (${n - used} ficam de fora)` : ''}.</span>}
+        </section>
+
         {error && <div className="error">{error}</div>}
-        <button className="primary big" disabled={!quiz || busy || (quiz?.questionCount ?? 0) < 1} onClick={() => void create()}>
+        <button className="primary big" disabled={!quiz || busy || n < 1} onClick={() => void create()}>
           {busy ? 'A criar…' : 'Criar sessão'}
         </button>
       </div>

@@ -1,5 +1,5 @@
 import type { AnyEvent } from './protocol';
-import type { AnswerRow, ClassRow, JoinResult, PlayerRow, QuestionRow, QuizRow, RaceRecordRow, SavedState, SessionRow, SessionSettings, SessionStatus } from './types';
+import type { AnswerRow, ClassRow, JoinResult, PlayerRow, QuestionRow, QuizInput, QuizRow, RaceRecordRow, RaceSummary, ReportData, SavedState, SaveQuizResult, SessionRow, SessionSettings, SessionStatus } from './types';
 
 export type TeacherCheck = { ok: true; id: string; name: string } | { ok: false; reason: 'anon' | 'noaccess' };
 
@@ -18,6 +18,18 @@ export interface Api {
   listQuizzes(): Promise<QuizRow[]>;
   listClasses(): Promise<ClassRow[]>;
   createClass(name: string, year: number): Promise<ClassRow>;
+  updateClass(id: string, name: string, year: number): Promise<ClassRow>;
+  deleteClass(id: string): Promise<void>;
+
+  getQuiz(id: string): Promise<{ quiz: QuizRow; questions: QuestionRow[] }>;
+  createQuiz(title: string, year: number | null, topic: string | null): Promise<QuizRow>;
+  /** Guarda quiz + perguntas; cria nova versão se a atual já foi jogada. */
+  saveQuiz(quiz: QuizInput): Promise<SaveQuizResult>;
+  duplicateQuiz(id: string): Promise<QuizRow>;
+  /** Apaga; se já tem sessões, arquiva (esconde da biblioteca, mantém o histórico). */
+  deleteQuiz(id: string): Promise<'deleted' | 'archived'>;
+  listRaces(filter?: { classId?: string; quizId?: string }): Promise<RaceSummary[]>;
+  loadReport(sessionId: string): Promise<ReportData>;
   listOpenSessions(): Promise<SessionRow[]>;
   createSession(quiz: QuizRow, classId: string | null, settings: SessionSettings): Promise<SessionRow>;
   getSession(id: string): Promise<SessionRow>;
