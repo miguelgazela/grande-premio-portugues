@@ -39,6 +39,8 @@ export interface HostSnapshot {
   team: TeamStyle;
   /** Alunos que já votaram. */
   voters: number;
+  /** Empate nos votos: o carro foi sorteado (nenhum dos empatados). */
+  tie: boolean;
   /** Aviso discreto (erros de rede a gravar, etc.). */
   notice: string | null;
 }
@@ -114,7 +116,7 @@ export class HostGame {
     this.snap = {
       phase: 'lobby', paused: false, hidden: false, connected: false, players: [], qIndex: 0, total: this.questions.length, laps: config.laps,
       questionTime: config.questionTime, timeLeft: config.questionTime, count: 3, avatars: session.state?.avatars ?? {}, answered: 0, question: null, reveal: null, final: null, notice: null,
-      team: DEFAULT_STYLE, voters: 0,
+      team: DEFAULT_STYLE, voters: 0, tie: false,
     };
   }
 
@@ -261,11 +263,11 @@ export class HostGame {
     }
   }
 
-  /** O carro da turma é sempre o mais votado pelos alunos (o por defeito, enquanto ninguém vota). */
+  /** O carro da turma é o mais votado pelos alunos (o por defeito, sem votos; sorteado, num empate). */
   private updateStyle(): void {
-    const { style, count } = tally(this.votes.values());
+    const { style, count, tie } = tally(this.votes.values(), this.session.id);
     this.style = { car: style.car };
-    this.set({ team: this.style, voters: count });
+    this.set({ team: this.style, voters: count, tie });
     this.send({ event: 'lobby', payload: { count: this.snap.players.length, team: this.style } });
   }
 

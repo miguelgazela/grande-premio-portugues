@@ -135,7 +135,7 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
             <div>
               <b>🏎️ Carro da turma: {carDef(s.team.car)?.label ?? ''}</b>
               <div className="muted" style={{ fontSize: 'clamp(13px,2.2vmin,22px)' }}>
-                {s.voters ? `Mais votado · ${s.voters} voto${s.voters > 1 ? 's' : ''}` : 'Por defeito: os alunos podem votar no telemóvel'}
+                {s.tie ? `Empate nos votos: carro sorteado · ${s.voters} votos` : s.voters ? `Mais votado · ${s.voters} voto${s.voters > 1 ? 's' : ''}` : 'Por defeito: os alunos podem votar no telemóvel'}
               </div>
             </div>
           </div>

@@ -163,7 +163,7 @@ export function Play() {
         <div className="msg">
           <div style={{ width: '100%', maxWidth: 520 }}>
             Estás dentro! 🏁<small>{view.count ? `${view.count} na corrida · ` : ''}À espera que a professora comece…</small>
-            <small>Escolhe a cor do carro da turma (conta a mais votada):</small>
+            <small>Vota no carro da turma (ganha o mais votado; num empate sai um à sorte):</small>
             <TeamPicker value={{ ...(view.team ?? DEFAULT_STYLE), ...mine }} onPick={vote} />
           </div>
         </div>
