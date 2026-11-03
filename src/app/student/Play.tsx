@@ -20,9 +20,9 @@ function readEnd(sessionId: string): EndMsg | null {
   }
 }
 
-function readVote(sessionId: string | undefined): string | null {
+function readVote(playerId: string | undefined): string | null {
   try {
-    const v = sessionId ? localStorage.getItem(`gpp.vote.${sessionId}`) : null;
+    const v = playerId ? localStorage.getItem(`gpp.vote.${playerId}`) : null;
     return v && carDef(v) ? v : null;
   } catch {
     return null;
@@ -51,14 +51,14 @@ export function Play() {
   const [problem, setProblem] = useState('');
   const [epoch, setEpoch] = useState(0);
   const channel = useRef<Channel | null>(null);
-  const [car, setCar] = useState<string | null>(() => readVote(player?.session_id));
+  const [car, setCar] = useState<string | null>(() => readVote(player?.player_id));
   const carRef = useRef(car);
   const [leaving, setLeaving] = useState(false);
   const vote = (next: string) => {
     carRef.current = next;
     setCar(next);
     if (!player) return;
-    try { localStorage.setItem(`gpp.vote.${player.session_id}`, next); } catch { /* sem armazenamento */ }
+    try { localStorage.setItem(`gpp.vote.${player.player_id}`, next); } catch { /* sem armazenamento */ }
     channel.current?.send({ event: 'vote', payload: { player_id: player.player_id, car: next } });
   };
 
