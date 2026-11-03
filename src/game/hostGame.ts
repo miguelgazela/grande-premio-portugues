@@ -11,6 +11,7 @@ import { ghostLabel, makeTimeline, type GhostRecord } from '../lib/ghosts';
 import type { AnyEvent, EndMsg, FinalInfo, HostEvent, PublicBody, PublicQuestion, RevealMsg } from '../lib/protocol';
 import { grade, prepare, solutionOf, toCanonical, type Prepared } from '../lib/questions';
 import type { AnswerValue, PlayerRow, QuestionRow, SavedState, SessionRow } from '../lib/types';
+import { MAX_PLAYERS, RateLimiter, answerSizeOk, isId, senderOf } from './guards';
 import { raceConfigFor } from './raceSettings';
 import { DEFAULT_STYLE, TEAM_NAME, botCars, carDef, cleanVote, parseStyle, tally, type StyleVote, type TeamStyle } from './teamStyle';
 
@@ -96,6 +97,8 @@ export class HostGame {
   private style: TeamStyle = DEFAULT_STYLE;
   private teacherPaused = false;
   private pageHidden = false;
+  private perPlayer = new RateLimiter(12, 4);
+  private overall = new RateLimiter(300, 150, 1);
 
   constructor(
     private api: Api,
@@ -246,6 +249,10 @@ export class HostGame {
   }
 
   private onMessage(m: AnyEvent) {
+    // Só mensagens bem formadas, de um aluno por vez, sem rajadas (o resto é descartado em silêncio).
+    const from = senderOf(m);
+    const now = performance.now();
+    if (!from || !this.overall.allow('*', now) || !this.perPlayer.allow(from, now)) return;
     if (m.event === 'hello') {
       const a = m.payload.avatar;
       if (typeof a === 'string' && /^avatar-[a-z-]{1,30}$/.test(a) && this.snap.avatars[m.payload.player_id] !== a && Object.keys(this.snap.avatars).length < 200) {
@@ -305,6 +312,7 @@ export class HostGame {
       return;
     }
     this.votes.delete(playerId);
+    this.dropFromRace(playerId);
     this.set({ players: this.snap.players.filter((p) => p.id !== playerId) });
     if (inLobby) this.updateStyle();
     else this.send({ event: 'lobby', payload: { count: this.snap.players.length, team: this.style } });
@@ -314,10 +322,34 @@ export class HostGame {
     try {
       await this.api.kickPlayer(playerId);
       this.channel?.send({ event: 'kicked', payload: { player_id: playerId } });
+      this.votes.delete(playerId);
+      this.dropFromRace(playerId);
       this.set({ players: this.snap.players.filter((p) => p.id !== playerId) });
       this.send({ event: 'lobby', payload: { count: this.snap.players.length, team: this.style } });
     } catch (e) {
       this.notice(`Não consegui expulsar: ${(e as Error).message}`);
+    }
+  }
+
+  /** Expulso ou saído: deixa de contar nas respostas e nos resultados. */
+  private dropFromRace(playerId: string) {
+    this.roster = this.roster.filter((p) => p.id !== playerId);
+    if (this.answers.delete(playerId)) this.set({ answered: this.answers.size });
+  }
+
+  /** A professora muda a alcunha (só no lobby). O servidor aplica o filtro e a unicidade. */
+  async rename(playerId: string, nickname: string): Promise<string | null> {
+    if (this.snap.phase !== 'lobby' || !this.snap.players.some((p) => p.id === playerId)) return null;
+    try {
+      const nick = await this.api.renamePlayer(playerId, nickname);
+      const rename = (p: PlayerRow) => (p.id === playerId ? { ...p, nickname: nick } : p);
+      this.roster = this.roster.map(rename);
+      this.set({ players: this.snap.players.map(rename) });
+      this.channel?.send({ event: 'renamed', payload: { player_id: playerId, nickname: nick } });
+      return nick;
+    } catch (e) {
+      this.notice(`Não consegui mudar a alcunha: ${(e as Error).message}`);
+      return null;
     }
   }
 
@@ -357,7 +389,7 @@ export class HostGame {
   async start(): Promise<void> {
     unlockAudio();
     if (!this.snap.players.length) return;
-    this.roster = [...this.snap.players];
+    this.roster = this.snap.players.slice(0, MAX_PLAYERS);
     this.race = this.buildRace(); // o carro da turma já tem o aspeto final
     try {
       await this.api.updateSession(this.session.id, { status: 'running', started: true, state: this.savedState(0) });
@@ -396,7 +428,9 @@ export class HostGame {
   private onAnswer(playerId: string, questionId: string, raw: unknown) {
     const cur = this.current;
     if (this.snap.phase !== 'question' || !cur || cur.q.id !== questionId || this.snap.paused) return;
+    if (!isId(questionId) || this.qElapsed > this.config.questionTime) return;
     if (!this.roster.some((p) => p.id === playerId) || this.answers.has(playerId)) return;
+    if (!answerSizeOk(raw)) return;
     const value = toCanonical(cur.q, cur.prep, raw);
     if (value === null) return;
     this.answers.set(playerId, { value, credit: grade(cur.q, value), ms: Math.round(this.qElapsed * 1000) });

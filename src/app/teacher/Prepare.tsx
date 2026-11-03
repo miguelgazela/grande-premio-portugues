@@ -15,6 +15,7 @@ export function Prepare() {
           <NavLink to="/prof/preparar/historico">Relatórios</NavLink>
         </nav>
         <span className="grow" />
+        <a href="#/privacidade" className="muted">Privacidade</a>
         <span className="muted">{teacher.name}</span>
         <button onClick={() => nav('/prof')}>▶ Ir para Jogar</button>
         <button onClick={signOut}>Sair</button>

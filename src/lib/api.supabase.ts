@@ -170,6 +170,9 @@ export const supabaseApi: Api = {
   async kickPlayer(playerId) {
     check(await supabase.from('player').update({ kicked: true }).eq('id', playerId));
   },
+  async renamePlayer(playerId, nickname) {
+    return check(await supabase.rpc('rename_player', { p_player_id: playerId, p_nickname: nickname })) as string;
+  },
   async removePlayer(playerId) {
     check(await supabase.from('player').delete().eq('id', playerId));
   },
@@ -206,7 +209,10 @@ export const supabaseApi: Api = {
 
   async joinSession(pin, nickname, deviceToken) {
     const res = await supabase.rpc('join_session', { p_pin: pin, p_nickname: nickname, p_device_token: deviceToken });
-    return check(res) as JoinResult;
+    const data = check(res) as JoinResult | { error: string };
+    // PIN errado não lança erro no servidor (para o registo da tentativa não ser desfeito).
+    if ('error' in data) throw new Error(data.error);
+    return data;
   },
 
   openChannel(sessionId, onMessage, onStatus) {

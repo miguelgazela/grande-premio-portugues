@@ -145,6 +145,10 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
               <span className="chip" key={p.id}>
                 {s.avatars[p.id] && <Asset name={s.avatars[p.id]} className="chip-avatar" />}
                 {p.nickname}
+                <button aria-label={`Mudar a alcunha de ${p.nickname}`} title="Mudar alcunha" onClick={() => {
+                  const nick = window.prompt('Nova alcunha', p.nickname);
+                  if (nick !== null && nick.trim() && nick.trim() !== p.nickname) void game.rename(p.id, nick);
+                }}>✎</button>
                 <button aria-label={`Expulsar ${p.nickname}`} onClick={() => void game.kick(p.id)}>✕</button>
               </span>
             ))}

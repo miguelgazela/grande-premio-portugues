@@ -76,6 +76,7 @@ function Login({ api, onDone }: { api: Api; onDone(): void }) {
         <input type="password" placeholder="Palavra-passe" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required={!api.mock} />
         {error && <div className="error">{error}</div>}
         <button className="primary" disabled={busy}>{busy ? 'A entrar…' : 'Entrar'}</button>
+        <a href="#/privacidade" className="privacy-link">Privacidade</a>
       </form>
     </div>
   );

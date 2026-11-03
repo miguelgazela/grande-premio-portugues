@@ -81,6 +81,7 @@ export function Join() {
         {previous && step === 'pin' && (
           <button type="button" onClick={() => nav('/jogar')}>Voltar a {previous.nickname} (PIN {previous.pin})</button>
         )}
+        <a href="#/privacidade" className="privacy-link">Privacidade</a>
       </form>
     </div>
   );
