@@ -269,3 +269,7 @@ h1, h2, h3 { margin: 0 0 .5em; }
 @keyframes overtake { 0% { transform: translateX(-50%) scale(.4); opacity: 0; } 15% { transform: translateX(-50%) scale(1.15); opacity: 1; } 25% { transform: translateX(-50%) scale(1); } 80% { opacity: 1; } 100% { transform: translateX(-50%) translateY(-30px) scale(1); opacity: 0; } }
 .soundbtn { background: #0006; }
 .student .picker { margin-top: 12px; }
+.picker .chipbtn { font-size: 15px; }
+.picker .model small { font-size: 12px; }
+.picker .swatch { flex: none; }
+.menubg .podium h1 { justify-self: center; background: #14141cd9; border-radius: 18px; padding: .15em .7em; }

@@ -90,6 +90,7 @@ export class RaceView {
       this.mini.addChild(this.miniDots);
     }
     const fit = () => {
+      if (this.destroyed) return;
       // `resizeTo` só reage ao resize da janela; a pista muda de altura quando a pergunta aparece/desaparece.
       if (el.clientWidth && el.clientHeight) this.app.renderer.resize(el.clientWidth, el.clientHeight);
       this.view = { w: el.clientWidth, h: el.clientHeight };
