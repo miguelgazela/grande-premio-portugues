@@ -170,6 +170,9 @@ export const supabaseApi: Api = {
   async kickPlayer(playerId) {
     check(await supabase.from('player').update({ kicked: true }).eq('id', playerId));
   },
+  async removePlayer(playerId) {
+    check(await supabase.from('player').delete().eq('id', playerId));
+  },
   async saveAnswers(rows: AnswerRow[]) {
     if (!rows.length) return;
     check(await supabase.from('answer').upsert(rows, { onConflict: 'player_id,question_id' }));

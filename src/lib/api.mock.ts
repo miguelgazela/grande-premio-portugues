@@ -236,6 +236,11 @@ export const mockApi: Api = {
       if (p) p.kicked = true;
     });
   },
+  async removePlayer(playerId) {
+    tx((db) => {
+      db.players = db.players.filter((x) => x.id !== playerId);
+    });
+  },
   async saveAnswers(rows) {
     tx((db) => {
       for (const r of rows) {

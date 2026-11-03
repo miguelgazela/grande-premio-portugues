@@ -258,6 +258,8 @@ export class HostGame {
         this.votes.set(m.payload.player_id, cleanVote(m.payload));
         this.updateStyle();
       }
+    } else if (m.event === 'leave') {
+      void this.onLeave(m.payload.player_id);
     } else if (m.event === 'answer') {
       this.onAnswer(m.payload.player_id, m.payload.question_id, m.payload.value);
     }
@@ -285,6 +287,23 @@ export class HostGame {
     } catch (e) {
       this.notice(`Não consegui ler os alunos: ${(e as Error).message}`);
     }
+  }
+
+  /** Um aluno saiu pelo botão "Sair": no lobby é apagado (pode voltar); a meio da corrida deixa de contar. */
+  private async onLeave(playerId: string): Promise<void> {
+    if (!this.snap.players.some((p) => p.id === playerId)) return;
+    const inLobby = this.snap.phase === 'lobby';
+    try {
+      if (inLobby) await this.api.removePlayer(playerId);
+      else await this.api.kickPlayer(playerId);
+    } catch (e) {
+      this.notice(`Não consegui retirar o aluno: ${(e as Error).message}`);
+      return;
+    }
+    this.votes.delete(playerId);
+    this.set({ players: this.snap.players.filter((p) => p.id !== playerId) });
+    if (inLobby) this.updateStyle();
+    else this.send({ event: 'lobby', payload: { count: this.snap.players.length, team: this.style } });
   }
 
   async kick(playerId: string): Promise<void> {

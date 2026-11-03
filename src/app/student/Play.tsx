@@ -43,6 +43,7 @@ export function Play() {
   const channel = useRef<Channel | null>(null);
   const voteRef = useRef<StyleVote | null>(null);
   const [mine, setMine] = useState<StyleVote>({});
+  const [leaving, setLeaving] = useState(false);
   const vote = (v: StyleVote) => {
     const next = { ...voteRef.current, ...v };
     voteRef.current = next;
@@ -148,6 +149,15 @@ export function Play() {
     return () => clearInterval(t);
   }, [view, player]);
 
+  const leave = () => {
+    if (player) channel.current?.send({ event: 'leave', payload: { player_id: player.player_id } });
+    // Dá um instante para a mensagem sair antes de fechar o canal.
+    window.setTimeout(() => {
+      clearPlayer();
+      nav('/', { replace: true });
+    }, 250);
+  };
+
   const answer = (i: AnswerValue) => {
     if (view.k !== 'question' || !player || chosen[view.q.question_id] !== undefined) return;
     setChosen({ ...chosen, [view.q.question_id]: i });
@@ -158,7 +168,27 @@ export function Play() {
 
   return (
     <div className="student">
-      <div className="who">{loadAvatar() && <Asset name={loadAvatar()!} className="me-avatar" />}{player.nickname}{problem && <span className="error"> · {problem}</span>}</div>
+      <header className="me-bar">
+        <span />
+        <div className="me-id">
+          {loadAvatar() && <Asset name={loadAvatar()!} className="me-avatar" />}
+          <span className="me-name">{player.nickname}</span>
+          {problem && <span className="error"> · {problem}</span>}
+        </div>
+        <button type="button" className="leave-btn" onClick={() => setLeaving(true)}>Sair</button>
+      </header>
+      {leaving && (
+        <div className="leave-backdrop" role="dialog" aria-modal="true" aria-label="Sair da corrida">
+          <div className="leave-card">
+            <b>Sair da corrida?</b>
+            <small>Deixas de jogar com a turma.</small>
+            <div className="leave-actions">
+              <button type="button" onClick={() => setLeaving(false)}>Ficar</button>
+              <button type="button" className="danger" onClick={leave}>Sair</button>
+            </div>
+          </div>
+        </div>
+      )}
       {view.k === 'wait' && (
         <div className="msg">
           <div style={{ width: '100%', maxWidth: 520 }}>

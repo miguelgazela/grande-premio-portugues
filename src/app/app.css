@@ -84,6 +84,17 @@ h1, h2, h3 { margin: 0 0 .5em; }
 /* ---- aluno ---- */
 .student { min-height: 100%; display: flex; flex-direction: column; padding: 16px; gap: 14px; max-width: 900px; margin: 0 auto; }
 .student .who { text-align: center; color: var(--muted); font-weight: 700; }
+.me-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: start; gap: 12px; }
+.me-id { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-width: 0; max-width: 100%; text-align: center; }
+.student .me-avatar { width: clamp(110px, 20vmin, 180px); height: clamp(110px, 20vmin, 180px); margin: 0; flex: none; border-radius: 50%; background: var(--panel2); }
+.me-name { font-size: clamp(32px, 7vmin, 60px); font-weight: 800; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.leave-btn { justify-self: end; min-height: 44px; padding: 8px 18px; border-radius: 12px; background: var(--panel2); color: var(--muted); font-weight: 700; }
+.leave-backdrop { position: fixed; inset: 0; background: #000a; display: grid; place-items: center; padding: 20px; z-index: 50; }
+.leave-card { background: var(--panel); border-radius: 20px; padding: 24px; display: grid; gap: 10px; text-align: center; max-width: 420px; width: 100%; font-size: clamp(22px, 4.5vmin, 32px); }
+.leave-card small { color: var(--muted); font-size: 1rem; font-weight: 600; }
+.leave-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+.leave-actions button { min-height: 54px; border-radius: 14px; font-weight: 800; font-size: 1.1rem; background: var(--panel2); }
+.leave-actions .danger { background: var(--red, #e74c3c); color: #fff; }
 .student .msg { flex: 1; display: grid; place-items: center; text-align: center; font-size: clamp(24px, 6vmin, 48px); font-weight: 800; gap: 10px; align-content: center; }
 .student .msg small { display: block; font-size: 1rem; color: var(--muted); font-weight: 600; }
 .sprompt { font-size: clamp(18px, 3.4vmin, 30px); font-weight: 700; background: var(--panel); border-radius: 18px; padding: 16px; }

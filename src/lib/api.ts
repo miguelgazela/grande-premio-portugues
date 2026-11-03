@@ -40,6 +40,8 @@ export interface Api {
   loadQuestions(quizId: string, version: number): Promise<QuestionRow[]>;
   listPlayers(sessionId: string): Promise<PlayerRow[]>;
   kickPlayer(playerId: string): Promise<void>;
+  /** Apaga o aluno (saiu no lobby): pode voltar a entrar mais tarde. */
+  removePlayer(playerId: string): Promise<void>;
   saveAnswers(rows: AnswerRow[]): Promise<void>;
   loadAnswers(sessionId: string): Promise<AnswerRow[]>;
   updateSession(id: string, patch: { status?: SessionStatus; state?: SavedState | null; started?: boolean; finished?: boolean }): Promise<void>;
