@@ -52,6 +52,7 @@ export class RaceView {
   private view = { w: 0, h: 0 };
   private cam = { x: 0, y: 0, zoom: 1, snapped: false };
   private lastClock = 0;
+  private lastTeamDist = 0;
   private mini = new Container();
   private miniDots = new Graphics();
   private miniW = 200;
@@ -528,7 +529,10 @@ export class RaceView {
       cam.y = ty;
       cam.snapped = true;
     }
-    const k = 1 - Math.exp(-dt * 3);
+    // O atraso da câmara é velocidade / k: com k fixo, o avanço rápido (todos responderam) e a rajada do reveal deixavam o carro fora do ecrã.
+    const speed = dt > 0 ? Math.abs(team.distance - this.lastTeamDist) / dt : 0;
+    this.lastTeamDist = team.distance;
+    const k = 1 - Math.exp(-dt * Math.max(3, speed / 40));
     cam.x += (tx - cam.x) * k;
     cam.y += (ty - cam.y) * k;
     const spinning = team.spinLeft > 0;
@@ -579,6 +583,7 @@ export class RaceView {
     this.chunks.clear();
     this.stands = [];
     this.cam.snapped = false;
+    this.lastTeamDist = 0;
     const start = this.track.poseAt(0);
     this.cam.x = start.x + LOOK_AHEAD;
     this.cam.y = start.y;
