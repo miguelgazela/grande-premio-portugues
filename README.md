@@ -6,7 +6,7 @@ Plano completo e decisões: [docs/PLANO.md](docs/PLANO.md).
 
 ## Estado
 
-**Fase 0** (motor + simulador) e **Fase 1** (MVP jogável: login, lobby, corrida em Realtime, pódio) feitas. Falta testar com iPads reais e AirPlay.
+**Fase 0** (motor + simulador), **Fase 1** (MVP jogável) e **Fase 2** (ferramentas da professora, sem importador CSV/Kahoot) feitas.
 
 ```bash
 npm install
@@ -20,7 +20,8 @@ npm run seed:sql     # regenera a migration de quizzes de exemplo
 
 ### Como se usa
 
-- **Professora** (iPad, espelhado por AirPlay): `/#/prof` → login → escolher quiz, turma e dificuldade dos bots → **Criar sessão** → lobby com PIN + QR → **Começar corrida**.
+- **Jogar** (iPad, espelhado por AirPlay): `/#/prof` → login → escolher quiz, turma, bots e definições da corrida (voltas, perguntas por volta, tempo) → **Criar sessão** → lobby com PIN + QR → **Começar corrida**.
+- **Preparar** (portátil): `/#/prof/preparar` → biblioteca (filtros, duplicar, apagar), editor de quizzes com gravação automática, turmas, histórico e relatório por corrida (% por pergunta, mais falhadas, opção errada mais escolhida, participação, CSV). Editar um quiz já jogado cria uma nova versão (função SQL `save_quiz`), por isso as corridas antigas não mudam.
 - **Alunos**: abrem o endereço da app (ou leem o QR), põem o PIN e uma alcunha.
 - Se o Safari do anfitrião sair do ecrã, a corrida pausa sozinha e retoma ao voltar. Se a página recarregar, aparece **Retomar** (o estado está em `session.state`). Controlos discretos no canto: ⏸ pausa, ⏭ fecha a pergunta / salta a revelação.
 - Os alunos reconectam sozinhos (o `device_token` fica em `localStorage`).
@@ -56,7 +57,8 @@ Projeto partilhado, schema próprio `grandePremioPortugues` (camelCase, por isso
 2. Dashboard → Settings → API → **Exposed schemas** → adicionar `grandePremioPortugues`.
 3. Criar a professora: `insert into "grandePremioPortugues".teacher (id, name) values ('<auth.users id>', 'Nome');`
 4. Copiar `.env.example` para `.env` (URL + publishable key, os mesmos do KangarooSplit).
-5. **Quizzes de exemplo**: colar `supabase/migrations/20261102120000_seed_exemplos.sql` no SQL Editor e correr (cria 2 quizzes de 18 perguntas, ligados à primeira professora; não é idempotente, correr uma vez só). Fonte: `src/data/exampleQuizzes.ts`.
+5. **Fase 2**: correr `supabase/migrations/20261103000000_fase2_ferramentas.sql` (coluna `quiz.archived_at` + função `save_quiz`). Sem isto a biblioteca e o editor não funcionam.
+6. **Quizzes de exemplo**: colar `supabase/migrations/20261102120000_seed_exemplos.sql` no SQL Editor e correr (cria 2 quizzes de 18 perguntas, ligados à primeira professora; não é idempotente, correr uma vez só). Fonte: `src/data/exampleQuizzes.ts`.
 
 Nunca usar `supabase db push` (projeto partilhado). Os alunos só chamam `join_session`; tudo o resto é da professora (RLS).
 

@@ -7,6 +7,8 @@ export interface QuizRow {
   topic: string | null;
   version: number;
   questionCount: number;
+  /** ISO da última corrida gravada, ou null. */
+  lastPlayed: string | null;
 }
 
 export interface ClassRow {
@@ -29,6 +31,12 @@ export type SessionStatus = 'lobby' | 'running' | 'finished' | 'aborted';
 
 export interface SessionSettings {
   botField: BotField;
+  /** Voltas (1–5). Omitido: 3 (ou 1 com menos de 3 perguntas). */
+  laps?: number;
+  /** Perguntas por volta. Omitido/null: "todas" (as perguntas repartem-se pelas voltas). */
+  questionsPerLap?: number | null;
+  /** Tempo por pergunta em segundos, a substituir o do quiz. */
+  questionTime?: number | null;
 }
 
 /** Estado gravado pelo anfitrião a cada pergunta, para retomar depois de sair do Safari. */
@@ -87,4 +95,39 @@ export interface RaceRecordRow {
   timeline: { accuracy: number; speedBonus: number }[];
   final_position: number;
   finish_time_ms: number;
+}
+
+export interface QuizInput {
+  id: string;
+  title: string;
+  year: number | null;
+  topic: string | null;
+  questions: QuestionRow[];
+}
+
+export interface SaveQuizResult {
+  version: number;
+  bumped: boolean;
+  /** Ids das perguntas, pela ordem enviada (mudam quando há nova versão). */
+  ids: string[];
+}
+
+export interface RaceSummary {
+  session_id: string;
+  created_at: string;
+  quiz_id: string;
+  quiz_title: string;
+  quiz_version: number;
+  class_id: string | null;
+  class_name: string | null;
+  final_position: number;
+  /** Média de respostas certas (0–1) ao longo da corrida. */
+  avg_accuracy: number;
+}
+
+export interface ReportData {
+  race: RaceSummary | null;
+  questions: QuestionRow[];
+  answers: AnswerRow[];
+  playerCount: number;
 }

@@ -1,7 +1,8 @@
+import { raceConfigFor } from '../game/raceSettings';
 import type { Api, Channel } from './api';
 import { channelName, type AnyEvent } from './protocol';
 import { supabase } from './supabase';
-import type { AnswerRow, ClassRow, JoinResult, PlayerRow, QuestionRow, QuizRow, RaceRecordRow, SessionRow } from './types';
+import type { AnswerRow, ClassRow, JoinResult, PlayerRow, QuestionRow, QuizRow, RaceRecordRow, RaceSummary, SaveQuizResult, SessionRow } from './types';
 
 function check<T>(res: { data: T; error: { message: string; code?: string } | null }): T {
   if (res.error) throw Object.assign(new Error(res.error.message), { code: res.error.code });
@@ -15,6 +16,24 @@ const toSession = (r: RawSession): SessionRow => {
   const { quiz: _quiz, ...rest } = r;
   return { ...rest, quiz_title: q?.title ?? '' };
 };
+
+interface RawRace {
+  session_id: string;
+  created_at: string;
+  quiz_id: string;
+  quiz_version: number;
+  class_id: string | null;
+  final_position: number;
+  timeline: { accuracy: number }[];
+  quiz: { title: string } | { title: string }[] | null;
+  class: { name: string } | { name: string }[] | null;
+}
+const one = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
+const toRace = (r: RawRace): RaceSummary => ({
+  session_id: r.session_id, created_at: r.created_at, quiz_id: r.quiz_id, quiz_title: one(r.quiz)?.title ?? '', quiz_version: r.quiz_version,
+  class_id: r.class_id, class_name: one(r.class)?.name ?? null, final_position: r.final_position,
+  avg_accuracy: r.timeline.length ? r.timeline.reduce((s, t) => s + t.accuracy, 0) / r.timeline.length : 0,
+});
 
 export const supabaseApi: Api = {
   mock: false,
@@ -36,16 +55,71 @@ export const supabaseApi: Api = {
   },
 
   async listQuizzes() {
-    const quizzes = check(await supabase.from('quiz').select('id, title, year, topic, version').order('created_at', { ascending: true }));
-    const out: QuizRow[] = [];
-    for (const q of quizzes as Omit<QuizRow, 'questionCount'>[]) {
-      const res = await supabase.from('question').select('id', { count: 'exact', head: true }).eq('quiz_id', q.id).eq('version', q.version);
-      out.push({ ...q, questionCount: res.count ?? 0 });
-    }
-    return out;
+    const quizzes = check(await supabase.from('quiz').select('id, title, year, topic, version').is('archived_at', null).order('created_at', { ascending: true })) as Omit<QuizRow, 'questionCount' | 'lastPlayed'>[];
+    const questions = check(await supabase.from('question').select('quiz_id, version')) as { quiz_id: string; version: number }[];
+    const records = check(await supabase.from('race_record').select('quiz_id, created_at')) as { quiz_id: string; created_at: string }[];
+    return quizzes.map((q): QuizRow => ({
+      ...q,
+      questionCount: questions.filter((x) => x.quiz_id === q.id && x.version === q.version).length,
+      lastPlayed: records.filter((r) => r.quiz_id === q.id).reduce<string | null>((m, r) => (!m || r.created_at > m ? r.created_at : m), null),
+    }));
+  },
+  async getQuiz(id) {
+    const q = check(await supabase.from('quiz').select('id, title, year, topic, version').eq('id', id).single()) as Omit<QuizRow, 'questionCount' | 'lastPlayed'>;
+    const questions = await supabaseApi.loadQuestions(id, q.version);
+    return { quiz: { ...q, questionCount: questions.length, lastPlayed: null }, questions };
+  },
+  async createQuiz(title, year, topic) {
+    const { data } = await supabase.auth.getSession();
+    const q = check(await supabase.from('quiz').insert({ teacher_id: data.session?.user.id, title, year, topic }).select('id, title, year, topic, version').single()) as Omit<QuizRow, 'questionCount' | 'lastPlayed'>;
+    return { ...q, questionCount: 0, lastPlayed: null };
+  },
+  async saveQuiz(quiz) {
+    const res = await supabase.rpc('save_quiz', {
+      p_quiz_id: quiz.id,
+      p_title: quiz.title,
+      p_year: quiz.year,
+      p_topic: quiz.topic,
+      p_questions: quiz.questions.map((q) => ({ id: q.id, prompt: q.prompt, options: q.options, correct: q.correct, time_limit: q.time_limit, explanation: q.explanation })),
+    });
+    return check(res) as SaveQuizResult;
+  },
+  async duplicateQuiz(id) {
+    const { quiz, questions } = await supabaseApi.getQuiz(id);
+    const copy = await supabaseApi.createQuiz(`${quiz.title} (cópia)`, quiz.year, quiz.topic);
+    await supabaseApi.saveQuiz({ id: copy.id, title: copy.title, year: copy.year, topic: copy.topic, questions: questions.map((q) => ({ ...q, id: crypto.randomUUID() })) });
+    return { ...copy, questionCount: questions.length };
+  },
+  async deleteQuiz(id) {
+    const res = await supabase.from('quiz').delete().eq('id', id);
+    if (!res.error) return 'deleted';
+    if (res.error.code !== '23503') throw new Error(res.error.message);
+    check(await supabase.from('quiz').update({ archived_at: new Date().toISOString() }).eq('id', id));
+    return 'archived';
+  },
+  async listRaces(filter) {
+    let q = supabase.from('race_record').select('session_id, created_at, quiz_id, quiz_version, class_id, final_position, timeline, quiz(title), class(name)').order('created_at', { ascending: false });
+    if (filter?.classId) q = q.eq('class_id', filter.classId);
+    if (filter?.quizId) q = q.eq('quiz_id', filter.quizId);
+    return (check(await q) as unknown as RawRace[]).map(toRace);
+  },
+  async loadReport(sessionId) {
+    const s = await supabaseApi.getSession(sessionId);
+    const rec = check(
+      await supabase.from('race_record').select('session_id, created_at, quiz_id, quiz_version, class_id, final_position, timeline, quiz(title), class(name)').eq('session_id', sessionId).maybeSingle(),
+    ) as unknown as RawRace | null;
+    const [questions, answers, players] = await Promise.all([supabaseApi.loadQuestions(s.quiz_id, s.quiz_version), supabaseApi.loadAnswers(sessionId), supabaseApi.listPlayers(sessionId)]);
+    // Só as perguntas que a corrida usou (as definições da sessão podem deixar algumas de fora).
+    return { race: rec ? toRace(rec) : null, questions: questions.slice(0, raceConfigFor(questions, s.settings).used), answers, playerCount: players.filter((p) => !p.kicked).length };
   },
   async listClasses() {
     return check(await supabase.from('class').select('id, name, year').order('name')) as ClassRow[];
+  },
+  async updateClass(id, name, year) {
+    return check(await supabase.from('class').update({ name, year }).eq('id', id).select('id, name, year').single()) as ClassRow;
+  },
+  async deleteClass(id) {
+    check(await supabase.from('class').delete().eq('id', id));
   },
   async createClass(name, year) {
     const { data } = await supabase.auth.getSession();

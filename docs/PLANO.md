@@ -61,7 +61,7 @@ Objetivo: correr uma aula real.
 
 Pronto quando: uma corrida completa com cerca de 25 iPads, espelhada por AirPlay, sem falhas, e a sobreviver a sair e voltar à app a meio.
 
-### Fase 2: Ferramentas da professora (portátil)
+### Fase 2: Ferramentas da professora (portátil) ✅ (importador CSV/Kahoot adiado)
 Editor de quizzes (desktop), turmas, biblioteca, importação CSV/Excel (incluindo o formato da folha de cálculo do Kahoot, se a Mara tiver quizzes lá), histórico, relatório pós-corrida e definições da sessão.
 
 ### Fase 3: Fantasmas de turmas

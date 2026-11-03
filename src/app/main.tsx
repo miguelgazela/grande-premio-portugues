@@ -4,7 +4,13 @@ import './app.css';
 import { Join } from './student/Join';
 import { Play } from './student/Play';
 import { Host } from './teacher/Host';
-import { Quizzes } from './teacher/Quizzes';
+import { Classes } from './teacher/Classes';
+import { Editor } from './teacher/Editor';
+import { History } from './teacher/History';
+import { Jogar } from './teacher/Jogar';
+import { Library } from './teacher/Library';
+import { Prepare } from './teacher/Prepare';
+import { Report } from './teacher/Report';
 import { TeacherGate } from './teacher/TeacherGate';
 
 createRoot(document.getElementById('root')!).render(
@@ -12,7 +18,14 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/" element={<Join />} />
         <Route path="/jogar" element={<Play />} />
-        <Route path="/prof" element={<TeacherGate><Quizzes /></TeacherGate>} />
+        <Route path="/prof" element={<TeacherGate><Jogar /></TeacherGate>} />
+        <Route path="/prof/preparar" element={<TeacherGate><Prepare /></TeacherGate>}>
+          <Route index element={<Library />} />
+          <Route path="quiz/:id" element={<Editor />} />
+          <Route path="turmas" element={<Classes />} />
+          <Route path="historico" element={<History />} />
+          <Route path="relatorio/:id" element={<Report />} />
+        </Route>
         <Route path="/prof/jogo/:id" element={<TeacherGate><Host /></TeacherGate>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
