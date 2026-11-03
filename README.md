@@ -67,3 +67,34 @@ Os alunos não têm conta: entram via `join_session(pin, alcunha, device_token)`
 - Anfitrião → alunos: `lobby`, `question` (sem a resposta certa), `reveal`, `end`, `kicked`.
 - Aluno → anfitrião: `hello`, `answer {player_id, question_id, value}`.
 - O anfitrião mede o tempo pela hora de chegada, calcula com o motor, grava `answer` + `session.state` a cada pergunta e `race_record` no fim.
+
+## Publicar (Vercel)
+
+O jogo é um site estático (`dist/`). Config em `vercel.json` (framework Vite, cabeçalhos de segurança, cache, CSP). O anfitrião precisa de HTTPS (Wake Lock, áudio), que a Vercel dá.
+
+Variáveis de ambiente (Settings > Environment Variables, para Production **e** Preview). São públicas por desenho; a proteção é a RLS:
+
+| Variável | Obrigatória |
+| --- | --- |
+| `VITE_SUPABASE_URL` | sim (`https://<ref>.supabase.co`) |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | sim (`sb_publishable_…`) |
+| `VITE_SUPABASE_SCHEMA` | não (o código usa `grandePremioPortugues` fixo) |
+
+O build falha com mensagem clara se faltarem as duas primeiras.
+
+Primeira vez:
+
+```bash
+npx vercel login
+npx vercel link              # cria/liga o projeto
+npx vercel env add VITE_SUPABASE_URL production   # repetir para preview e para a chave
+npx vercel                   # deploy de preview: testar
+npx vercel --prod            # produção
+```
+
+Voltar a publicar: `npx vercel --prod` (ou push para `main`, se o repositório estiver ligado à Vercel). Deployment Protection: o URL de produção tem de ficar público (os alunos não têm conta).
+
+Notas:
+- `sim.html` (simulador) só existe em dev; não vai para o build. O modo `?mock` só funciona em dev.
+- A CSP permite `https://*.supabase.co` e `wss://*.supabase.co`. Se mudares de domínio de Supabase ou adicionares fontes/CDNs externos, ajusta `vercel.json`. O PixiJS usa `pixi.js/unsafe-eval` (importado em `src/render/raceView.ts`) para não precisar de `unsafe-eval`.
+- Ecrã inteiro no iPad: Safari > Partilhar > Adicionar ao ecrã principal (usa `manifest.webmanifest`). Sem service worker, de propósito.

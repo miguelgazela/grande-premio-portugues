@@ -1,0 +1,8 @@
+.env
+.env.*
+assets/source
+docs
+scripts
+supabase
+.claude
+node_modules

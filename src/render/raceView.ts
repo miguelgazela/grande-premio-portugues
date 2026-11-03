@@ -1,3 +1,5 @@
+// Necessário com CSP sem 'unsafe-eval' (ver vercel.json): o PixiJS usa uma variante sem eval.
+import 'pixi.js/unsafe-eval';
 import { Application, Container, Graphics, Sprite, Text, TilingSprite, type Texture } from 'pixi.js';
 import { mulberry32 } from '../engine/rng';
 import { CURB_W, ROAD_W, WORLD_H, WORLD_W, type Track } from '../engine/track';
