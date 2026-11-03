@@ -41,7 +41,10 @@ export function Library() {
     <div className="stack">
       <div className="row spread">
         <h1>Biblioteca de quizzes</h1>
-        <button className="primary" onClick={() => void create()}>＋ Novo quiz</button>
+        <div className="row">
+          <button onClick={() => nav('/prof/preparar/importar')}>⤓ Importar</button>
+          <button className="primary" onClick={() => void create()}>＋ Novo quiz</button>
+        </div>
       </div>
       <div className="row filters">
         <input className="grow" placeholder="Pesquisar por título…" value={q} onChange={(e) => setQ(e.target.value)} />

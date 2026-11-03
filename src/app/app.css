@@ -364,3 +364,20 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
 @keyframes stepin { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .step, .vote-done { animation: none; } }
 @media (max-width: 420px) { .colorgrid.n8 { grid-template-columns: repeat(3, 1fr); } .modelgrid { gap: 8px; } }
+
+/* ---- importador de quizzes (portátil) ---- */
+.importer { max-width: 1000px; }
+.dropzone { display: grid; gap: 8px; justify-items: center; text-align: center; padding: 48px 24px; border: 3px dashed var(--panel2); border-radius: 22px; background: var(--panel); cursor: pointer; }
+.dropzone.over, .dropzone:hover { border-color: var(--gold); }
+.dropzone input { display: none; }
+.imp-help p { margin: 6px 0; }
+.linklike { background: none; padding: 0; border-radius: 0; color: var(--gold); text-decoration: underline; font-weight: 600; }
+.imp-tbl td { vertical-align: top; }
+.imp-tbl tr.removed td { opacity: .45; }
+.imp-tbl tr.imp-skip td:nth-child(2) { color: var(--muted); }
+.imp-notes { color: var(--muted); font-size: .85rem; margin-top: 4px; }
+.imp-badge { padding: 3px 10px; border-radius: 999px; font-size: .85rem; font-weight: 700; background: var(--panel2); }
+.imp-badge.ok { background: #2ecc7133; color: var(--green); }
+.imp-badge.warn { background: #ffb21a33; color: var(--gold); }
+.imp-badge.skip { background: #e74c3c33; color: #ff8a80; }
+.imp-foot { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0; }
