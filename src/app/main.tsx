@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import { createRoot } from 'react-dom/client';
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom';
 import './app.css';
@@ -11,6 +12,8 @@ import { History } from './teacher/History';
 import { Revisao } from './teacher/Revisao';
 import { Jogar } from './teacher/Jogar';
 import { Library } from './teacher/Library';
+// Só a professora usa o importador: fica noutro ficheiro, que os alunos nunca descarregam.
+const Importer = lazy(() => import('./teacher/Importer').then((m) => ({ default: m.Importer })));
 import { Prepare } from './teacher/Prepare';
 import { Report } from './teacher/Report';
 import { TeacherGate } from './teacher/TeacherGate';
@@ -29,6 +32,7 @@ createRoot(document.getElementById('root')!).render(
         <Route path="/prof/revisao" element={<TeacherGate><Revisao /></TeacherGate>} />
         <Route path="/prof/preparar" element={<TeacherGate><Prepare /></TeacherGate>}>
           <Route index element={<Library />} />
+          <Route path="importar" element={<Suspense fallback={<p className="muted">A carregar…</p>}><Importer /></Suspense>} />
           <Route path="quiz/:id" element={<Editor />} />
           <Route path="turmas" element={<Classes />} />
           <Route path="historico" element={<History />} />
