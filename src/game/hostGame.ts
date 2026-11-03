@@ -39,7 +39,7 @@ export interface HostSnapshot {
   team: TeamStyle;
   /** Alunos que já votaram. */
   voters: number;
-  /** Empate nos votos: o carro foi sorteado (nenhum dos empatados). */
+  /** Empate nos votos: o carro foi sorteado entre os empatados. */
   tie: boolean;
   /** Aviso discreto (erros de rede a gravar, etc.). */
   notice: string | null;

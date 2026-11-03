@@ -53,9 +53,9 @@ function hashSeed(s: string): number {
 
 /**
  * Carro mais votado; sem votos, o por defeito.
- * Num empate nenhum dos empatados sai: é sorteado um dos outros carros. O sorteio é estável
- * (depende só da sessão e do empate), para o carro não mudar a cada atualização do lobby, e
- * só volta a sortear quando os votos mudarem.
+ * Num empate é sorteado um dos carros empatados. O sorteio é estável (depende só da sessão e
+ * do empate), para o carro não mudar a cada atualização do lobby, e só volta a sortear quando
+ * os votos mudarem.
  */
 export function tally(votes: Iterable<StyleVote>, seed = ''): { style: TeamStyle; count: number; tie: boolean } {
   const counts = new Map<string, number>();
@@ -69,10 +69,8 @@ export function tally(votes: Iterable<StyleVote>, seed = ''): { style: TeamStyle
   const tied = [...counts].filter(([, n]) => n === top && n > 0).map(([k]) => k).sort();
   if (tied.length === 0) return { style: { car: DEFAULT_STYLE.car }, count, tie: false };
   if (tied.length === 1) return { style: { car: tied[0] }, count, tie: false };
-  const pool = CARS.filter((c) => !tied.includes(c.key));
-  if (pool.length === 0) return { style: { car: tied[0] }, count, tie: true };
-  const pick = pool[Math.floor(mulberry32(hashSeed(`${seed}|${tied.join(',')}|${top}`))() * pool.length)];
-  return { style: { car: pick.key }, count, tie: true };
+  const pick = tied[Math.floor(mulberry32(hashSeed(`${seed}|${tied.join(',')}|${top}`))() * tied.length)];
+  return { style: { car: pick }, count, tie: true };
 }
 
 /** Lê um estilo gravado em `session.state.team`; o formato antigo (`color`) e lixo dão um carro válido. */

@@ -12,25 +12,24 @@ describe('teamStyle', () => {
     expect(r.style).toEqual({ car: 'car-red' });
     expect(r.count).toBe(3);
   });
-  it('num empate não sai nenhum dos empatados: sai outro carro, sempre o mesmo para o mesmo empate', () => {
+  it('num empate sai um dos empatados, sempre o mesmo para o mesmo empate', () => {
     const votes = [{ car: 'car-van-yellow' }, { car: 'car-red' }];
     const a = tally(votes, 'sessao-1');
     expect(a.tie).toBe(true);
-    expect(['car-van-yellow', 'car-red']).not.toContain(a.style.car);
-    expect(carDef(a.style.car)).toBeDefined();
+    expect(['car-van-yellow', 'car-red']).toContain(a.style.car);
     expect(tally(votes, 'sessao-1').style).toEqual(a.style); // estável
     expect(tally([...votes].reverse(), 'sessao-1').style).toEqual(a.style); // não depende da ordem dos votos
-    const outros = new Set(['s1', 's2', 's3', 's4', 's5', 's6', 's7', 's8'].map((s) => tally(votes, s).style.car));
-    expect(outros.size).toBeGreaterThan(1); // varia com a sessão
+    const saidos = new Set(Array.from({ length: 40 }, (_, i) => tally(votes, `s${i}`).style.car));
+    expect(saidos).toEqual(new Set(['car-van-yellow', 'car-red'])); // varia com a sessão, só entre os empatados
   });
   it('desempate: um voto a mais volta a escolher o mais votado', () => {
     const r = tally([{ car: 'car-van-yellow' }, { car: 'car-red' }, { car: 'car-van-yellow' }], 's');
     expect(r).toMatchObject({ style: { car: 'car-van-yellow' }, tie: false });
   });
-  it('empate a 3 também exclui os 3', () => {
+  it('empate a 3 sorteia entre os 3', () => {
     const r = tally([{ car: 'car-red' }, { car: 'car-van-yellow' }, { car: 'car-kart-green' }], 's');
     expect(r.tie).toBe(true);
-    expect(['car-red', 'car-van-yellow', 'car-kart-green']).not.toContain(r.style.car);
+    expect(['car-red', 'car-van-yellow', 'car-kart-green']).toContain(r.style.car);
   });
   it('ignora votos inválidos', () => {
     expect(cleanVote({ car: 'car-inexistente' })).toEqual({});
