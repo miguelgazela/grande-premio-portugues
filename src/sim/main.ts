@@ -115,7 +115,7 @@ function startRace() {
   const seed = Math.floor(Math.random() * 1e9);
   raceData = buildRace(config, sim, seed);
   race = raceData.race;
-  view.reset(race.raceLength);
+  view.reset();
   shownEvents = 0;
   $('#log').innerHTML = '';
   $('#results').innerHTML = '';

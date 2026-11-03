@@ -16,7 +16,7 @@ import { MAX_PLAYERS, RateLimiter, answerSizeOk, isId, senderOf } from './guards
 import { raceConfigFor } from './raceSettings';
 import { DEFAULT_STYLE, TEAM_NAME, botCars, carDef, cleanVote, parseStyle, tally, type StyleVote, type TeamStyle } from './teamStyle';
 
-export type Phase = 'lobby' | 'countdown' | 'resume' | 'question' | 'ff' | 'reveal' | 'sprint' | 'finishing' | 'finished';
+export type Phase = 'lobby' | 'countdown' | 'resume' | 'question' | 'reveal' | 'sprint' | 'finishing' | 'finished';
 
 export interface HostSnapshot {
   phase: Phase;
@@ -51,9 +51,7 @@ export interface HostSnapshot {
 
 const REVEAL_SECONDS = 5;
 const FINISH_HOLD = 2.5;
-const FF_SECONDS = 1.2;
 const COUNT_STEP = 0.9;
-const EPS = 0.0005;
 
 export { raceConfigFor };
 
@@ -90,7 +88,6 @@ export class HostGame {
   private holdT = 0;
   private countT = 0;
   private sprintRate = 0;
-  private ffRate = 1;
   private roster: PlayerRow[] = [];
   private lastMsg: HostEvent | null = null;
   private lastResync = 0;
@@ -185,8 +182,7 @@ export class HostGame {
       b.color = cars[i]?.color ?? b.color;
     });
     const race = new Race([team, ...bots, ...ghosts], this.config);
-    // Pré-rolo: a resolução de cada pergunta coincide com o fim do tempo de resposta.
-    race.time = this.config.overheadTime;
+    race.manual = true; // a pergunta resolve-se quando fecha (todos responderam, tempo ou professora), não a horas fixas
     return race;
   }
 
@@ -195,10 +191,12 @@ export class HostGame {
     this.set({ team: this.style });
     this.outcomes = state.outcomes.slice(0, state.next);
     this.race = this.buildRace();
+    // Os tempos reais não foram gravados: refaz a corrida com o ritmo nominal (as posições relativas são as mesmas).
     for (let q = 0; q < state.next; q++) {
-      while (this.race.nextQuestion <= q) this.race.step(0.25);
+      this.race.step(this.config.questionTime);
+      this.race.resolveNow();
+      this.race.step(this.config.overheadTime);
     }
-    if (state.next > 0) this.race.step(this.config.overheadTime);
     this.race.finalizeEvents();
 
     const rows = await this.api.loadAnswers(this.session.id);
@@ -389,7 +387,7 @@ export class HostGame {
   }
 
   private inRace(): boolean {
-    return ['question', 'ff', 'reveal', 'sprint'].includes(this.snap.phase);
+    return ['question', 'reveal', 'sprint'].includes(this.snap.phase);
   }
 
   // ---------- Fluxo ----------
@@ -463,13 +461,9 @@ export class HostGame {
       session_id: this.session.id, question_id: cur.q.id, player_id, value: a.value, correct: a.credit === 1, ms_taken: a.ms,
     }));
     void this.api.saveAnswers(rows).catch((e) => this.notice(`Respostas por gravar: ${(e as Error).message}`));
-    const remaining = this.boundary(cur.index) - this.race.time;
-    this.ffRate = Math.max(1, remaining / FF_SECONDS);
-    this.set({ phase: 'ff' });
-  }
-
-  private boundary(q: number) {
-    return (q + 1) * this.race.cycle;
+    // O efeito aplica-se já: os carros continuam à mesma velocidade e recebem o bónus (ou o travão) no reveal.
+    this.race.resolveNow();
+    this.onResolved();
   }
 
   private onResolved() {
@@ -526,9 +520,7 @@ export class HostGame {
         this.set({ count });
       }
     } else if (phase === 'question') {
-      const cur = this.current!;
-      const bound = this.boundary(cur.index) - EPS;
-      race.step(Math.max(0, Math.min(dt, bound - race.time)));
+      race.step(dt);
       this.qElapsed += dt;
       const left = Math.max(0, this.config.questionTime - this.qElapsed);
       const bucket = Math.ceil(left * 4);
@@ -538,15 +530,6 @@ export class HostGame {
       }
       const active = this.roster.length;
       if (this.qElapsed >= this.config.questionTime || (active > 0 && this.answers.size >= active)) this.closeQuestion();
-    } else if (phase === 'ff') {
-      const q = this.current!.index;
-      const left = this.boundary(q) - EPS - race.time;
-      if (left > 1e-6) {
-        race.step(Math.min(left, dt * this.ffRate));
-      } else {
-        race.step(0.001); // atravessa a fronteira → o motor resolve a pergunta
-        this.onResolved();
-      }
     } else if (phase === 'reveal') {
       race.step(dt);
       this.revealT += dt;
@@ -562,7 +545,7 @@ export class HostGame {
       // Uma turma fraca pode ficar muito longe da meta: acelera o sprint (taxa fixa) para durar ~20s.
       const t = race.team!;
       if (this.sprintRate === 0) {
-        const est = (race.raceLength - t.distance) / (race.baseSpeed * Math.max(0.3, t.mult));
+        const est = Math.max(0, (race.raceLength - t.distance) / race.baseSpeed);
         this.sprintRate = Math.min(40, Math.max(1, est / 20));
       }
       const rate = this.sprintRate;

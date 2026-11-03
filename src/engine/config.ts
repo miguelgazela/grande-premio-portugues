@@ -44,7 +44,7 @@ export const DEFAULT_CONFIG: RaceConfig = {
   minFactor: 0.6,
   maxFactor: 1.4,
   cruiseSpeed: 160,
-  effectScale: 0.07,
+  effectScale: 0.05,
   turboThreshold: 0.8,
   turboMult: 1.12,
   slowThreshold: 0.5,
