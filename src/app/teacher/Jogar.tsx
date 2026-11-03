@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { BotField } from '../../engine/drivers';
 import { MAX_LAPS, maxQuestionsPerLap } from '../../game/raceSettings';
 import { errorMessage } from '../../lib/api';
+import { endSessions } from '../../lib/endSessions';
 import type { ClassRow, QuizRow, SessionRow, SessionSettings } from '../../lib/types';
 import { useTeacher } from './TeacherGate';
 
@@ -52,6 +53,17 @@ export function Jogar() {
   const effPer = perLap && perLap <= maxPer ? perLap : 0;
   const used = effLaps * (effPer || maxPer);
 
+  const terminate = async (ids: string[]) => {
+    const what = ids.length > 1 ? `Terminar as ${ids.length} sessões em curso?` : 'Terminar esta sessão?';
+    if (!window.confirm(`${what} Os alunos ficam sem corrida e nada é guardado no histórico.`)) return;
+    try {
+      await endSessions(api, ids);
+      setOpen((cur) => cur.filter((x) => !ids.includes(x.id)));
+    } catch (e) {
+      setError(errorMessage(e));
+    }
+  };
+
   const create = async () => {
     if (!quiz) return;
     setBusy(true);
@@ -79,14 +91,20 @@ export function Jogar() {
 
         {open.length > 0 && (
           <section>
-            <h3>Sessões em curso</h3>
+            <div className="row spread">
+              <h3>Sessões em curso</h3>
+              {open.length > 1 && <button className="danger" onClick={() => void terminate(open.map((s) => s.id))}>Terminar todas</button>}
+            </div>
             <div style={{ display: 'grid', gap: 8 }}>
               {open.map((s) => (
                 <div className="quiz" key={s.id} onClick={() => nav(`/prof/jogo/${s.id}`)}>
                   <span>
                     <b>{s.quiz_title}</b> <span className="muted">PIN {s.pin} · {s.status === 'lobby' ? 'à espera' : 'a decorrer'}</span>
                   </span>
-                  <button className="primary">Abrir</button>
+                  <span className="row">
+                    <button className="danger" onClick={(e) => { e.stopPropagation(); void terminate([s.id]); }}>Terminar</button>
+                    <button className="primary">Abrir</button>
+                  </span>
                 </div>
               ))}
             </div>

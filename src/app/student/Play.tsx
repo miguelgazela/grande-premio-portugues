@@ -21,7 +21,8 @@ type View =
   | { k: 'wait'; count: number | null }
   | { k: 'question'; q: PublicQuestion; at: number; full: number }
   | { k: 'reveal'; r: RevealMsg }
-  | { k: 'end'; e: EndMsg };
+  | { k: 'end'; e: EndMsg }
+  | { k: 'aborted' };
 
 export function Play() {
   const api = useApi();
@@ -64,6 +65,10 @@ export function Play() {
           setView({ k: 'end', e: savedEnd });
           return;
         }
+        if (msg === 'PIN inválido' && localStorage.getItem(`gpp.aborted.${player.session_id}`)) {
+          setView({ k: 'aborted' });
+          return;
+        }
         if (msg === 'PIN inválido' || msg.startsWith('Removido')) {
           clearPlayer();
           nav('/', { replace: true });
@@ -93,6 +98,10 @@ export function Play() {
             case 'end':
               try { localStorage.setItem(`gpp.end.${player.session_id}`, JSON.stringify(m.payload)); } catch { /* sem armazenamento */ }
               setView({ k: 'end', e: m.payload });
+              break;
+            case 'aborted':
+              try { localStorage.setItem(`gpp.aborted.${player.session_id}`, '1'); } catch { /* sem armazenamento */ }
+              setView({ k: 'aborted' });
               break;
             case 'kicked':
               if (m.payload.player_id === player.player_id) {
@@ -142,6 +151,14 @@ export function Play() {
       )}
       {view.k === 'question' && <QuestionView q={view.q} at={view.at} full={view.full} mine={chosen[view.q.question_id]} onPick={answer} />}
       {view.k === 'reveal' && <RevealView r={view.r} mine={chosen[view.r.question_id]} me={player.player_id} />}
+      {view.k === 'aborted' && (
+        <div className="msg">
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div>A professora terminou a sessão</div>
+            <button className="primary big" onClick={() => { clearPlayer(); nav('/'); }}>Voltar ao início</button>
+          </div>
+        </div>
+      )}
       {view.k === 'end' && <EndView e={view.e} me={player.player_id} onExit={() => { clearPlayer(); nav('/'); }} />}
     </div>
   );

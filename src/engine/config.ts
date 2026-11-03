@@ -10,6 +10,9 @@ export interface RaceConfig {
   minFactor: number;
   maxFactor: number;
 
+  /** Speed factor while students think (igual para todos). O efeito da resposta vem numa rajada no reveal. */
+  cruiseMult: number;
+
   turboThreshold: number;
   turboMult: number;
   slowThreshold: number;
@@ -41,6 +44,7 @@ export const DEFAULT_CONFIG: RaceConfig = {
   overheadTime: 5,
   minFactor: 0.6,
   maxFactor: 1.4,
+  cruiseMult: 1.0,
   turboThreshold: 0.8,
   turboMult: 1.12,
   slowThreshold: 0.5,

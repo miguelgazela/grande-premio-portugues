@@ -9,6 +9,7 @@ function check<T>(res: { data: T; error: { message: string; code?: string } | nu
   return res.data;
 }
 
+const STALE_SESSION_MS = 12 * 3600_000;
 const SESSION_COLS = 'id, teacher_id, quiz_id, quiz_version, class_id, pin, status, settings, state, quiz(title)';
 type RawSession = Omit<SessionRow, 'quiz_title'> & { quiz: { title: string } | { title: string }[] | null };
 const toSession = (r: RawSession): SessionRow => {
@@ -127,8 +128,14 @@ export const supabaseApi: Api = {
     return row as ClassRow;
   },
   async listOpenSessions() {
+    // Limpeza: sessões esquecidas em lobby/running há mais de 12 h libertam o PIN.
+    const cutoff = new Date(Date.now() - STALE_SESSION_MS).toISOString();
+    await supabase.from('session').update({ status: 'aborted', finished_at: new Date().toISOString() }).in('status', ['lobby', 'running']).lt('created_at', cutoff);
     const rows = check(await supabase.from('session').select(SESSION_COLS).in('status', ['lobby', 'running']).order('created_at', { ascending: false }));
     return (rows as unknown as RawSession[]).map(toSession);
+  },
+  async abortSession(id) {
+    check(await supabase.from('session').update({ status: 'aborted', finished_at: new Date().toISOString() }).eq('id', id).in('status', ['lobby', 'running']));
   },
   async createSession(quiz, classId, settings) {
     const { data } = await supabase.auth.getSession();
@@ -189,7 +196,7 @@ export const supabaseApi: Api = {
 
   openChannel(sessionId, onMessage, onStatus) {
     const ch = supabase.channel(channelName(sessionId), { config: { broadcast: { self: false, ack: false } } });
-    for (const event of ['hello', 'answer', 'lobby', 'question', 'reveal', 'end', 'kicked']) {
+    for (const event of ['hello', 'answer', 'lobby', 'question', 'reveal', 'end', 'kicked', 'aborted']) {
       ch.on('broadcast', { event }, (m) => onMessage({ event, payload: m.payload } as AnyEvent));
     }
     let ready = false;

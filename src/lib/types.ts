@@ -63,6 +63,8 @@ export interface SessionRow {
   status: SessionStatus;
   settings: SessionSettings;
   state: SavedState | null;
+  /** Só preenchido pela base de dados falsa (limpeza de sessões antigas). */
+  created_at?: string;
 }
 
 export interface PlayerRow {

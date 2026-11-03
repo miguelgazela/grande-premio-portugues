@@ -30,7 +30,10 @@ export interface Api {
   deleteQuiz(id: string): Promise<'deleted' | 'archived'>;
   listRaces(filter?: { classId?: string; quizId?: string }): Promise<RaceSummary[]>;
   loadReport(sessionId: string): Promise<ReportData>;
+  /** Sessões em lobby/running. Antes de listar, termina as que estão abertas há mais de 12 h. */
   listOpenSessions(): Promise<SessionRow[]>;
+  /** Termina uma sessão a meio: `aborted` + `finished_at`, sem race_record (fica fora do histórico). */
+  abortSession(id: string): Promise<void>;
   createSession(quiz: QuizRow, classId: string | null, settings: SessionSettings): Promise<SessionRow>;
   getSession(id: string): Promise<SessionRow>;
   loadQuestions(quizId: string, version: number): Promise<QuestionRow[]>;

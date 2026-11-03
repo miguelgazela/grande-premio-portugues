@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from './config';
-import { Track, DEFAULT_TRACK_POINTS } from './track';
+import { Track, DEFAULT_TRACK_POINTS, TRACKS, ROAD_W, CURB_W, type Vec } from './track';
 import { Race, type Driver } from './race';
 import { makeGhost } from './drivers';
 import { outcomeFromAnswers } from './outcome';
@@ -106,5 +106,45 @@ describe('balance (Phase 0 targets)', () => {
   });
   it('excellent class usually wins', () => {
     expect(pos(0.92).positionShare[0]).toBeGreaterThan(0.5);
+  });
+});
+
+describe.each(TRACKS)('Track geometry: $name', ({ points, samples }) => {
+  const track = new Track(points, samples);
+  const half = ROAD_W / 2 + CURB_W;
+  const edge = (side: number) =>
+    track.points.slice(0, -1).map((_, i) => {
+      const p = track.poseAt(track.cum[i]);
+      return { x: p.x + p.nx * half * side, y: p.y + p.ny * half * side };
+    });
+  const cross = (a: Vec, b: Vec, c: Vec) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  const intersects = (a: Vec, b: Vec, c: Vec, d: Vec) => cross(a, b, c) * cross(a, b, d) < 0 && cross(c, d, a) * cross(c, d, b) < 0;
+
+  it('road + curb edges never self-intersect', () => {
+    for (const side of [-1, 1]) {
+      const e = edge(side);
+      const n = e.length;
+      let hits = 0;
+      for (let i = 0; i < n; i++) {
+        for (let j = i + 2; j < n; j++) {
+          if (i === 0 && j === n - 1) continue;
+          if (intersects(e[i], e[(i + 1) % n], e[j], e[(j + 1) % n])) hits++;
+        }
+      }
+      expect(hits).toBe(0);
+    }
+  });
+
+  it('distant stretches of track keep clear of each other', () => {
+    const pts = track.points.slice(0, -1);
+    let min = Infinity;
+    for (let i = 0; i < pts.length; i++) {
+      for (let j = i + 1; j < pts.length; j++) {
+        const arc = Math.min(track.cum[j] - track.cum[i], track.length - (track.cum[j] - track.cum[i]));
+        if (arc < 300) continue;
+        min = Math.min(min, Math.hypot(pts[i].x - pts[j].x, pts[i].y - pts[j].y));
+      }
+    }
+    expect(min).toBeGreaterThan(2 * half + 40);
   });
 });

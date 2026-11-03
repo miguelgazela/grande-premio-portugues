@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { HostGame, type HostSnapshot } from '../../game/hostGame';
 import { errorMessage } from '../../lib/api';
+import { endSessions } from '../../lib/endSessions';
 import { keepAwake, wakeLockSupported } from '../../lib/wakeLock';
 import { RaceView } from '../../render/raceView';
 import { Asset, Countdown, Flames, Place } from '../ui/Asset';
@@ -55,11 +56,41 @@ function HostScreen({ game }: { game: HostGame }) {
   return <RaceScreen game={game} s={s} />;
 }
 
+/** Terminar a sessão (sempre com confirmação); no lobby também dá para só voltar ao menu. */
+function ExitDialog({ game, canLeave, onClose }: { game: HostGame; canLeave: boolean; onClose(): void }) {
+  const { api } = useTeacher();
+  const nav = useNavigate();
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const end = async () => {
+    setBusy(true);
+    try {
+      await endSessions(api, [game.session.id]);
+      nav('/prof');
+    } catch (e) {
+      setErr(errorMessage(e));
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="overlay" style={{ zIndex: 20 }} onClick={(e) => e.stopPropagation()}>
+      <div className="card" style={{ display: 'grid', gap: 12, maxWidth: 460 }}>
+        <h2>Terminar a sessão?</h2>
+        <p className="muted">Os alunos veem que a professora terminou e o PIN fica livre. Nada fica no histórico.</p>
+        {err && <p className="error">{err}</p>}
+        <button className="danger big" disabled={busy} onClick={() => void end()}>{busy ? 'A terminar…' : 'Terminar sessão'}</button>
+        {canLeave && <button disabled={busy} onClick={() => nav('/prof')}>Só voltar ao menu (a sessão continua)</button>}
+        <button disabled={busy} onClick={onClose}>Cancelar</button>
+      </div>
+    </div>
+  );
+}
+
 function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
   const pin = game.session.pin;
   const url = `${location.origin}${location.pathname}#/?pin=${pin}`;
   const [qr, setQr] = useState('');
-  const nav = useNavigate();
+  const [exiting, setExiting] = useState(false);
   useEffect(() => {
     void QRCode.toDataURL(url, { margin: 0, width: 512, errorCorrectionLevel: 'M' }).then(setQr);
   }, [url]);
@@ -91,13 +122,14 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
           </div>
           {!wakeLockSupported() && <p className="muted">Dica: desliga o bloqueio automático do iPad (Ajustes → Ecrã e brilho).</p>}
           <div className="row spread" style={{ marginTop: 12 }}>
-            <button onClick={() => nav('/prof')}>← Sair</button>
+            <button onClick={() => setExiting(true)}>← Sair</button>
             <span className={s.connected ? 'muted' : 'offline'}>{s.connected ? '● ligado' : '○ a ligar…'}</span>
             <button className="primary big" disabled={!s.players.length} onClick={() => void game.start()}>🏁 Começar corrida</button>
           </div>
         </div>
       </div>
       {s.notice && <div className="notice">{s.notice}</div>}
+      {exiting && <ExitDialog game={game} canLeave onClose={() => setExiting(false)} />}
     </div>
   );
 }
@@ -105,6 +137,7 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
 function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [rank, setRank] = useState(0);
+  const [exiting, setExiting] = useState(false);
   const [stageError, setStageError] = useState<string | null>(null);
   const qpl = game.config.questionsPerLap;
   const lap = Math.min(game.config.laps, Math.floor(s.qIndex / qpl) + 1);
@@ -112,7 +145,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   const showReveal = s.phase === 'reveal' && s.reveal;
 
   useEffect(() => {
-    const view = new RaceView(game.track, { sprites: true });
+    const view = new RaceView(game.track, { sprites: true, follow: true });
     let mounted = false;
     let gone = false;
     let lastRank = 0;
@@ -207,7 +240,10 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
           <div className="card">
             <h2>Corrida em pausa</h2>
             <p className="muted">{s.qIndex >= s.total ? 'Retomar no sprint final.' : `Retomar na pergunta ${s.qIndex + 1} de ${s.total}.`} Os alunos voltam sozinhos.</p>
-            <button className="primary big" onClick={() => game.resume()}>▶ Retomar</button>
+            <div style={{ display: 'grid', gap: 10 }}>
+              <button className="primary big" onClick={() => game.resume()}>▶ Retomar</button>
+              <button onClick={() => setExiting(true)}>Terminar sessão</button>
+            </div>
           </div>
         </div>
       )}
@@ -217,9 +253,11 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
             <div style={{ fontSize: '12vmin' }}>⏸</div>
             <h2>{s.hidden ? 'Em pausa: a app saiu do ecrã' : 'Em pausa'}</h2>
             {!s.hidden && <button className="primary big">▶ Continuar</button>}
+            {!s.hidden && <div style={{ marginTop: 14 }}><button onClick={(e) => { e.stopPropagation(); setExiting(true); }}>Terminar sessão</button></div>}
           </div>
         </div>
       )}
+      {exiting && <ExitDialog game={game} canLeave={false} onClose={() => setExiting(false)} />}
       {!s.connected && <div className="notice">○ Sem ligação: a tentar reconectar…</div>}
       {s.notice && <div className="notice" style={{ bottom: 50 }}>{s.notice}</div>}
     </div>

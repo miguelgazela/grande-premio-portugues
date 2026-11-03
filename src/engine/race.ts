@@ -105,6 +105,31 @@ export class Race {
     return Math.min(this.nextQuestion, this.questionCount);
   }
 
+  /** Segundos desde o início do ciclo da pergunta em curso (os primeiros `overheadTime` são o reveal da anterior). */
+  private get cyclePhase(): number {
+    return this.time - this.nextQuestion * this.cycle;
+  }
+
+  /**
+   * true durante o reveal (e no sprint final): o efeito da última resposta está a atuar.
+   * Enquanto os alunos pensam, todos os carros andam ao ritmo neutro.
+   */
+  get bursting(): boolean {
+    if (this.nextQuestion >= this.questionCount) return true;
+    return this.nextQuestion > 0 && this.cyclePhase < this.config.overheadTime;
+  }
+
+  /**
+   * Multiplicador de velocidade instantâneo. `car.mult` é a média do ciclo; a rajada no reveal é
+   * calculada para que a distância por ciclo seja a mesma de antes: cruise·questionTime + burst·overhead = mult·cycle.
+   */
+  private speedMult(car: CarState): number {
+    const c = this.config;
+    if (this.nextQuestion >= this.questionCount) return car.mult;
+    if (!this.bursting) return c.cruiseMult;
+    return Math.max(0.05, (car.mult * this.cycle - c.cruiseMult * c.questionTime) / c.overheadTime);
+  }
+
   /** 0..1 progress through the current question cycle. */
   get cycleProgress(): number {
     return clamp((this.time - this.nextQuestion * this.cycle) / this.cycle, 0, 1);
@@ -144,7 +169,7 @@ export class Race {
         car.spinLeft = Math.max(0, car.spinLeft - dt);
         continue;
       }
-      let m = car.mult;
+      let m = this.speedMult(car);
       if (car.driver.kind === 'bot' && team) {
         const gapLaps = (car.distance - team.distance) / this.lapLength;
         m *= 1 + clamp(-gapLaps * this.config.rubberBand, -this.config.rubberBandCap, this.config.rubberBandCap);

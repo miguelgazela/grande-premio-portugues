@@ -187,14 +187,26 @@ export const mockApi: Api = {
     });
   },
   async listOpenSessions() {
-    return tx((db) => db.sessions.filter((s) => s.status === 'lobby' || s.status === 'running'));
+    return tx((db) => {
+      const cutoff = Date.now() - 12 * 3600_000;
+      for (const s of db.sessions) {
+        if ((s.status === 'lobby' || s.status === 'running') && s.created_at && Date.parse(s.created_at) < cutoff) s.status = 'aborted';
+      }
+      return db.sessions.filter((s) => s.status === 'lobby' || s.status === 'running');
+    });
+  },
+  async abortSession(id) {
+    tx((db) => {
+      const s = db.sessions.find((x) => x.id === id);
+      if (s && (s.status === 'lobby' || s.status === 'running')) s.status = 'aborted';
+    });
   },
   async createSession(quiz, classId, settings) {
     return tx((db) => {
       let pin = '';
       do pin = String(Math.floor(Math.random() * 1_000_000)).padStart(6, '0');
       while (db.sessions.some((s) => s.pin === pin && (s.status === 'lobby' || s.status === 'running')));
-      const s: SessionRow = { id: uid(), teacher_id: 'mock-teacher', quiz_id: quiz.id, quiz_version: quiz.version, quiz_title: quiz.title, class_id: classId, pin, status: 'lobby', settings, state: null };
+      const s: SessionRow = { id: uid(), teacher_id: 'mock-teacher', quiz_id: quiz.id, quiz_version: quiz.version, quiz_title: quiz.title, class_id: classId, pin, status: 'lobby', settings, state: null, created_at: new Date().toISOString() };
       db.sessions.push(s);
       return s;
     });

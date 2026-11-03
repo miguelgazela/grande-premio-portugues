@@ -1,13 +1,16 @@
 import { Application, Container, Graphics, Sprite, Text, TilingSprite, type Texture } from 'pixi.js';
 import { mulberry32 } from '../engine/rng';
-import type { Track } from '../engine/track';
+import { CURB_W, ROAD_W, WORLD_H, WORLD_W, type Track } from '../engine/track';
 import type { CarState, Race } from '../engine/race';
 import { loadRaceTextures, type RaceTextures } from './assets';
 
-const WORLD_W = 1000;
-const WORLD_H = 620;
-const ROAD_W = 56;
 const CAR_LEN = 34;
+/** Zoom da câmara em relação ao "caber o mundo antigo (1000 de largura) no ecrã". */
+const FOLLOW_ZOOM = 2.2;
+const LOOK_AHEAD = 70;
+const CURB_STRIPE = 18;
+const CURB_ORANGE = 0xf26b1d;
+const CURB_WHITE = 0xf5f5f5;
 
 /** Cor do bot → sprite de carro. */
 const CAR_BY_COLOR: Record<number, string> = {
@@ -41,11 +44,25 @@ export class RaceView {
   private cars = new Map<string, CarNode>();
   private tex: RaceTextures = new Map();
   private destroyed = false;
+  private view = { w: 0, h: 0 };
+  private cam = { x: WORLD_W / 2, y: WORLD_H / 2, zoom: 1, snapped: false };
+  private lastClock = 0;
+  private mini = new Container();
+  private miniDots = new Graphics();
+  private miniScale = 1;
+  private clearancePts: Float32Array;
 
   constructor(
     private track: Track,
-    private opts: { sprites?: boolean } = {},
-  ) {}
+    private opts: { sprites?: boolean; follow?: boolean } = {},
+  ) {
+    const pts = track.points.slice(0, -1);
+    this.clearancePts = new Float32Array(pts.length * 2);
+    pts.forEach((p, i) => {
+      this.clearancePts[i * 2] = p.x;
+      this.clearancePts[i * 2 + 1] = p.y;
+    });
+  }
 
   async mount(el: HTMLElement): Promise<void> {
     if (this.opts.sprites) this.tex = await loadRaceTextures();
@@ -55,15 +72,56 @@ export class RaceView {
     this.app.stage.addChild(this.world);
     this.drawTrack();
     this.world.addChild(this.carLayer);
+    if (this.opts.follow) {
+      this.app.stage.addChild(this.mini);
+      this.mini.addChild(this.miniDots);
+    }
     const fit = () => {
       // `resizeTo` só reage ao resize da janela; a pista muda de altura quando a pergunta aparece/desaparece.
       if (el.clientWidth && el.clientHeight) this.app.renderer.resize(el.clientWidth, el.clientHeight);
-      const s = Math.min(el.clientWidth / WORLD_W, el.clientHeight / WORLD_H);
-      this.world.scale.set(s);
-      this.world.position.set((el.clientWidth - WORLD_W * s) / 2, (el.clientHeight - WORLD_H * s) / 2);
+      this.view = { w: el.clientWidth, h: el.clientHeight };
+      if (this.opts.follow) {
+        this.layoutMinimap();
+        this.applyCamera(0);
+      } else {
+        const s = Math.min(el.clientWidth / WORLD_W, el.clientHeight / WORLD_H);
+        this.world.scale.set(s);
+        this.world.position.set((el.clientWidth - WORLD_W * s) / 2, (el.clientHeight - WORLD_H * s) / 2);
+      }
     };
     new ResizeObserver(fit).observe(el);
     fit();
+  }
+
+  /** Escala base: o mundo antigo (1000 de largura) cabia no ecrã; o zoom de seguimento mede-se contra isso. */
+  private baseScale(): number {
+    return Math.min(this.view.w / 1000, this.view.h / 620);
+  }
+
+  private applyCamera(shake: number): void {
+    const s = this.baseScale() * FOLLOW_ZOOM * this.cam.zoom;
+    this.world.scale.set(s);
+    this.world.position.set(
+      this.view.w / 2 - this.cam.x * s + (shake ? (Math.random() - 0.5) * shake : 0),
+      this.view.h / 2 - this.cam.y * s + (shake ? (Math.random() - 0.5) * shake : 0),
+    );
+  }
+
+  private layoutMinimap(): void {
+    const w = Math.max(150, Math.min(260, this.view.w * 0.24));
+    const h = w * (WORLD_H / WORLD_W);
+    this.miniScale = w / WORLD_W;
+    this.mini.position.set(this.view.w - w - 12, this.view.h - h - 12);
+    const bg = new Graphics();
+    bg.roundRect(-8, -8, w + 16, h + 16, 10).fill({ color: 0x14141c, alpha: 0.55 });
+    const pts = this.track.points;
+    bg.moveTo(pts[0].x * this.miniScale, pts[0].y * this.miniScale);
+    for (let i = 1; i < pts.length; i += 3) bg.lineTo(pts[i].x * this.miniScale, pts[i].y * this.miniScale);
+    bg.closePath().stroke({ width: 5, color: 0xffffff, alpha: 0.85, join: 'round' });
+    const start = this.track.poseAt(0);
+    bg.circle(start.x * this.miniScale, start.y * this.miniScale, 3).fill(0xffd23f);
+    this.mini.children.filter((c) => c !== this.miniDots).forEach((c) => c.destroy());
+    this.mini.addChildAt(bg, 0);
   }
 
   private t(key: string): Texture | undefined {
@@ -87,15 +145,14 @@ export class RaceView {
       this.world.addChild(bg);
     }
 
+    this.drawCurbs();
     const road = new Graphics();
     const asphalt = this.t('track-asphalt');
-    const hasCurb = !!this.t('track-curb');
-    if (!hasCurb) this.path(road).stroke({ width: ROAD_W + 10, color: 0xff8c1a, join: 'round' });
     if (asphalt) {
       // Asfalto em tile, recortado pela forma da estrada.
       const mask = this.path(new Graphics()).stroke({ width: ROAD_W, color: 0xffffff, join: 'round' });
-      const tile = new TilingSprite({ texture: asphalt, width: WORLD_W + 200, height: WORLD_H + 200 });
-      tile.position.set(-100, -100);
+      const tile = new TilingSprite({ texture: asphalt, width: WORLD_W + 400, height: WORLD_H + 400 });
+      tile.position.set(-200, -200);
       tile.tileScale.set(0.3);
       tile.mask = mask;
       this.world.addChild(road, mask, tile);
@@ -103,9 +160,6 @@ export class RaceView {
       this.path(road).stroke({ width: ROAD_W, color: 0x3d3d48, join: 'round' });
       this.world.addChild(road);
     }
-
-    this.drawProps();
-    if (hasCurb) this.drawCurbs();
 
     // Linha central tracejada.
     const dashes = new Graphics();
@@ -118,28 +172,49 @@ export class RaceView {
     this.world.addChild(dashes);
 
     this.drawStartLine();
+    this.drawProps();
   }
 
-  /** Faixas laranja/branca ao longo das duas bordas. */
+  /**
+   * Curb contínuo: base laranja (traço mais largo que a estrada) e quads brancos por cima,
+   * gerados a partir das normais por vértice, por isso sem buracos nem sobreposições em curva.
+   */
   private drawCurbs(): void {
-    const curb = this.t('track-curb')!;
-    const layer = new Container();
-    const len = 44;
-    const thick = 6;
-    for (let d = 0; d < this.track.length; d += len) {
-      const p = this.track.poseAt(d + len / 2);
-      for (const side of [-1, 1]) {
-        const off = side * (ROAD_W / 2 + thick / 2 - 1);
-        const s = new Sprite(curb);
-        s.anchor.set(0.5);
-        s.width = len + 2;
-        s.height = thick;
-        s.position.set(p.x + p.nx * off, p.y + p.ny * off);
-        s.rotation = p.angle;
-        layer.addChild(s);
+    const g = new Graphics();
+    this.path(g).stroke({ width: ROAD_W + CURB_W * 2, color: CURB_ORANGE, join: 'round' });
+    const pts = this.track.points.slice(0, -1);
+    const n = pts.length;
+    const cum = this.track.cum;
+    const normals = pts.map((_p, i) => {
+      const a = pts[(i - 1 + n) % n];
+      const b = pts[(i + 1) % n];
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      return { x: -dy / len, y: dx / len };
+    });
+    const inner = ROAD_W / 2 - 1;
+    const outer = ROAD_W / 2 + CURB_W;
+    const white = (i: number) => Math.floor(cum[i] / CURB_STRIPE) % 2 === 1;
+    for (const side of [-1, 1]) {
+      let i = 0;
+      while (i < n) {
+        if (!white(i)) {
+          i++;
+          continue;
+        }
+        let j = i;
+        while (j + 1 < n && white(j + 1)) j++;
+        // Inclui o vértice seguinte para as listas encostarem.
+        const end = Math.min(j + 1, n - 1);
+        const poly: number[] = [];
+        for (let k = i; k <= end; k++) poly.push(pts[k].x + normals[k].x * outer * side, pts[k].y + normals[k].y * outer * side);
+        for (let k = end; k >= i; k--) poly.push(pts[k].x + normals[k].x * inner * side, pts[k].y + normals[k].y * inner * side);
+        g.poly(poly).fill(CURB_WHITE);
+        i = j + 1;
       }
     }
-    this.world.addChild(layer);
+    this.world.addChild(g);
   }
 
   private drawStartLine(): void {
@@ -166,63 +241,126 @@ export class RaceView {
     this.world.addChild(finish);
   }
 
-  /** Árvores, arbustos, cones, pneus e bancada, sem nunca tapar a estrada. */
+  /** Distância ao ponto mais próximo de QUALQUER troço da pista. */
+  private clearance(x: number, y: number): number {
+    const c = this.clearancePts;
+    let best = Infinity;
+    for (let i = 0; i < c.length; i += 2) {
+      const dx = c[i] - x;
+      const dy = c[i + 1] - y;
+      const d = dx * dx + dy * dy;
+      if (d < best) best = d;
+    }
+    return Math.sqrt(best);
+  }
+
+  /** Árvores, arbustos, cones, pneus e bancadas: acima da estrada, ordenados por y, nunca sobre ela. */
   private drawProps(): void {
     const layer = new Container();
+    layer.sortableChildren = true;
     const rng = mulberry32(7);
-    const pts = this.track.points;
-    const clearance = (x: number, y: number) => {
-      let best = Infinity;
-      for (let i = 0; i < pts.length; i += 2) best = Math.min(best, Math.hypot(pts[i].x - x, pts[i].y - y));
-      return best;
-    };
+    const roadEdge = ROAD_W / 2 + CURB_W;
     const placed: { x: number; y: number; r: number }[] = [];
+    const add = (tex: Texture, x: number, y: number, w: number, h: number, rotation = 0) => {
+      const s = new Sprite(tex);
+      s.anchor.set(0.5);
+      s.width = w;
+      s.height = h;
+      s.rotation = rotation;
+      s.position.set(x, y);
+      s.zIndex = y;
+      layer.addChild(s);
+    };
+
+    // Bancadas: nas retas mais direitas, do lado de fora da pista, viradas para ela. A principal junto à meta.
+    const stand = this.t('prop-grandstand');
+    if (stand) {
+      const L = this.track.length;
+      const turn = (d: number) => {
+        let worst = 0;
+        for (let k = -4; k < 4; k++) {
+          const a = this.track.poseAt(d + k * 40).angle;
+          const b = this.track.poseAt(d + (k + 1) * 40).angle;
+          worst += Math.abs(Math.atan2(Math.sin(b - a), Math.cos(b - a)));
+        }
+        return worst;
+      };
+      const candidates: { d: number; score: number }[] = [];
+      for (let d = 0; d < L; d += 30) candidates.push({ d, score: turn(d) });
+      candidates.sort((a, b) => a.score - b.score);
+      const near = (d: number, e: number) => Math.min(Math.abs(d - e), L - Math.abs(d - e));
+      const cx = WORLD_W / 2;
+      const cy = WORLD_H / 2;
+      const tryStand = (d: number, w: number): boolean => {
+        const h = (stand.height / stand.width) * w;
+        const p = this.track.poseAt(d);
+        // Lado de fora: o que se afasta do centro do mundo.
+        const side = (p.nx * (p.x - cx) + p.ny * (p.y - cy)) >= 0 ? 1 : -1;
+        const off = roadEdge + 12 + h / 2;
+        const x = p.x + p.nx * side * off;
+        const y = p.y + p.ny * side * off;
+        const tx = Math.cos(p.angle);
+        const ty = Math.sin(p.angle);
+        const fx = -p.nx * side; // para a pista
+        const fy = -p.ny * side;
+        // Todos os pontos do retângulo (cantos e meios) longe de QUALQUER troço, não só do mais próximo.
+        for (const u of [-0.5, -0.25, 0, 0.25, 0.5]) {
+          for (const v of [-0.5, 0, 0.5]) {
+            if (this.clearance(x + tx * w * u + fx * h * v, y + ty * w * u + fy * h * v) < roadEdge + 8) return false;
+          }
+        }
+        const s = new Sprite(stand);
+        s.anchor.set(0.5);
+        s.width = w;
+        s.height = h;
+        s.rotation = Math.atan2(fy, fx) - Math.PI / 2;
+        s.position.set(x, y);
+        s.zIndex = y;
+        layer.addChild(s);
+        placed.push({ x, y, r: w / 2 });
+        return true;
+      };
+      const picks: number[] = [];
+      for (const c of candidates.filter((c) => near(c.d, 0) < 0.12 * L)) {
+        if (tryStand(c.d, 300)) {
+          picks.push(c.d);
+          break;
+        }
+      }
+      for (const c of candidates) {
+        if (picks.length >= 3) break;
+        if (picks.every((p) => near(p, c.d) > 0.22 * L) && tryStand(c.d, 230)) picks.push(c.d);
+      }
+    }
+
     const place = (key: string, size: number, count: number, margin: number, nearRoad: boolean) => {
       const tex = this.t(key);
       if (!tex) return;
-      for (let n = 0, tries = 0; n < count && tries < 500; tries++) {
+      const r = size / 2;
+      for (let n = 0, tries = 0; n < count && tries < 1500; tries++) {
         let x: number;
         let y: number;
         if (nearRoad) {
           const p = this.track.poseAt(rng() * this.track.length);
-          const off = (rng() < 0.5 ? -1 : 1) * (ROAD_W / 2 + margin + rng() * 14);
+          const off = (rng() < 0.5 ? -1 : 1) * (roadEdge + r + margin + rng() * 10);
           x = p.x + p.nx * off;
           y = p.y + p.ny * off;
         } else {
-          x = -90 + rng() * (WORLD_W + 180);
-          y = -60 + rng() * (WORLD_H + 120);
+          x = -140 + rng() * (WORLD_W + 280);
+          y = -140 + rng() * (WORLD_H + 280);
         }
-        const r = size / 2;
-        if (clearance(x, y) < ROAD_W / 2 + margin + r * 0.6) continue;
+        if (this.clearance(x, y) < roadEdge + r * 0.8 + margin) continue;
         if (placed.some((o) => Math.hypot(o.x - x, o.y - y) < (o.r + r) * 0.9)) continue;
         placed.push({ x, y, r });
-        const s = new Sprite(tex);
-        s.anchor.set(0.5);
-        s.scale.set(size / Math.max(tex.width, tex.height));
-        s.position.set(x, y);
-        s.rotation = key === 'prop-tree' || key === 'prop-bush' ? rng() * Math.PI * 2 : 0;
-        layer.addChild(s);
+        const k = size / Math.max(tex.width, tex.height);
+        add(tex, x, y, tex.width * k, tex.height * k, key === 'prop-tree' || key === 'prop-bush' ? rng() * Math.PI * 2 : 0);
         n++;
       }
     };
-
-    // Bancada junto à reta de cima, virada para a pista.
-    const stand = this.t('prop-grandstand');
-    if (stand) {
-      const w = 130;
-      const h = (stand.height / stand.width) * w;
-      const s = new Sprite(stand);
-      s.anchor.set(0.5);
-      s.width = w;
-      s.height = h;
-      s.position.set(470, 90 - ROAD_W / 2 - 14 - h / 2 - 8);
-      layer.addChild(s);
-      placed.push({ x: s.x, y: s.y, r: w / 2 });
-    }
-    place('prop-tree', 56, 16, 8, false);
-    place('prop-bush', 34, 10, 6, false);
-    place('prop-tires', 26, 5, 6, true);
-    place('prop-cone', 16, 8, 4, true);
+    place('prop-tree', 70, 42, 10, false);
+    place('prop-bush', 40, 26, 8, false);
+    place('prop-tires', 28, 14, 8, true);
+    place('prop-cone', 18, 20, 6, true);
     this.world.addChild(layer);
   }
 
@@ -297,8 +435,8 @@ export class RaceView {
 
       const running = car.finishTime === null && !spinning;
       const flicker = 0.75 + 0.25 * Math.sin(clock * 40 + i);
-      const nitroOn = running && car.nitroActive;
-      const turboOn = running && !car.nitroActive && car.lastEffect === 'turbo';
+      const nitroOn = running && race.bursting && car.nitroActive;
+      const turboOn = running && race.bursting && !car.nitroActive && car.lastEffect === 'turbo';
       if (node.fx) {
         node.fx.clear();
         if (nitroOn || turboOn) {
@@ -324,6 +462,44 @@ export class RaceView {
     const team = race.team;
     const teamNode = team && this.cars.get(team.driver.id);
     if (teamNode) this.carLayer.setChildIndex(teamNode.root, this.carLayer.children.length - 1);
+    if (this.opts.follow && team && teamNode) this.followCamera(race, team, teamNode.root, clock);
+  }
+
+  /** Segue o carro da turma: lerp com look-ahead, zoom-out no turbo/nitro, tremor no despiste. Sem rodar. */
+  private followCamera(race: Race, team: CarState, root: Container, clock: number): void {
+    const dt = Math.min(0.1, Math.max(0, clock - this.lastClock));
+    this.lastClock = clock;
+    const pose = this.track.poseAt(team.distance);
+    const tx = root.x + Math.cos(pose.angle) * LOOK_AHEAD;
+    const ty = root.y + Math.sin(pose.angle) * LOOK_AHEAD;
+    const cam = this.cam;
+    if (!cam.snapped) {
+      cam.x = tx;
+      cam.y = ty;
+      cam.snapped = true;
+    }
+    const k = 1 - Math.exp(-dt * 3);
+    cam.x += (tx - cam.x) * k;
+    cam.y += (ty - cam.y) * k;
+    const spinning = team.spinLeft > 0;
+    const boosted = team.finishTime === null && !spinning && race.bursting;
+    const targetZoom = boosted && team.nitroActive ? 0.84 : boosted && team.lastEffect === 'turbo' ? 0.92 : 1;
+    cam.zoom += (targetZoom - cam.zoom) * (1 - Math.exp(-dt * 2.5));
+    this.applyCamera(spinning ? 10 : 0);
+
+    // Minimapa: um ponto por carro, o da turma maior e por cima.
+    const d = this.miniDots;
+    d.clear();
+    const order = [...race.cars].sort((a, b) => Number(a === team) - Number(b === team));
+    for (const c of order) {
+      const node = this.cars.get(c.driver.id);
+      if (!node) continue;
+      const isTeam = c === team;
+      const x = node.root.x * this.miniScale;
+      const y = node.root.y * this.miniScale;
+      d.circle(x, y, isTeam ? 6 : 3.5).fill(c.driver.kind === 'ghost' ? 0xbfc5cc : c.driver.color || 0x95a5a6);
+      if (isTeam) d.circle(x, y, 6).stroke({ width: 2, color: 0xffffff });
+    }
   }
 
   destroy(): void {

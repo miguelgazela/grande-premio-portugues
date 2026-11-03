@@ -60,7 +60,9 @@ export type HostEvent =
   | { event: 'question'; payload: PublicQuestion }
   | { event: 'reveal'; payload: RevealMsg }
   | { event: 'end'; payload: EndMsg }
-  | { event: 'kicked'; payload: { player_id: string } };
+  | { event: 'kicked'; payload: { player_id: string } }
+  /** A professora terminou a sessão a meio. */
+  | { event: 'aborted'; payload: Record<string, never> };
 
 /** Aluno → anfitrião. */
 export type StudentEvent =

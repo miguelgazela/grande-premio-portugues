@@ -4,7 +4,7 @@ import { outcomeFromAnswers, type PlayerAnswer, type QuestionOutcome } from '../
 import { Race, type Driver } from '../engine/race';
 import { mulberry32 } from '../engine/rng';
 import { pickAwards, scoreRace } from '../engine/scoring';
-import { DEFAULT_TRACK_POINTS, Track } from '../engine/track';
+import { Track, trackFor } from '../engine/track';
 import type { Api, Channel } from '../lib/api';
 import { play, unlockAudio } from '../lib/audio';
 import type { AnyEvent, EndMsg, FinalInfo, HostEvent, PublicQuestion, RevealMsg } from '../lib/protocol';
@@ -51,7 +51,7 @@ type Listener = () => void;
  * calcula a corrida com o motor e grava respostas e estado a cada pergunta.
  */
 export class HostGame {
-  readonly track = new Track(DEFAULT_TRACK_POINTS);
+  readonly track: Track;
   readonly config: RaceConfig;
   readonly questions: QuestionRow[];
   race: Race;
@@ -90,6 +90,8 @@ export class HostGame {
     questions: QuestionRow[],
   ) {
     const { config, used } = raceConfigFor(questions, session.settings);
+    const def = trackFor(session.id);
+    this.track = new Track(def.points, def.samples);
     this.config = config;
     this.questions = questions.slice(0, used);
     this.seed = session.state?.seed ?? Math.floor(Math.random() * 2 ** 31);
