@@ -86,5 +86,7 @@ Assets já gerados (ver `assets/README.md` e `public/assets/manifest.json`), por
 ### Fase 6: Pedagógico
 Modo revisão, evolução por tema, perguntas geradas com IA, modo trabalho de casa.
 
+Feito: **modo revisão** (`/prof/revisao`, `src/lib/review.ts`). Sem SQL novo: as falhas calculam-se no cliente com as `answer` das sessões `finished` da turma (RLS própria). A sessão guarda `settings.review` (`questionIds` ordenados, limiar, % antes); o quiz da sessão é só âncora. Não grava `race_record` (sem fantasmas nem recorde). No fim mostra o que subiu e o que continua falhado, e repete só as ainda falhadas. Falta: evolução por tema, IA, trabalho de casa.
+
 ### Fase 7: Robustez e partilha
 Antibatota, filtro de alcunhas, RGPD, partilha entre professores, acessibilidade.

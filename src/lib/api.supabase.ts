@@ -4,7 +4,7 @@ import type { Api, Channel } from './api';
 import { toSaveShape } from './quizEdit';
 import { EVENT_NAMES, channelName, type AnyEvent } from './protocol';
 import { supabase } from './supabase';
-import type { AnswerRow, ClassRow, JoinResult, PlayerRow, QuestionRow, QuizRow, RaceRecordRow, RaceSummary, SaveQuizResult, SessionRow } from './types';
+import type { AnswerRow, ClassRow, JoinResult, PlayerRow, QuestionRow, QuizRow, RaceRecordRow, RaceSummary, ReviewQuestion, ReviewSession, SaveQuizResult, SessionRow } from './types';
 
 function check<T>(res: { data: T; error: { message: string; code?: string } | null }): T {
   if (res.error) throw Object.assign(new Error(res.error.message), { code: res.error.code });
@@ -17,7 +17,7 @@ type RawSession = Omit<SessionRow, 'quiz_title'> & { quiz: { title: string } | {
 const toSession = (r: RawSession): SessionRow => {
   const q = Array.isArray(r.quiz) ? r.quiz[0] : r.quiz;
   const { quiz: _quiz, ...rest } = r;
-  return { ...rest, quiz_title: q?.title ?? '' };
+  return { ...rest, quiz_title: r.settings?.review?.title ?? q?.title ?? '' };
 };
 
 interface RawRace {
@@ -112,7 +112,7 @@ export const supabaseApi: Api = {
     const rec = check(
       await supabase.from('race_record').select('session_id, created_at, quiz_id, quiz_version, class_id, final_position, timeline, quiz(title), class(name)').eq('session_id', sessionId).maybeSingle(),
     ) as unknown as RawRace | null;
-    const [questions, answers, players] = await Promise.all([supabaseApi.loadQuestions(s.quiz_id, s.quiz_version), supabaseApi.loadAnswers(sessionId), supabaseApi.listPlayers(sessionId)]);
+    const [questions, answers, players] = await Promise.all([s.settings?.review ? supabaseApi.loadQuestionsByIds(s.settings.review.questionIds) : supabaseApi.loadQuestions(s.quiz_id, s.quiz_version), supabaseApi.loadAnswers(sessionId), supabaseApi.listPlayers(sessionId)]);
     // Só as perguntas que a corrida usou (as definições da sessão podem deixar algumas de fora).
     return { race: rec ? toRace(rec) : null, questions: questions.slice(0, raceConfigFor(questions, s.settings).used), answers, playerCount: players.filter((p) => !p.kicked).length };
   },
@@ -163,6 +163,39 @@ export const supabaseApi: Api = {
       await supabase.from('question').select('id, position, type, prompt, payload, correct, time_limit, explanation').eq('quiz_id', quizId).eq('version', version).order('position'),
     );
     return rows as unknown as QuestionRow[];
+  },
+  async loadQuestionsByIds(ids) {
+    if (!ids.length) return [];
+    type Raw = QuestionRow & { quiz_id: string; version: number; quiz: { title: string; archived_at: string | null } | { title: string; archived_at: string | null }[] | null };
+    const rows: Raw[] = [];
+    for (let i = 0; i < ids.length; i += 80) { // ids no URL: em blocos
+      rows.push(...(check(await supabase.from('question').select('id, position, type, prompt, payload, correct, time_limit, explanation, quiz_id, version, quiz(title, archived_at)').in('id', ids.slice(i, i + 80))) as unknown as Raw[]));
+    }
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    return ids.flatMap((id): ReviewQuestion[] => {
+      const r = byId.get(id);
+      if (!r) return [];
+      const { quiz, version, ...q } = r;
+      const qz = one(quiz);
+      return [{ ...q, quiz_version: version, quiz_title: qz?.title ?? '', archived: !!qz?.archived_at } as ReviewQuestion];
+    });
+  },
+  async loadReviewPool({ classId, quizIds, sessions }) {
+    let q = supabase.from('session').select('id, created_at, status, quiz_id, settings, quiz(title)').eq('status', 'finished').eq('class_id', classId).order('created_at', { ascending: false }).limit(sessions);
+    if (quizIds?.length) q = q.in('quiz_id', quizIds);
+    const rows = check(await q) as unknown as { id: string; created_at: string; status: ReviewSession['status']; quiz_id: string; settings: SessionRow['settings']; quiz: { title: string } | { title: string }[] | null }[];
+    const out: ReviewSession[] = rows.map((r) => ({ id: r.id, created_at: r.created_at, status: r.status, quiz_id: r.quiz_id, quiz_title: r.settings?.review?.title ?? one(r.quiz)?.title ?? '', review: !!r.settings?.review, answers: [] }));
+    // O PostgREST devolve no máximo 1000 linhas por pedido: pagina.
+    const bySession = new Map(out.map((s) => [s.id, s]));
+    for (let from = 0; out.length; from += 1000) {
+      const page = check(
+        await supabase.from('answer').select('session_id, question_id, player_id, value, correct, ms_taken').in('session_id', out.map((s) => s.id)).order('id').range(from, from + 999),
+      ) as AnswerRow[];
+      for (const a of page) bySession.get(a.session_id)?.answers.push(a);
+      if (page.length < 1000) break;
+    }
+    const qids = [...new Set(out.flatMap((s) => s.answers.map((a) => a.question_id)))];
+    return { sessions: out, questions: await supabaseApi.loadQuestionsByIds(qids) };
   },
   async listPlayers(sessionId) {
     return check(await supabase.from('player').select('id, nickname, kicked').eq('session_id', sessionId).order('joined_at')) as PlayerRow[];
