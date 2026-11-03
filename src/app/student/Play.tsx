@@ -31,7 +31,7 @@ function readVote(playerId: string | undefined): string | null {
 
 type View =
   | { k: 'wait'; count: number | null }
-  | { k: 'question'; q: PublicQuestion; at: number; full: number }
+  | { k: 'question'; q: PublicQuestion; at: number; full: number; paused?: boolean }
   | { k: 'reveal'; r: RevealMsg; body: PublicBody | null }
   | { k: 'end'; e: EndMsg }
   | { k: 'aborted' };
@@ -119,6 +119,11 @@ export function Play() {
               setView({ k: 'question', q: m.payload, at: Date.now(), full: same ? cur.full : m.payload.time });
               const prev = chosenRef.current[m.payload.question_id];
               if (prev !== undefined) ch?.send({ event: 'answer', payload: { player_id: player.player_id, question_id: m.payload.question_id, value: prev } });
+              break;
+            }
+            case 'pause': {
+              const cur = viewRef.current;
+              if (cur.k === 'question') setView({ ...cur, q: { ...cur.q, time: m.payload.time }, at: Date.now(), paused: m.payload.paused });
               break;
             }
             case 'reveal':
@@ -217,7 +222,7 @@ export function Play() {
           </div>
         </div>
       )}
-      {view.k === 'question' && <QuestionView q={view.q} at={view.at} full={view.full} mine={chosen[view.q.question_id]} onPick={answer} />}
+      {view.k === 'question' && <QuestionView q={view.q} at={view.at} full={view.full} paused={view.paused} mine={chosen[view.q.question_id]} onPick={answer} />}
       {view.k === 'reveal' && <RevealView r={view.r} mine={chosen[view.r.question_id]} body={view.body} me={player.player_id} />}
       {view.k === 'aborted' && (
         <div className="msg">
@@ -232,18 +237,23 @@ export function Play() {
   );
 }
 
-function QuestionView({ q, at, full, mine, onPick }: { q: PublicQuestion; at: number; full: number; mine: AnswerValue | undefined; onPick(v: AnswerValue): void }) {
+function QuestionView({ q, at, full, paused, mine, onPick }: { q: PublicQuestion; at: number; full: number; paused?: boolean; mine: AnswerValue | undefined; onPick(v: AnswerValue): void }) {
   const [left, setLeft] = useState(q.time);
   useEffect(() => {
+    if (paused) {
+      setLeft(q.time);
+      return;
+    }
     const t = window.setInterval(() => setLeft(Math.max(0, q.time - (Date.now() - at) / 1000)), 250);
     return () => clearInterval(t);
-  }, [q.time, at]);
+  }, [q.time, at, paused]);
   return (
     <>
       <div className="sprompt">{q.prompt}</div>
       <div className="timer" style={{ minHeight: 8 }}><i style={{ width: `${Math.min(100, (left / full) * 100)}%` }} /></div>
       {/* `key` repõe o estado local (palavras tocadas, ordem…) a cada pergunta. */}
-      <StudentInput key={q.question_id} body={q.body} mine={mine} onSubmit={onPick} />
+      {paused && <div className="who">⏸ Jogo em pausa</div>}
+      <StudentInput key={q.question_id} body={q.body} mine={mine} onSubmit={paused ? () => undefined : onPick} />
       {mine !== undefined && <div className="who">Resposta enviada ✓</div>}
     </>
   );

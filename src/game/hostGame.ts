@@ -159,6 +159,12 @@ export class HostGame {
     this.raf = requestAnimationFrame(this.loop);
   }
 
+  /** Avisa já os alunos, pelo canal que o anfitrião tem aberto, de que a sessão terminou. */
+  announceAborted(): void {
+    this.channel?.send({ event: 'aborted', payload: {} });
+    window.setTimeout(() => this.channel?.send({ event: 'aborted', payload: {} }), 300);
+  }
+
   destroy(): void {
     this.stopped = true;
     music.stop();
@@ -246,6 +252,7 @@ export class HostGame {
     }
     if (m.event === 'question' && this.current) {
       this.channel?.send({ event: 'question', payload: { ...m.payload, time: Math.max(0, this.config.questionTime - this.qElapsed) } });
+      if (this.snap.paused) this.announcePause();
     } else {
       this.channel?.send(m);
     }
@@ -371,11 +378,13 @@ export class HostGame {
       this.pageHidden = true;
       music.stop();
       this.set({ hidden: true, paused: true });
+      this.announcePause();
     } else {
       this.pageHidden = false;
       this.lastTs = performance.now();
       this.connect(); // o Safari suspende os websockets em segundo plano
       this.set({ hidden: false, paused: this.teacherPaused });
+      this.announcePause();
       if (!this.teacherPaused && this.inRace()) music.start();
     }
   };
@@ -384,8 +393,14 @@ export class HostGame {
     this.teacherPaused = !this.teacherPaused;
     this.lastTs = performance.now();
     this.set({ paused: this.teacherPaused || this.pageHidden });
+    this.announcePause();
     if (this.teacherPaused) music.stop();
     else if (this.inRace()) music.start();
+  }
+
+  /** Avisa os alunos para congelarem (ou retomarem) o tempo da pergunta. */
+  private announcePause() {
+    this.channel?.send({ event: 'pause', payload: { paused: this.snap.paused, time: Math.max(0, this.config.questionTime - this.qElapsed) } });
   }
 
   private inRace(): boolean {
