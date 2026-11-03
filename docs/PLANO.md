@@ -73,6 +73,8 @@ V/F, toca na palavra, ordenar, completar, excerto + pergunta, correspondência.
 ### Fase 5: Arte final e game feel
 Sprites do Higgsfield, várias pistas, câmara, partículas, música, personalização do carro da turma, avatares.
 
+Feito (branch `fase5-arte-game-feel`): fundos de menu, modelos `cartype-*` tingidos (bots e turma), temas por pista (relva/deserto/neve/cidade, função de `trackId` em `src/engine/theme.ts`, por isso fantasmas e refresh coincidem sem gravar nada), carro da turma (cor/modelo/nome por votação dos alunos ou fixado pela professora, gravado em `session.state.team`), partículas (pool de 140), "+1 POSIÇÃO!", público a festejar, efeitos e música sintetizados (WebAudio) com botão de som. Falta: mascote (Higgsfield), número no carro, música em ficheiro.
+
 Assets já gerados (ver `assets/README.md` e `public/assets/manifest.json`), por integrar:
 - Carros: 8 com cor (`car-*`, número "1") e 5 modelos tintáveis sem número (`cartype-*`, usar `sprite.tint`), 256×128, virados para +x.
 - Pista e temas: `bg-grass`, `track-asphalt`, `track-curb`, mais deserto/neve/cidade (`bg-*`, `track-asphalt-*`, `track-curb-*`, props), rasto/óleo/confetti.
