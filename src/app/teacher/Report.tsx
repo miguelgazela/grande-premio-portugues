@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { errorMessage } from '../../lib/api';
+import { TYPE_LABEL } from '../../lib/questions';
 import { buildReport, reportToCsv, type QuestionStat } from '../../lib/report';
 import type { ReportData } from '../../lib/types';
 import { fmtDate, pct } from './Prepare';
@@ -71,20 +72,22 @@ export function Report() {
 
 function QuestionCard({ q }: { q: QuestionStat }) {
   const max = Math.max(1, ...q.counts);
+  const bars = q.options.length > 0;
   return (
     <div className="qcard">
       <div className="row spread">
-        <b>{q.index + 1}. {q.prompt}</b>
+        <b>{q.index + 1}. {q.prompt} <small className="muted">· {TYPE_LABEL[q.type]}</small></b>
         <span className={q.accuracy < 0.5 ? 'bad' : 'muted'}>{pct(q.accuracy)} certas · {q.answered} respostas{q.noAnswer ? ` · ${q.noAnswer} sem resposta` : ''}</span>
       </div>
-      {q.options.map((o, i) => (
+      {bars && q.options.map((o, i) => (
         <div className="bar" key={i}>
-          <span className="lbl">{LETTERS[i]}{i === q.correct ? ' ✓' : ''}</span>
+          <span className="lbl">{q.type === 'true_false' ? (i === 0 ? 'V' : 'F') : LETTERS[i]}{i === q.correct ? ' ✓' : ''}</span>
           <div className="track"><i className={i === q.correct ? 'ok' : ''} style={{ width: `${(q.counts[i] / max) * 100}%` }} /></div>
           <span className="n">{q.counts[i]}</span>
-          <span className="opt-text">{o}</span>
+          <span className="opt-text">{q.type === 'true_false' ? '' : o}</span>
         </div>
       ))}
+      {!bars && <div className="common">{q.commonError ? `Erro mais comum: ${q.commonError.label} (${q.commonError.count}×)` : q.answered ? 'Sem erros.' : 'Sem respostas.'}</div>}
     </div>
   );
 }

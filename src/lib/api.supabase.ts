@@ -1,5 +1,6 @@
 import { raceConfigFor } from '../game/raceSettings';
 import type { Api, Channel } from './api';
+import { toSaveShape } from './quizEdit';
 import { channelName, type AnyEvent } from './protocol';
 import { supabase } from './supabase';
 import type { AnswerRow, ClassRow, JoinResult, PlayerRow, QuestionRow, QuizRow, RaceRecordRow, RaceSummary, SaveQuizResult, SessionRow } from './types';
@@ -81,7 +82,7 @@ export const supabaseApi: Api = {
       p_title: quiz.title,
       p_year: quiz.year,
       p_topic: quiz.topic,
-      p_questions: quiz.questions.map((q) => ({ id: q.id, prompt: q.prompt, options: q.options, correct: q.correct, time_limit: q.time_limit, explanation: q.explanation })),
+      p_questions: quiz.questions.map(toSaveShape),
     });
     return check(res) as SaveQuizResult;
   },
@@ -157,11 +158,9 @@ export const supabaseApi: Api = {
   },
   async loadQuestions(quizId, version) {
     const rows = check(
-      await supabase.from('question').select('id, position, prompt, payload, correct, time_limit, explanation').eq('quiz_id', quizId).eq('version', version).order('position'),
+      await supabase.from('question').select('id, position, type, prompt, payload, correct, time_limit, explanation').eq('quiz_id', quizId).eq('version', version).order('position'),
     );
-    return (rows as { id: string; position: number; prompt: string; payload: { options: string[] }; correct: { index: number }; time_limit: number; explanation: string | null }[]).map(
-      (r): QuestionRow => ({ id: r.id, position: r.position, prompt: r.prompt, options: r.payload.options, correct: r.correct.index, time_limit: r.time_limit, explanation: r.explanation }),
-    );
+    return rows as unknown as QuestionRow[];
   },
   async listPlayers(sessionId) {
     return check(await supabase.from('player').select('id, nickname, kicked').eq('session_id', sessionId).order('joined_at')) as PlayerRow[];

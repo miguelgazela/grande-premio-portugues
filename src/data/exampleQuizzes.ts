@@ -1,11 +1,21 @@
+import type { QuestionBody } from '../lib/types';
+
 /** Quizzes de exemplo. A migration de seed é gerada daqui (`npm run seed:sql`); o modo mock usa-os também. */
-export interface ExampleQuestion {
+/** Escolha múltipla na forma compacta (a das primeiras seeds). */
+export interface ExampleMC {
   prompt: string;
   options: [string, string, string, string];
   /** Índice (0–3) da opção certa. */
   correct: number;
   explanation?: string;
+  time_limit?: number;
 }
+/** Qualquer outro tipo, com o payload/correct finais. */
+export type ExampleTyped = { prompt: string; explanation?: string; time_limit?: number } & QuestionBody;
+export type ExampleQuestion = ExampleMC | ExampleTyped;
+
+export const toBody = (x: ExampleQuestion): QuestionBody =>
+  'type' in x ? ({ type: x.type, payload: x.payload, correct: x.correct } as QuestionBody) : { type: 'multiple_choice', payload: { options: [...x.options] }, correct: { index: x.correct } };
 
 export interface ExampleQuiz {
   title: string;
@@ -66,3 +76,39 @@ export const EXAMPLE_QUIZZES: ExampleQuiz[] = [
     ],
   },
 ];
+
+/** Fase 4: um quiz por ano com todos os tipos de pergunta. Vão numa migration à parte (a seed original já foi aplicada). */
+export const EXAMPLE_QUIZZES_TIPOS: ExampleQuiz[] = [
+  {
+    title: 'Gramática e literatura: todos os tipos (9.º)',
+    year: 9,
+    topic: 'Mistura',
+    questions: [
+      { type: 'true_false', prompt: '«Rapidamente» é um advérbio de modo.', payload: {}, correct: { value: true }, explanation: 'Termina em -mente e modifica o verbo.', time_limit: 15 },
+      { type: 'true_false', prompt: '«Nós» é um pronome pessoal da 2.ª pessoa do singular.', payload: {}, correct: { value: false }, explanation: '«Nós» é 1.ª pessoa do plural.', time_limit: 15 },
+      { type: 'tap_word', prompt: 'Toca no sujeito da frase.', payload: { sentence: 'Os alunos leram o poema ontem.' }, correct: { indices: [0, 1] }, explanation: 'Quem leu? «Os alunos».', time_limit: 25 },
+      { type: 'tap_word', prompt: 'Toca no advérbio.', payload: { sentence: 'O gato dorme tranquilamente no sofá.' }, correct: { indices: [3] }, explanation: '«Tranquilamente» modifica o verbo «dorme».', time_limit: 25 },
+      { type: 'order', prompt: 'Ordena as partes da estrutura de uma narrativa.', payload: { items: ['Situação inicial', 'Complicação', 'Clímax', 'Desenlace'] }, correct: {}, explanation: 'Apresenta-se, complica-se, atinge-se o ponto alto e resolve-se.', time_limit: 30 },
+      { type: 'complete', prompt: 'Conjuga o verbo entre parênteses.', payload: { text: 'Ontem, eu ___ (fazer) o trabalho de casa.' }, correct: { accepted: [['fiz']] }, explanation: 'Pretérito perfeito de «fazer».', time_limit: 25 },
+      { type: 'complete', prompt: 'Escolhe a forma que concorda com o sujeito.', payload: { text: 'Os alunos ___ muito atentos à aula.', options: ['estava', 'estavam', 'estás'] }, correct: { accepted: [['estavam']] }, explanation: 'Sujeito plural, verbo plural.', time_limit: 20 },
+      { type: 'excerpt', prompt: 'Que figura de estilo há em «quanto do teu sal / São lágrimas de Portugal»?', payload: { excerpt: 'Ó mar salgado, quanto do teu sal\nSão lágrimas de Portugal!\n\nFernando Pessoa, «Mar Português»', options: ['Metáfora', 'Hipérbole', 'Ironia', 'Comparação'] }, correct: { index: 0 }, explanation: 'O sal do mar identifica-se com as lágrimas, sem nexo comparativo.', time_limit: 40 },
+      { type: 'match', prompt: 'Liga cada autor à sua obra.', payload: { left: ['Luís de Camões', 'Fernando Pessoa', 'Eça de Queirós', 'José Saramago'], right: ['Os Lusíadas', 'Mensagem', 'Os Maias', 'Ensaio sobre a Cegueira'] }, correct: {}, explanation: 'Camões: epopeia; Pessoa: poesia; Eça: romance; Saramago: romance.', time_limit: 35 },
+    ],
+  },
+  {
+    title: 'Pessoa e os seus heterónimos: todos os tipos (12.º)',
+    year: 12,
+    topic: 'Fernando Pessoa',
+    questions: [
+      { type: 'true_false', prompt: 'Ricardo Reis é o heterónimo de inspiração epicurista.', payload: {}, correct: { value: true }, explanation: 'Odes inspiradas em Horácio.', time_limit: 15 },
+      { type: 'tap_word', prompt: 'Toca no sujeito.', payload: { sentence: 'O poeta é um fingidor.' }, correct: { indices: [0, 1] }, time_limit: 20 },
+      { type: 'complete', prompt: 'Completa.', payload: { text: 'Alberto Caeiro é o autor de «O Guardador de ___».' }, correct: { accepted: [['Rebanhos']] }, time_limit: 20 },
+      { type: 'order', prompt: 'Ordena as fases da poesia de Álvaro de Campos.', payload: { items: ['Decadentista', 'Futurista e sensacionista', 'Intimista'] }, correct: {}, explanation: 'Do esteticismo à máquina e, por fim, ao desencanto.', time_limit: 25 },
+      { type: 'excerpt', prompt: 'Qual é a ideia central do poema?', payload: { excerpt: 'O poeta é um fingidor.\nFinge tão completamente\nQue chega a fingir que é dor\nA dor que deveras sente.\n\nFernando Pessoa, «Autopsicografia»', options: ['O poeta transforma a sua emoção em arte através da imaginação', 'O poeta escreve apenas o que viveu', 'O poeta não sente nada', 'A poesia dispensa a emoção'] }, correct: { index: 0 }, explanation: 'Fingimento poético: a dor sentida é intelectualizada.', time_limit: 45 },
+      { type: 'excerpt', prompt: 'Que sentimento domina o sujeito poético?', payload: { excerpt: 'Não sou nada.\nNunca serei nada.\nNão posso querer ser nada.\nÀ parte isso, tenho em mim todos os sonhos do mundo.\n\nÁlvaro de Campos, «Tabacaria»', options: ['Frustração, mas com sonhos grandiosos', 'Orgulho da pátria', 'Alegria pela natureza', 'Indiferença total'] }, correct: { index: 0 }, explanation: 'Contraste entre o vazio e os sonhos.', time_limit: 45 },
+      { type: 'match', prompt: 'Liga cada heterónimo ao que o caracteriza.', payload: { left: ['Alberto Caeiro', 'Ricardo Reis', 'Álvaro de Campos', 'Bernardo Soares'], right: ['Mestre e poeta das sensações', 'Epicurismo e carpe diem', 'Engenheiro e poeta da modernidade', 'Livro do Desassossego'] }, correct: {}, time_limit: 40 },
+    ],
+  },
+];
+
+export const ALL_EXAMPLE_QUIZZES: ExampleQuiz[] = [...EXAMPLE_QUIZZES, ...EXAMPLE_QUIZZES_TIPOS];

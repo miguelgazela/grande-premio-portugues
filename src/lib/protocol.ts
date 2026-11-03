@@ -1,19 +1,44 @@
 import type { Effect } from '../engine/race';
+import type { AnswerValue } from './types';
 
-/** Pergunta tal como os alunos a veem: nunca inclui a resposta certa. */
+/** Material de uma pergunta tal como os alunos (e o projetor) o veem: nunca inclui a resposta certa. */
+export type PublicBody =
+  | { type: 'multiple_choice'; options: string[] }
+  | { type: 'true_false' }
+  /** `words` = frase tokenizada; o aluno devolve os índices. */
+  | { type: 'tap_word'; words: string[] }
+  /** `items` já baralhados; o aluno devolve os índices pela ordem que escolheu. */
+  | { type: 'order'; items: string[] }
+  /** `text` com `___` nas lacunas; `options` (baralhadas) só quando é para escolher. */
+  | { type: 'complete'; text: string; options?: string[] }
+  | { type: 'excerpt'; excerpt: string; options: string[] }
+  /** `right` baralhado; o aluno devolve, para cada `left[i]`, o índice escolhido em `right` (-1 = por ligar). */
+  | { type: 'match'; left: string[]; right: string[] };
+
 export interface PublicQuestion {
   question_id: string;
   index: number;
   total: number;
   prompt: string;
-  options: string[];
+  body: PublicBody;
   /** Segundos que faltam para fechar. */
   time: number;
 }
 
+/** A solução, só enviada na revelação. */
+export type Solution =
+  | { type: 'multiple_choice' | 'excerpt'; index: number }
+  | { type: 'true_false'; value: boolean }
+  | { type: 'tap_word'; indices: number[] }
+  /** Itens pela ordem certa (texto). */
+  | { type: 'order'; items: string[] }
+  /** Uma resposta (a principal) por lacuna. */
+  | { type: 'complete'; answers: string[] }
+  | { type: 'match'; pairs: [string, string][] };
+
 export interface RevealMsg {
   question_id: string;
-  correct_index: number;
+  solution: Solution;
   explanation: string | null;
   /** Quota de alunos que acertou, 0..1. */
   accuracy: number;
@@ -23,6 +48,8 @@ export interface RevealMsg {
   cars: number;
   /** Respostas certas (player_id → acertou). */
   results: Record<string, boolean>;
+  /** Crédito parcial (0–1) só para quem não acertou por inteiro mas teve alguma parte certa. */
+  partial?: Record<string, number>;
 }
 
 export interface PlayerSummary {
@@ -67,7 +94,7 @@ export type HostEvent =
 /** Aluno → anfitrião. */
 export type StudentEvent =
   | { event: 'hello'; payload: { player_id: string; /** Chave do manifest, ex. `avatar-fox`. */ avatar?: string } }
-  | { event: 'answer'; payload: { player_id: string; question_id: string; value: number } };
+  | { event: 'answer'; payload: { player_id: string; question_id: string; value: AnswerValue } };
 
 export type AnyEvent = HostEvent | StudentEvent;
 

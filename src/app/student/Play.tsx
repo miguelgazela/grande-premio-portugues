@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Channel } from '../../lib/api';
 import { errorMessage } from '../../lib/api';
-import type { EndMsg, PublicQuestion, RevealMsg } from '../../lib/protocol';
+import type { EndMsg, PublicBody, PublicQuestion, RevealMsg } from '../../lib/protocol';
+import type { AnswerValue } from '../../lib/types';
 import { useApi } from '../useApi';
 import { Asset } from '../ui/Asset';
+import { StudentInput, describeSolution } from '../ui/Question';
 import { clearPlayer, deviceToken, loadAvatar, loadPlayer } from './session';
 
-const LETTERS = ['A', 'B', 'C', 'D'];
 
 function readEnd(sessionId: string): EndMsg | null {
   try {
@@ -20,7 +21,7 @@ function readEnd(sessionId: string): EndMsg | null {
 type View =
   | { k: 'wait'; count: number | null }
   | { k: 'question'; q: PublicQuestion; at: number; full: number }
-  | { k: 'reveal'; r: RevealMsg }
+  | { k: 'reveal'; r: RevealMsg; body: PublicBody | null }
   | { k: 'end'; e: EndMsg }
   | { k: 'aborted' };
 
@@ -29,11 +30,12 @@ export function Play() {
   const nav = useNavigate();
   const player = useRef(loadPlayer()).current;
   const [view, setView] = useState<View>({ k: 'wait', count: null });
-  const [chosen, setChosen] = useState<Record<string, number>>({});
+  const [chosen, setChosen] = useState<Record<string, AnswerValue>>({});
   const chosenRef = useRef(chosen);
   chosenRef.current = chosen;
   const viewRef = useRef(view);
   viewRef.current = view;
+  const lastBody = useRef<{ id: string; body: PublicBody } | null>(null);
   const [problem, setProblem] = useState('');
   const [epoch, setEpoch] = useState(0);
   const channel = useRef<Channel | null>(null);
@@ -87,13 +89,14 @@ export function Play() {
             case 'question': {
               const cur = viewRef.current;
               const same = cur.k === 'question' && cur.q.question_id === m.payload.question_id;
+              lastBody.current = { id: m.payload.question_id, body: m.payload.body };
               setView({ k: 'question', q: m.payload, at: Date.now(), full: same ? cur.full : m.payload.time });
               const prev = chosenRef.current[m.payload.question_id];
               if (prev !== undefined) ch?.send({ event: 'answer', payload: { player_id: player.player_id, question_id: m.payload.question_id, value: prev } });
               break;
             }
             case 'reveal':
-              setView({ k: 'reveal', r: m.payload });
+              setView({ k: 'reveal', r: m.payload, body: lastBody.current?.id === m.payload.question_id ? lastBody.current.body : null });
               break;
             case 'end':
               try { localStorage.setItem(`gpp.end.${player.session_id}`, JSON.stringify(m.payload)); } catch { /* sem armazenamento */ }
@@ -133,7 +136,7 @@ export function Play() {
     return () => clearInterval(t);
   }, [view, player]);
 
-  const answer = (i: number) => {
+  const answer = (i: AnswerValue) => {
     if (view.k !== 'question' || !player || chosen[view.q.question_id] !== undefined) return;
     setChosen({ ...chosen, [view.q.question_id]: i });
     channel.current?.send({ event: 'answer', payload: { player_id: player.player_id, question_id: view.q.question_id, value: i } });
@@ -150,7 +153,7 @@ export function Play() {
         </div>
       )}
       {view.k === 'question' && <QuestionView q={view.q} at={view.at} full={view.full} mine={chosen[view.q.question_id]} onPick={answer} />}
-      {view.k === 'reveal' && <RevealView r={view.r} mine={chosen[view.r.question_id]} me={player.player_id} />}
+      {view.k === 'reveal' && <RevealView r={view.r} mine={chosen[view.r.question_id]} body={view.body} me={player.player_id} />}
       {view.k === 'aborted' && (
         <div className="msg">
           <div style={{ display: 'grid', gap: 16 }}>
@@ -164,7 +167,7 @@ export function Play() {
   );
 }
 
-function QuestionView({ q, at, full, mine, onPick }: { q: PublicQuestion; at: number; full: number; mine: number | undefined; onPick(i: number): void }) {
+function QuestionView({ q, at, full, mine, onPick }: { q: PublicQuestion; at: number; full: number; mine: AnswerValue | undefined; onPick(v: AnswerValue): void }) {
   const [left, setLeft] = useState(q.time);
   useEffect(() => {
     const t = window.setInterval(() => setLeft(Math.max(0, q.time - (Date.now() - at) / 1000)), 250);
@@ -174,30 +177,25 @@ function QuestionView({ q, at, full, mine, onPick }: { q: PublicQuestion; at: nu
     <>
       <div className="sprompt">{q.prompt}</div>
       <div className="timer" style={{ minHeight: 8 }}><i style={{ width: `${Math.min(100, (left / full) * 100)}%` }} /></div>
-      <div className="sopts">
-        {q.options.map((o, i) => (
-          <button key={i} className={`sopt ${LETTERS[i]} ${mine !== undefined && mine !== i ? 'dim' : ''} ${mine === i ? 'mine' : ''}`} disabled={mine !== undefined} onClick={() => onPick(i)}>
-            <b>{LETTERS[i]}</b>
-            <span>{o}</span>
-          </button>
-        ))}
-      </div>
+      {/* `key` repõe o estado local (palavras tocadas, ordem…) a cada pergunta. */}
+      <StudentInput key={q.question_id} body={q.body} mine={mine} onSubmit={onPick} />
       {mine !== undefined && <div className="who">Resposta enviada ✓</div>}
     </>
   );
 }
 
-function RevealView({ r, mine, me }: { r: RevealMsg; mine: number | undefined; me: string }) {
+function RevealView({ r, mine, body, me }: { r: RevealMsg; mine: AnswerValue | undefined; body: PublicBody | null; me: string }) {
   const ok = r.results[me] === true;
+  const part = r.partial?.[me];
   const answered = mine !== undefined;
   return (
     <div className="msg">
       <div>
         <div className="big-result">
-          {ok ? <Asset name="ui-check" fallback="✅" /> : answered ? <Asset name="ui-cross" fallback="❌" /> : '⏱️'}
+          {ok ? <Asset name="ui-check" fallback="✅" /> : part ? '🟡' : answered ? <Asset name="ui-cross" fallback="❌" /> : '⏱️'}
         </div>
-        {ok ? 'Certo!' : answered ? 'Errado' : 'Sem resposta'}
-        <small>A resposta era {LETTERS[r.correct_index]}. {Math.round(r.accuracy * 100)}% da turma acertou.</small>
+        {ok ? 'Certo!' : part ? `Quase! ${Math.round(part * 100)}% certo` : answered ? 'Errado' : 'Sem resposta'}
+        <small>{describeSolution(r.solution, body)} {Math.round(r.accuracy * 100)}% da turma acertou.</small>
         {r.explanation && <small>{r.explanation}</small>}
       </div>
     </div>

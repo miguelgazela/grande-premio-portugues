@@ -1,9 +1,12 @@
-import type { PlayerAnswer } from './outcome';
+import { creditOf, type PlayerAnswer } from './outcome';
 
 export interface PlayerScore {
   playerId: string;
   points: number;
+  /** Certas por inteiro. */
   correct: number;
+  /** Parcialmente certas (crédito entre 0 e 1). */
+  partial: number;
   answered: number;
   bestStreak: number;
   heroCount: number;
@@ -14,22 +17,31 @@ export interface PlayerScore {
 export const POINTS = { correct: 100, speedMax: 50, perStreak: 10, streakCap: 50, hero: 50, heroBelow: 0.5 };
 
 /**
- * Contribution points per player.
+ * Contribution points per player. A partially credited answer (order/complete/match) earns
+ * (100 + speed) × credit and breaks the streak; `correct` counts only fully right ones.
  * correct 100 + up to 50 for speed + 10 per answer already in the streak
  * (capped at +50) + 50 "hero" bonus when the class was below 50% on that question.
  */
 export function scoreRace(playerIds: string[], questions: { answers: PlayerAnswer[]; teamAccuracy: number }[]): PlayerScore[] {
   const scores = new Map<string, PlayerScore & { streak: number; timeSum: number }>();
   for (const id of playerIds) {
-    scores.set(id, { playerId: id, points: 0, correct: 0, answered: 0, bestStreak: 0, heroCount: 0, avgCorrectTime: 1, streak: 0, timeSum: 0 });
+    scores.set(id, { playerId: id, points: 0, correct: 0, partial: 0, answered: 0, bestStreak: 0, heroCount: 0, avgCorrectTime: 1, streak: 0, timeSum: 0 });
   }
   for (const q of questions) {
     for (const a of q.answers) {
       const s = scores.get(a.playerId);
       if (!s) continue;
       if (a.answered) s.answered++;
-      if (!a.correct) {
+      const credit = creditOf(a);
+      if (credit <= 0) {
         s.streak = 0;
+        continue;
+      }
+      // Crédito parcial: pontos proporcionais, sem bónus de série nem de herói, e a série quebra.
+      if (credit < 1) {
+        s.points += Math.round((POINTS.correct + POINTS.speedMax * (1 - a.timeFrac)) * credit);
+        s.streak = 0;
+        s.partial++;
         continue;
       }
       s.correct++;

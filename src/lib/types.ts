@@ -17,15 +17,54 @@ export interface ClassRow {
   year: number;
 }
 
-export interface QuestionRow {
+export type QuestionType = 'multiple_choice' | 'true_false' | 'tap_word' | 'order' | 'complete' | 'excerpt' | 'match';
+
+/**
+ * Formato de cada tipo, tal como fica em `question.payload` / `question.correct` (jsonb).
+ * `payload` descreve o material; `correct` a solução. Nunca vão juntos para os alunos:
+ * o anfitrião constrói a `PublicQuestion` só com o material (e baralhado onde faz falta).
+ *
+ * - multiple_choice: payload `{options}` (2–4), correct `{index}`.
+ * - true_false:      payload `{}`, correct `{value: boolean}`.
+ * - tap_word:        payload `{sentence}`; as palavras são `tokenize(sentence)` (separadas por espaços,
+ *                    a pontuação fica colada à palavra); correct `{indices}` = palavras a tocar (exato).
+ * - order:           payload `{items}` (2–8) JÁ NA ORDEM CERTA; correct `{}`. Baralha-se no anfitrião.
+ *                    Crédito parcial = fração de itens na posição certa.
+ * - complete:        payload `{text, options?}`; `text` tem uma ou mais lacunas `___`. correct `{accepted}`
+ *                    = uma lista de respostas aceites por lacuna. Com `options` há uma só lacuna e o aluno
+ *                    escolhe; sem `options` escreve. Crédito parcial = fração de lacunas certas.
+ *                    Comparação sem maiúsculas, acentos nem espaços a mais (`normalizeAnswer`).
+ * - excerpt:         payload `{excerpt, options}` (2–4), correct `{index}`; como escolha múltipla.
+ * - match:           payload `{left, right}` (2–6 cada), em que `left[i]` liga a `right[i]`; correct `{}`.
+ *                    Baralha-se a coluna da direita. Crédito parcial = fração de pares certos.
+ */
+export type QuestionBody =
+  | { type: 'multiple_choice'; payload: { options: string[] }; correct: { index: number } }
+  | { type: 'true_false'; payload: Record<string, never>; correct: { value: boolean } }
+  | { type: 'tap_word'; payload: { sentence: string }; correct: { indices: number[] } }
+  | { type: 'order'; payload: { items: string[] }; correct: Record<string, never> }
+  | { type: 'complete'; payload: { text: string; options?: string[] }; correct: { accepted: string[][] } }
+  | { type: 'excerpt'; payload: { excerpt: string; options: string[] }; correct: { index: number } }
+  | { type: 'match'; payload: { left: string[]; right: string[] }; correct: Record<string, never> };
+
+export type QuestionRow = {
   id: string;
   position: number;
   prompt: string;
-  options: string[];
-  correct: number;
   time_limit: number;
   explanation: string | null;
-}
+} & QuestionBody;
+
+/**
+ * Valor de uma resposta, em coordenadas "canónicas" (as do payload original, não as baralhadas):
+ * - multiple_choice / excerpt: índice da opção;
+ * - true_false: boolean;
+ * - tap_word: índices das palavras tocadas, ordenados;
+ * - order: índices originais dos itens, pela ordem que o aluno escolheu;
+ * - complete: um texto por lacuna;
+ * - match: para cada `left[i]`, o índice original de `right` escolhido (-1 = por ligar).
+ */
+export type AnswerValue = number | boolean | number[] | string[];
 
 export type SessionStatus = 'lobby' | 'running' | 'finished' | 'aborted';
 
@@ -77,7 +116,8 @@ export interface AnswerRow {
   session_id: string;
   question_id: string;
   player_id: string;
-  value: number | null;
+  value: AnswerValue | null;
+  /** Certa por inteiro (crédito 1). O crédito parcial recalcula-se a partir do `value`. */
   correct: boolean;
   ms_taken: number;
 }

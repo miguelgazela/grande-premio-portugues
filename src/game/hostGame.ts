@@ -7,8 +7,9 @@ import { pickAwards, scoreRace } from '../engine/scoring';
 import { Track, trackFor } from '../engine/track';
 import type { Api, Channel } from '../lib/api';
 import { play, unlockAudio } from '../lib/audio';
-import type { AnyEvent, EndMsg, FinalInfo, HostEvent, PublicQuestion, RevealMsg } from '../lib/protocol';
-import type { PlayerRow, QuestionRow, SavedState, SessionRow } from '../lib/types';
+import type { AnyEvent, EndMsg, FinalInfo, HostEvent, PublicBody, PublicQuestion, RevealMsg } from '../lib/protocol';
+import { grade, prepare, solutionOf, toCanonical, type Prepared } from '../lib/questions';
+import type { AnswerValue, PlayerRow, QuestionRow, SavedState, SessionRow } from '../lib/types';
 import { raceConfigFor } from './raceSettings';
 
 export type Phase = 'lobby' | 'countdown' | 'resume' | 'question' | 'ff' | 'reveal' | 'sprint' | 'finishing' | 'finished';
@@ -29,7 +30,7 @@ export interface HostSnapshot {
   count: number;
   avatars: Record<string, string>;
   answered: number;
-  question: { prompt: string; options: string[] } | null;
+  question: { prompt: string; body: PublicBody } | null;
   reveal: RevealMsg | null;
   final: EndMsg | null;
   /** Aviso discreto (erros de rede a gravar, etc.). */
@@ -68,8 +69,9 @@ export class HostGame {
 
   private outcomes: QuestionOutcome[] = [];
   private answerLog: PlayerAnswer[][] = [];
-  private current: { index: number; q: QuestionRow } | null = null;
-  private answers = new Map<string, { value: number; correct: boolean; ms: number }>();
+  private current: { index: number; q: QuestionRow; prep: Prepared } | null = null;
+  /** `value` em coordenadas canónicas; `credit` 0..1. */
+  private answers = new Map<string, { value: AnswerValue; credit: number; ms: number }>();
   private qElapsed = 0;
   private revealT = 0;
   private holdT = 0;
@@ -175,7 +177,8 @@ export class HostGame {
       const qid = this.questions[q].id;
       this.answerLog[q] = this.roster.map((p): PlayerAnswer => {
         const a = rows.find((r) => r.player_id === p.id && r.question_id === qid);
-        return { playerId: p.id, answered: !!a, correct: a?.correct ?? false, timeFrac: a ? Math.min(1, a.ms_taken / qt) : 1 };
+        const credit = a ? (a.value !== null ? grade(this.questions[q], a.value) : a.correct ? 1 : 0) : 0;
+        return { playerId: p.id, answered: !!a, correct: credit === 1, credit, timeFrac: a ? Math.min(1, a.ms_taken / qt) : 1 };
       });
     }
     this.set({ phase: 'resume', qIndex: state.next, players: this.roster });
@@ -305,23 +308,25 @@ export class HostGame {
 
   private startQuestion(index: number) {
     const q = this.questions[index];
-    this.current = { index, q };
+    const prep = prepare(q, this.seed);
+    this.current = { index, q, prep };
     this.answers = new Map();
     this.qElapsed = 0;
     this.timeBucket = -1;
-    const payload: PublicQuestion = { question_id: q.id, index, total: this.questions.length, prompt: q.prompt, options: q.options, time: this.config.questionTime };
+    const payload: PublicQuestion = { question_id: q.id, index, total: this.questions.length, prompt: q.prompt, body: prep.body, time: this.config.questionTime };
     this.send({ event: 'question', payload });
     this.set({
-      phase: 'question', qIndex: index, question: { prompt: q.prompt, options: q.options }, reveal: null, answered: 0, timeLeft: this.config.questionTime,
+      phase: 'question', qIndex: index, question: { prompt: q.prompt, body: prep.body }, reveal: null, answered: 0, timeLeft: this.config.questionTime,
     });
   }
 
-  private onAnswer(playerId: string, questionId: string, value: number) {
+  private onAnswer(playerId: string, questionId: string, raw: unknown) {
     const cur = this.current;
     if (this.snap.phase !== 'question' || !cur || cur.q.id !== questionId || this.snap.paused) return;
     if (!this.roster.some((p) => p.id === playerId) || this.answers.has(playerId)) return;
-    if (!Number.isInteger(value) || value < 0 || value >= cur.q.options.length) return;
-    this.answers.set(playerId, { value, correct: value === cur.q.correct, ms: Math.round(this.qElapsed * 1000) });
+    const value = toCanonical(cur.q, cur.prep, raw);
+    if (value === null) return;
+    this.answers.set(playerId, { value, credit: grade(cur.q, value), ms: Math.round(this.qElapsed * 1000) });
     this.set({ answered: this.answers.size });
   }
 
@@ -336,12 +341,12 @@ export class HostGame {
     const qt = this.config.questionTime;
     const list = this.roster.map((p): PlayerAnswer => {
       const a = this.answers.get(p.id);
-      return { playerId: p.id, answered: !!a, correct: a?.correct ?? false, timeFrac: a ? Math.min(1, a.ms / (qt * 1000)) : 1 };
+      return { playerId: p.id, answered: !!a, correct: a?.credit === 1, credit: a?.credit ?? 0, timeFrac: a ? Math.min(1, a.ms / (qt * 1000)) : 1 };
     });
     this.answerLog[cur.index] = list;
     this.outcomes[cur.index] = outcomeFromAnswers(list, list.length);
     const rows = [...this.answers].map(([player_id, a]) => ({
-      session_id: this.session.id, question_id: cur.q.id, player_id, value: a.value, correct: a.correct, ms_taken: a.ms,
+      session_id: this.session.id, question_id: cur.q.id, player_id, value: a.value, correct: a.credit === 1, ms_taken: a.ms,
     }));
     void this.api.saveAnswers(rows).catch((e) => this.notice(`Respostas por gravar: ${(e as Error).message}`));
     const remaining = this.boundary(cur.index) - this.race.time;
@@ -359,9 +364,13 @@ export class HostGame {
     const ev = this.race.events[q];
     const res = ev.results[0];
     const results: Record<string, boolean> = {};
-    for (const a of this.answerLog[q]) results[a.playerId] = a.correct && a.answered;
+    const partial: Record<string, number> = {};
+    for (const a of this.answerLog[q]) {
+      results[a.playerId] = a.correct && a.answered;
+      if (a.answered && !a.correct && (a.credit ?? 0) > 0) partial[a.playerId] = a.credit!;
+    }
     const reveal: RevealMsg = {
-      question_id: cur.q.id, correct_index: cur.q.correct, explanation: cur.q.explanation, accuracy: res.accuracy,
+      question_id: cur.q.id, solution: solutionOf(cur.q), partial, explanation: cur.q.explanation, accuracy: res.accuracy,
       effect: res.effect, nitro: res.nitro, rank: this.race.rankOf(this.race.team!), cars: this.race.cars.length, results,
     };
     this.send({ event: 'reveal', payload: reveal });
