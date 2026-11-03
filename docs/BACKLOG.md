@@ -59,4 +59,4 @@ Problemas vistos nos testes, com o diagnóstico e a proposta de solução. Resol
 ### 6. A corrida acaba antes das perguntas, e o carro fica parado na meta
 **Resolvido no branch `claude/ritmo-corrida-d1a93d` (por rever e juntar ao main).**
 Nova abordagem: velocidade de cruzeiro constante (`cruiseSpeed`), efeitos das respostas pequenos (`effectScale`) como subida/descida suave no reveal, e meta a `cruiseSpeed × (perguntas × ciclo + ganho máximo possível)`. Ninguém chega antes da última pergunta, e o tempo de meta depende só das respostas de cada carro (comparável com fantasmas). A pista deixou de ter voltas: é uma estrada aberta gerada por semente (`Road`), desenhada aos blocos à volta da câmara.
-**Por ver**: fantasmas/recordes gravados com o motor antigo têm tempos de meta que já não batem com o motor novo; o HUD ainda fala em "Volta x/y" (a volta final ×2 mantém-se por agora).
+**Por ver**: o ecrã Jogar e o simulador ainda falam em "voltas" (definem as perguntas da reta final ×2). Fantasmas e recordes antigos vão ser apagados antes do uso a sério.
