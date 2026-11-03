@@ -57,7 +57,7 @@ export function StudentInput({ body, mine, onSubmit }: InputProps) {
       return (
         <div className="sopts tf">
           {[true, false].map((v) => (
-            <button key={String(v)} className={`sopt ${v ? 'A' : 'C'} ${mine !== undefined && mine !== v ? 'dim' : ''} ${mine === v ? 'mine' : ''}`} disabled={mine !== undefined} onClick={() => onSubmit(v)}>
+            <button key={String(v)} className={`sopt ${v ? 'T' : 'F'} ${mine !== undefined && mine !== v ? 'dim' : ''} ${mine === v ? 'mine' : ''}`} disabled={mine !== undefined} onClick={() => onSubmit(v)}>
               <b>{v ? '✔' : '✘'}</b>
               <span>{v ? 'Verdadeiro' : 'Falso'}</span>
             </button>
@@ -257,7 +257,7 @@ export function HostBody({ body, solution }: { body: PublicBody; solution?: Solu
       return (
         <div className="opts">
           {[true, false].map((x) => (
-            <div key={String(x)} className={`opt ${x ? 'A' : 'C'} ${rev ? (v === x ? 'right' : 'dim') : ''}`}><b>{x ? '✔' : '✘'}</b>{x ? 'Verdadeiro' : 'Falso'}</div>
+            <div key={String(x)} className={`opt ${x ? 'T' : 'F'} ${rev ? (v === x ? 'right' : 'dim') : ''}`}><b>{x ? '✔' : '✘'}</b>{x ? 'Verdadeiro' : 'Falso'}</div>
           ))}
         </div>
       );
