@@ -49,19 +49,6 @@ function writeLast(v: LastGame) {
   }
 }
 
-/** iPad na horizontal: o layout passa a duas colunas sem scroll. */
-const LANDSCAPE_Q = '(orientation: landscape) and (min-width: 900px)';
-function useLandscape() {
-  const [v, setV] = useState(() => window.matchMedia(LANDSCAPE_Q).matches);
-  useEffect(() => {
-    const m = window.matchMedia(LANDSCAPE_Q);
-    const on = () => setV(m.matches);
-    m.addEventListener('change', on);
-    return () => m.removeEventListener('change', on);
-  }, []);
-  return v;
-}
-
 /** Área "Jogar" (iPad): repetir o último jogo, ou escolher quiz e turma, e abrir a sala. */
 export function Jogar() {
   const { api, teacher, signOut } = useTeacher();
@@ -81,7 +68,6 @@ export function Jogar() {
   const [picked, setPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const landscape = useLandscape();
 
   useEffect(() => {
     void (async () => {
@@ -244,7 +230,7 @@ export function Jogar() {
         </section>
 
         <div className="adv-area">
-          <details className="more" open={landscape || undefined} key={landscape ? 'l' : 'p'}>
+          <details className="more">
             <summary>
               <span>Ajustar corrida</span>
               <span className="sum">Bots {botLabel(field).toLowerCase()} · {effLaps} voltas{time ? ` · ${timeLabel(time)}` : ''}{validPicked.length ? ` · ${validPicked.length} 👻` : ''}</span>
