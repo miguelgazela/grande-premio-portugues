@@ -1,0 +1,207 @@
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import type { Channel } from '../../lib/api';
+import { errorMessage } from '../../lib/api';
+import type { EndMsg, PublicQuestion, RevealMsg } from '../../lib/protocol';
+import { useApi } from '../useApi';
+import { clearPlayer, deviceToken, loadPlayer } from './session';
+
+const LETTERS = ['A', 'B', 'C', 'D'];
+
+function readEnd(sessionId: string): EndMsg | null {
+  try {
+    return JSON.parse(localStorage.getItem(`gpp.end.${sessionId}`) ?? 'null') as EndMsg | null;
+  } catch {
+    return null;
+  }
+}
+
+type View =
+  | { k: 'wait'; count: number | null }
+  | { k: 'question'; q: PublicQuestion; at: number; full: number }
+  | { k: 'reveal'; r: RevealMsg }
+  | { k: 'end'; e: EndMsg };
+
+export function Play() {
+  const api = useApi();
+  const nav = useNavigate();
+  const player = useRef(loadPlayer()).current;
+  const [view, setView] = useState<View>({ k: 'wait', count: null });
+  const [chosen, setChosen] = useState<Record<string, number>>({});
+  const chosenRef = useRef(chosen);
+  chosenRef.current = chosen;
+  const viewRef = useRef(view);
+  viewRef.current = view;
+  const [problem, setProblem] = useState('');
+  const [epoch, setEpoch] = useState(0);
+  const channel = useRef<Channel | null>(null);
+
+  useEffect(() => {
+    if (!player) nav('/', { replace: true });
+  }, [player, nav]);
+
+  // Volta a ligar quando o Safari regressa do segundo plano.
+  useEffect(() => {
+    const onVisible = () => document.visibilityState === 'visible' && setEpoch((n) => n + 1);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
+
+  useEffect(() => {
+    if (!api || !player) return;
+    let closed = false;
+    let ch: Channel | null = null;
+    void (async () => {
+      try {
+        // Confirma que ainda estamos na sessão (e não fomos expulsos).
+        await api.joinSession(player.pin, player.nickname, deviceToken());
+      } catch (e) {
+        if (closed) return;
+        const msg = errorMessage(e);
+        const savedEnd = msg === 'PIN inválido' ? readEnd(player.session_id) : null;
+        if (savedEnd) {
+          setView({ k: 'end', e: savedEnd });
+          return;
+        }
+        if (msg === 'PIN inválido' || msg.startsWith('Removido')) {
+          clearPlayer();
+          nav('/', { replace: true });
+          return;
+        }
+        if (msg !== 'A corrida já começou') setProblem(msg);
+      }
+      if (closed) return;
+      ch = api.openChannel(
+        player.session_id,
+        (m) => {
+          switch (m.event) {
+            case 'lobby':
+              if (viewRef.current.k === 'wait') setView({ k: 'wait', count: m.payload.count });
+              break;
+            case 'question': {
+              const cur = viewRef.current;
+              const same = cur.k === 'question' && cur.q.question_id === m.payload.question_id;
+              setView({ k: 'question', q: m.payload, at: Date.now(), full: same ? cur.full : m.payload.time });
+              const prev = chosenRef.current[m.payload.question_id];
+              if (prev !== undefined) ch?.send({ event: 'answer', payload: { player_id: player.player_id, question_id: m.payload.question_id, value: prev } });
+              break;
+            }
+            case 'reveal':
+              setView({ k: 'reveal', r: m.payload });
+              break;
+            case 'end':
+              try { localStorage.setItem(`gpp.end.${player.session_id}`, JSON.stringify(m.payload)); } catch { /* sem armazenamento */ }
+              setView({ k: 'end', e: m.payload });
+              break;
+            case 'kicked':
+              if (m.payload.player_id === player.player_id) {
+                clearPlayer();
+                nav('/', { replace: true });
+              }
+              break;
+          }
+        },
+        (ok) => ok && ch?.send({ event: 'hello', payload: { player_id: player.player_id } }),
+      );
+      channel.current = ch;
+    })();
+    return () => {
+      closed = true;
+      ch?.close();
+      channel.current = null;
+    };
+  }, [api, player, nav, epoch]);
+
+  // Reenvia a resposta enquanto não há revelação (o anfitrião ignora repetidas).
+  useEffect(() => {
+    if (view.k !== 'question' || !player) return;
+    const qid = view.q.question_id;
+    const t = window.setInterval(() => {
+      const v = chosenRef.current[qid];
+      if (v !== undefined) channel.current?.send({ event: 'answer', payload: { player_id: player.player_id, question_id: qid, value: v } });
+    }, 3000);
+    return () => clearInterval(t);
+  }, [view, player]);
+
+  const answer = (i: number) => {
+    if (view.k !== 'question' || !player || chosen[view.q.question_id] !== undefined) return;
+    setChosen({ ...chosen, [view.q.question_id]: i });
+    channel.current?.send({ event: 'answer', payload: { player_id: player.player_id, question_id: view.q.question_id, value: i } });
+  };
+
+  if (!player) return null;
+
+  return (
+    <div className="student">
+      <div className="who">{player.nickname}{problem && <span className="error"> · {problem}</span>}</div>
+      {view.k === 'wait' && (
+        <div className="msg">
+          <div>Estás dentro! 🏁<small>{view.count ? `${view.count} na corrida · ` : ''}À espera que a professora comece…</small></div>
+        </div>
+      )}
+      {view.k === 'question' && <QuestionView q={view.q} at={view.at} full={view.full} mine={chosen[view.q.question_id]} onPick={answer} />}
+      {view.k === 'reveal' && <RevealView r={view.r} mine={chosen[view.r.question_id]} me={player.player_id} />}
+      {view.k === 'end' && <EndView e={view.e} me={player.player_id} onExit={() => { clearPlayer(); nav('/'); }} />}
+    </div>
+  );
+}
+
+function QuestionView({ q, at, full, mine, onPick }: { q: PublicQuestion; at: number; full: number; mine: number | undefined; onPick(i: number): void }) {
+  const [left, setLeft] = useState(q.time);
+  useEffect(() => {
+    const t = window.setInterval(() => setLeft(Math.max(0, q.time - (Date.now() - at) / 1000)), 250);
+    return () => clearInterval(t);
+  }, [q.time, at]);
+  return (
+    <>
+      <div className="sprompt">{q.prompt}</div>
+      <div className="timer" style={{ minHeight: 8 }}><i style={{ width: `${Math.min(100, (left / full) * 100)}%` }} /></div>
+      <div className="sopts">
+        {q.options.map((o, i) => (
+          <button key={i} className={`sopt ${LETTERS[i]} ${mine !== undefined && mine !== i ? 'dim' : ''} ${mine === i ? 'mine' : ''}`} disabled={mine !== undefined} onClick={() => onPick(i)}>
+            <b>{LETTERS[i]}</b>
+            <span>{o}</span>
+          </button>
+        ))}
+      </div>
+      {mine !== undefined && <div className="who">Resposta enviada ✓</div>}
+    </>
+  );
+}
+
+function RevealView({ r, mine, me }: { r: RevealMsg; mine: number | undefined; me: string }) {
+  const ok = r.results[me] === true;
+  const answered = mine !== undefined;
+  return (
+    <div className="msg">
+      <div>
+        <div className="big-result">{ok ? '✅' : answered ? '❌' : '⏱️'}</div>
+        {ok ? 'Certo!' : answered ? 'Errado' : 'Sem resposta'}
+        <small>A resposta era {LETTERS[r.correct_index]}. {Math.round(r.accuracy * 100)}% da turma acertou.</small>
+        {r.explanation && <small>{r.explanation}</small>}
+      </div>
+    </div>
+  );
+}
+
+function EndView({ e, me, onExit }: { e: EndMsg; me: string; onExit(): void }) {
+  const p = e.players[me];
+  return (
+    <div className="msg">
+      <div style={{ display: 'grid', gap: 12, width: '100%', maxWidth: 480 }}>
+        <div>{e.final.teamPosition === 1 ? '🏆 A turma venceu!' : `🏁 A turma acabou em ${e.final.teamPosition}º`}</div>
+        {p ? (
+          <>
+            <div className="stat"><span>Acertaste</span><b>{p.correct} / {e.final.totalQuestions}</b></div>
+            <div className="stat"><span>Maior série</span><b>{p.bestStreak} 🔥</b></div>
+            <div className="stat"><span>Pontos para a equipa</span><b>{p.points}</b></div>
+            {p.top && <div>⭐ Estás no top 5 de quem mais ajudou!</div>}
+          </>
+        ) : (
+          <small>Obrigado por jogares!</small>
+        )}
+        <button onClick={onExit}>Sair</button>
+      </div>
+    </div>
+  );
+}

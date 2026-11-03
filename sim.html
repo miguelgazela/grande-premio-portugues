@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulador · Grande Prémio</title>
+  </head>
+  <body>
+    <div id="app">
+      <aside id="controls">
+        <h1>Simulador de mecânica</h1>
+        <p class="hint">Afina a fórmula. A tabela recalcula com 300 corridas por nível.</p>
+        <div id="sliders"></div>
+        <button id="reset" type="button">Repor valores</button>
+      </aside>
+      <main>
+        <section id="stage-wrap">
+          <div id="stage"></div>
+          <div id="hud">
+            <div id="hud-q"></div>
+            <div id="hud-pos"></div>
+            <div id="banner"></div>
+          </div>
+          <div id="toolbar">
+            <button id="play" type="button">▶ Ver corrida</button>
+            <label>Velocidade <select id="speed"><option>4</option><option selected>10</option><option>25</option></select>×</label>
+            <span id="seed"></span>
+          </div>
+        </section>
+        <section id="bottom">
+          <div>
+            <h2>Posição final da turma por nível</h2>
+            <table id="matrix"></table>
+            <p class="hint">Objetivo: turma média (~60–70%) entre 2º e 4º; turma excelente ganha mas à justa; turma fraca não fica sempre em último.</p>
+          </div>
+          <div>
+            <h2>Última corrida</h2>
+            <ol id="log"></ol>
+            <div id="results"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/src/sim/main.ts"></script>
+  </body>
+</html>

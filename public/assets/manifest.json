@@ -1,0 +1,872 @@
+{
+  "car-team": {
+    "file": "car-team.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Carro azul, carro da turma; virado para +x (direita), vista de cima, 256x128, ~30px de largura no jogo. Todos com o número 1 pintado."
+  },
+  "car-red": {
+    "file": "car-red.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Carro vermelho; virado para +x (direita), vista de cima, 256x128, ~30px de largura no jogo. Todos com o número 1 pintado."
+  },
+  "car-orange": {
+    "file": "car-orange.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Carro laranja; virado para +x (direita), vista de cima, 256x128, ~30px de largura no jogo. Todos com o número 1 pintado."
+  },
+  "car-purple": {
+    "file": "car-purple.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Carro roxo; virado para +x (direita), vista de cima, 256x128, ~30px de largura no jogo. Todos com o número 1 pintado."
+  },
+  "car-teal": {
+    "file": "car-teal.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Carro turquesa; virado para +x (direita), vista de cima, 256x128, ~30px de largura no jogo. Todos com o número 1 pintado."
+  },
+  "car-pink": {
+    "file": "car-pink.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Carro rosa; virado para +x (direita), vista de cima, 256x128, ~30px de largura no jogo. Todos com o número 1 pintado."
+  },
+  "car-grey": {
+    "file": "car-grey.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Carro cinzento; virado para +x (direita), vista de cima, 256x128, ~30px de largura no jogo. Todos com o número 1 pintado."
+  },
+  "car-green": {
+    "file": "car-green.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Carro verde; virado para +x (direita), vista de cima, 256x128, ~30px de largura no jogo. Todos com o número 1 pintado."
+  },
+  "prop-tree": {
+    "file": "prop-tree.png",
+    "w": 246,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Árvore vista de cima"
+  },
+  "prop-bush": {
+    "file": "prop-bush.png",
+    "w": 160,
+    "h": 159,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Arbusto com flores"
+  },
+  "prop-cone": {
+    "file": "prop-cone.png",
+    "w": 89,
+    "h": 96,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Cone de trânsito"
+  },
+  "prop-tires": {
+    "file": "prop-tires.png",
+    "w": 192,
+    "h": 170,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Pilha de pneus"
+  },
+  "prop-grandstand": {
+    "file": "prop-grandstand.png",
+    "w": 384,
+    "h": 158,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Bancada com público; lado comprido horizontal, rodar 90° se necessário"
+  },
+  "prop-startline": {
+    "file": "prop-startline.png",
+    "w": 39,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Faixa axadrezada de partida/meta, orientada na vertical (atravessa estrada horizontal)"
+  },
+  "fx-turbo": {
+    "file": "fx-turbo.png",
+    "w": 256,
+    "h": 116,
+    "anchor": [
+      1,
+      0.5
+    ],
+    "notes": "Chama de turbo; aponta para -x, bocal à direita: anchor no bocal, colar à traseira do carro"
+  },
+  "fx-nitro": {
+    "file": "fx-nitro.png",
+    "w": 256,
+    "h": 134,
+    "anchor": [
+      1,
+      0.5
+    ],
+    "notes": "Chama de nitro azul; aponta para -x, bocal à direita"
+  },
+  "fx-smoke": {
+    "file": "fx-smoke.png",
+    "w": 192,
+    "h": 191,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Nuvem de fumo/pião"
+  },
+  "ui-logo": {
+    "file": "ui-logo.png",
+    "w": 768,
+    "h": 496,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Logo Grande Prémio de Português"
+  },
+  "ui-trophy": {
+    "file": "ui-trophy.png",
+    "w": 192,
+    "h": 179,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Ícone UI"
+  },
+  "ui-medal-gold": {
+    "file": "ui-medal-gold.png",
+    "w": 148,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Ícone UI"
+  },
+  "ui-medal-silver": {
+    "file": "ui-medal-silver.png",
+    "w": 149,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Ícone UI"
+  },
+  "ui-medal-bronze": {
+    "file": "ui-medal-bronze.png",
+    "w": 146,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Ícone UI"
+  },
+  "ui-flame": {
+    "file": "ui-flame.png",
+    "w": 192,
+    "h": 126,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Ícone UI"
+  },
+  "ui-podium": {
+    "file": "ui-podium.png",
+    "w": 384,
+    "h": 188,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Pódio 2-1-3"
+  },
+  "bg-grass": {
+    "file": "bg-grass.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile de relva 512x512 (opaco). Usar como TilingSprite."
+  },
+  "bg-desert": {
+    "file": "bg-desert.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile tema deserto 512x512 (opaco)"
+  },
+  "bg-snow": {
+    "file": "bg-snow.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile tema neve 512x512 (opaco)"
+  },
+  "bg-city": {
+    "file": "bg-city.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile tema cidade 512x512 (opaco)"
+  },
+  "prop-cactus": {
+    "file": "prop-cactus.png",
+    "w": 235,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop do tema deserto, equivalente à árvore"
+  },
+  "prop-pine": {
+    "file": "prop-pine.png",
+    "w": 234,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop do tema neve, equivalente à árvore"
+  },
+  "prop-rooftop": {
+    "file": "prop-rooftop.png",
+    "w": 235,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop do tema cidade, equivalente à árvore"
+  },
+  "avatar-dog": {
+    "file": "avatar-dog.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-cat": {
+    "file": "avatar-cat.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-rabbit": {
+    "file": "avatar-rabbit.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-fox": {
+    "file": "avatar-fox.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-bear": {
+    "file": "avatar-bear.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-panda": {
+    "file": "avatar-panda.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-lion": {
+    "file": "avatar-lion.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-tiger": {
+    "file": "avatar-tiger.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-monkey": {
+    "file": "avatar-monkey.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-frog": {
+    "file": "avatar-frog.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-pig": {
+    "file": "avatar-pig.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-penguin": {
+    "file": "avatar-penguin.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-owl": {
+    "file": "avatar-owl.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-elephant": {
+    "file": "avatar-elephant.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-chick": {
+    "file": "avatar-chick.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-octopus": {
+    "file": "avatar-octopus.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "track-asphalt": {
+    "file": "track-asphalt.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile de asfalto 512x512 (opaco)"
+  },
+  "track-curb": {
+    "file": "track-curb.png",
+    "w": 512,
+    "h": 69,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Faixa de curb laranja/branca, horizontal; repetir ao longo da borda da estrada"
+  },
+  "fx-oil": {
+    "file": "fx-oil.png",
+    "w": 160,
+    "h": 119,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Mancha de óleo"
+  },
+  "fx-skid": {
+    "file": "fx-skid.png",
+    "w": 256,
+    "h": 58,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Rasto de pneus, horizontal"
+  },
+  "fx-confetti": {
+    "file": "fx-confetti.png",
+    "w": 378,
+    "h": 384,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Explosão de confetti"
+  },
+  "ui-check": {
+    "file": "ui-check.png",
+    "w": 124,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Certo"
+  },
+  "ui-cross": {
+    "file": "ui-cross.png",
+    "w": 124,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Errado"
+  },
+  "ui-star": {
+    "file": "ui-star.png",
+    "w": 128,
+    "h": 127,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Estrela"
+  },
+  "ui-banner": {
+    "file": "ui-banner.png",
+    "w": 512,
+    "h": 183,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Faixa vazia para títulos (escrever texto por cima)"
+  },
+  "ui-shield": {
+    "file": "ui-shield.png",
+    "w": 113,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Power-up escudo"
+  },
+  "ui-nitro": {
+    "file": "ui-nitro.png",
+    "w": 70,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Power-up nitro"
+  },
+  "ui-traffic-light": {
+    "file": "ui-traffic-light.png",
+    "w": 130,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Semáforo de partida"
+  },
+  "ui-count-3": {
+    "file": "ui-count-3.png",
+    "w": 124,
+    "h": 160,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Contagem 3"
+  },
+  "ui-count-2": {
+    "file": "ui-count-2.png",
+    "w": 116,
+    "h": 160,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Contagem 2"
+  },
+  "ui-count-1": {
+    "file": "ui-count-1.png",
+    "w": 104,
+    "h": 160,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Contagem 1"
+  },
+  "ui-count-go": {
+    "file": "ui-count-go.png",
+    "w": 256,
+    "h": 129,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "VAI!"
+  },
+  "avatar-robot-red": {
+    "file": "avatar-robot-red.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-robot-blue": {
+    "file": "avatar-robot-blue.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-robot-green": {
+    "file": "avatar-robot-green.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-robot-yellow": {
+    "file": "avatar-robot-yellow.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-robot-purple": {
+    "file": "avatar-robot-purple.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-robot-orange": {
+    "file": "avatar-robot-orange.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-robot-pink": {
+    "file": "avatar-robot-pink.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-robot-teal": {
+    "file": "avatar-robot-teal.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-robot-silver": {
+    "file": "avatar-robot-silver.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-robot-space": {
+    "file": "avatar-robot-space.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-robot-lime": {
+    "file": "avatar-robot-lime.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-robot-gold": {
+    "file": "avatar-robot-gold.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-hero-blue": {
+    "file": "avatar-hero-blue.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-hero-red": {
+    "file": "avatar-hero-red.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-hero-green": {
+    "file": "avatar-hero-green.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-hero-yellow": {
+    "file": "avatar-hero-yellow.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-hero-purple": {
+    "file": "avatar-hero-purple.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-hero-orange": {
+    "file": "avatar-hero-orange.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-hero-pink": {
+    "file": "avatar-hero-pink.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-hero-teal": {
+    "file": "avatar-hero-teal.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-hero-shield": {
+    "file": "avatar-hero-shield.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-hero-pilot": {
+    "file": "avatar-hero-pilot.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-hero-mask": {
+    "file": "avatar-hero-mask.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  },
+  "avatar-hero-ninja": {
+    "file": "avatar-hero-ninja.png",
+    "w": 192,
+    "h": 192,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Avatar de aluno 192x192"
+  }
+}
