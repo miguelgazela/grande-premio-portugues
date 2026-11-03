@@ -175,11 +175,11 @@ h1, h2, h3 { margin: 0 0 .5em; }
 .save.saved { color: var(--green); } .save.invalid, .save.error { color: #ffb74d; }
 .note { background: #3a3320; border-radius: 10px; padding: 10px 14px; cursor: pointer; }
 .ed-body { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 20px; align-items: start; }
-.ed-list { display: grid; gap: 6px; }
+.ed-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; min-width: 0; }
 .qrow { display: flex; gap: 8px; align-items: center; padding: 8px 10px; background: var(--panel); border-radius: 10px; cursor: pointer; border: 2px solid transparent; }
 .qrow.sel { border-color: var(--gold); }
 .qrow .num { font-weight: 800; color: var(--muted); min-width: 1.6em; }
-.qrow .txt { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qrow .txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .mini { display: flex; flex-direction: column; gap: 2px; }
 .prep .mini button { padding: 0 8px; min-height: 0; height: 20px; line-height: 1; border-radius: 6px; font-size: .75rem; }
 .ed-form { background: var(--panel); border-radius: 16px; padding: 20px; display: grid; gap: 14px; }
