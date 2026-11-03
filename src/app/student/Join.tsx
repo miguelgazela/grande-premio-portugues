@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { VersionTag } from '../ui/VersionTag';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { errorMessage } from '../../lib/api';
 import { loadAvatarKeys } from '../../render/assets';
@@ -78,6 +79,7 @@ export function Join() {
         )}
         <a href="#/privacidade" className="privacy-link">Privacidade</a>
       </form>
+      <VersionTag />
     </div>
   );
 }

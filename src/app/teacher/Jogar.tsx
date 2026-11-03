@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { VersionTag } from '../ui/VersionTag';
 import { useNavigate } from 'react-router-dom';
 import type { BotField } from '../../engine/drivers';
 import { MAX_LAPS, maxQuestionsPerLap, raceConfigFor } from '../../game/raceSettings';
@@ -284,6 +285,7 @@ export function Jogar() {
           </details>
         </div>
 
+      <VersionTag />
       {showBar && (
         <div className="actionbar">
           <button className="primary big" disabled={!quiz || busy || n < 1} onClick={() => quiz && void open(quiz, { quizId: quiz.id, classId, field, laps: effLaps, time }, chosen)}>
