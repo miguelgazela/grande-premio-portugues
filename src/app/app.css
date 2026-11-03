@@ -197,10 +197,7 @@ h1, h2, h3 { margin: 0 0 .5em; }
 .bar .track i { display: block; height: 100%; background: var(--red); } .bar .track i.ok { background: var(--green); }
 .bar .n { text-align: right; font-variant-numeric: tabular-nums; } .bar .opt-text { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.settings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; align-items: end; }
-.settings h3, .settings > span { grid-column: 1 / -1; }
-.settings label { display: grid; gap: 6px; font-weight: 700; }
-@media (max-width: 900px) { .ed-body { grid-template-columns: 1fr; } .kpis { grid-template-columns: 1fr 1fr; } .settings { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .ed-body { grid-template-columns: 1fr; } .kpis { grid-template-columns: 1fr 1fr; } }
 
 /* ---- Fase 4: tipos de pergunta ---- */
 .excerpt { margin: 0; background: var(--panel); border-radius: 18px; padding: 16px 20px; font-size: clamp(17px, 3vmin, 26px); line-height: 1.45; white-space: pre-wrap; max-height: 34vh; overflow: auto; font-style: italic; border-left: 6px solid var(--gold); }
@@ -289,3 +286,40 @@ h1, h2, h3 { margin: 0 0 .5em; }
 .privacy p { margin: 0; line-height: 1.5; }
 .privacy-contact, .privacy-todo { background: var(--panel2); border-radius: 12px; padding: 14px; display: grid; gap: 4px; }
 .privacy-todo { outline: 2px dashed #ff5a5a; }
+
+/* ---- professora: Jogar (iPad) ---- */
+.jogar .card { gap: 22px; padding-bottom: 130px; }
+.jogar .wide { width: min(100%, 760px); }
+.nav-btn { min-height: 48px; padding: 0 16px; font-size: .95rem; }
+button.ghost { background: transparent; color: var(--muted); }
+.group { display: grid; gap: 10px; }
+h2.sec { font-size: 1.1rem; color: var(--muted); font-weight: 700; margin: 0; }
+.hero { background: var(--panel2); border: 2px solid var(--gold); border-radius: 24px; padding: 22px; display: grid; gap: 14px; }
+.hero-what { font-size: 1.5rem; font-weight: 800; line-height: 1.2; }
+.tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.tag { background: var(--panel); border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: .95rem; }
+.quiz-btn, .ghost-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 64px; padding: 10px 18px; width: 100%; text-align: left; border: 3px solid transparent; border-radius: 16px; }
+.quiz-btn small { display: block; color: var(--muted); font-weight: 600; }
+.quiz-btn.sel, .ghost-row.sel, .choice.sel { border-color: var(--gold); background: #3a3f55; }
+.tick { color: var(--gold); font-size: 1.4rem; }
+.more-btn { justify-self: start; min-height: 48px; }
+.choice { min-height: 56px; border: 3px solid transparent; }
+details.more { background: var(--panel2); border-radius: 18px; }
+details.more summary { list-style: none; min-height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 20px; font-weight: 700; cursor: pointer; border-radius: 18px; }
+details.more summary::-webkit-details-marker { display: none; }
+details.more summary::after { content: '›'; font-size: 1.6rem; margin-left: 12px; color: var(--muted); transition: transform .2s; }
+details.more[open] summary::after { transform: rotate(90deg); }
+details.more .sum { margin-left: auto; color: var(--muted); font-weight: 600; font-size: .95rem; text-align: right; }
+details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.adv { padding: 4px 20px 20px; display: grid; gap: 18px; }
+.field { display: grid; gap: 8px; }
+.seg button { min-height: 56px; }
+.stepper { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.stepper button { width: 56px; min-height: 56px; padding: 0; font-size: 1.5rem; }
+.stepper output { min-width: 3ch; text-align: center; font-size: 1.3rem; font-weight: 800; }
+.ghost-row { background: var(--panel); }
+.actionbar { position: fixed; left: 0; right: 0; bottom: 0; padding: 14px 20px calc(14px + env(safe-area-inset-bottom)); background: linear-gradient(transparent, var(--bg) 28%); display: flex; justify-content: center; z-index: 5; }
+.actionbar button { width: min(100%, 720px); }
+.jogar .hero button.big { min-height: 76px; width: 100%; }
+@media (prefers-reduced-motion: reduce) { details.more summary::after { transition: none; } }
+.lobby button, .host .overlay .card button { min-height: 56px; }

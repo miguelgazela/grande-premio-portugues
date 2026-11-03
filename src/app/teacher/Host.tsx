@@ -70,8 +70,8 @@ function HostScreen({ game }: { game: HostGame }) {
   return <RaceScreen game={game} s={s} />;
 }
 
-/** Terminar a sessão (sempre com confirmação); no lobby também dá para só voltar ao menu. */
-function ExitDialog({ game, canLeave, onClose }: { game: HostGame; canLeave: boolean; onClose(): void }) {
+/** Sair termina o jogo (sempre com confirmação). */
+function ExitDialog({ game, onClose }: { game: HostGame; onClose(): void }) {
   const { api } = useTeacher();
   const nav = useNavigate();
   const [busy, setBusy] = useState(false);
@@ -89,12 +89,11 @@ function ExitDialog({ game, canLeave, onClose }: { game: HostGame; canLeave: boo
   return (
     <div className="overlay" style={{ zIndex: 20 }} onClick={(e) => e.stopPropagation()}>
       <div className="card" style={{ display: 'grid', gap: 12, maxWidth: 460 }}>
-        <h2>Terminar a sessão?</h2>
+        <h2>Terminar o jogo?</h2>
         <p className="muted">Os alunos veem que a professora terminou e o PIN fica livre. Nada fica no histórico.</p>
         {err && <p className="error">{err}</p>}
-        <button className="danger big" disabled={busy} onClick={() => void end()}>{busy ? 'A terminar…' : 'Terminar sessão'}</button>
-        {canLeave && <button disabled={busy} onClick={() => nav('/prof')}>Só voltar ao menu (a sessão continua)</button>}
-        <button disabled={busy} onClick={onClose}>Cancelar</button>
+        <button className="danger big" disabled={busy} onClick={() => void end()}>{busy ? 'A terminar…' : 'Terminar jogo'}</button>
+        <button disabled={busy} onClick={onClose}>Continuar</button>
       </div>
     </div>
   );
@@ -166,7 +165,7 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
         </div>
       </div>
       {s.notice && <div className="notice">{s.notice}</div>}
-      {exiting && <ExitDialog game={game} canLeave onClose={() => setExiting(false)} />}
+      {exiting && <ExitDialog game={game} onClose={() => setExiting(false)} />}
     </div>
   );
 }
@@ -289,7 +288,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
             <p className="muted">{s.qIndex >= s.total ? 'Retomar no sprint final.' : `Retomar na pergunta ${s.qIndex + 1} de ${s.total}.`} Os alunos voltam sozinhos.</p>
             <div style={{ display: 'grid', gap: 10 }}>
               <button className="primary big" onClick={() => game.resume()}>▶ Retomar</button>
-              <button onClick={() => setExiting(true)}>Terminar sessão</button>
+              <button onClick={() => setExiting(true)}>Terminar jogo</button>
             </div>
           </div>
         </div>
@@ -300,11 +299,11 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
             <div style={{ fontSize: '12vmin' }}>⏸</div>
             <h2>{s.hidden ? 'Em pausa: a app saiu do ecrã' : 'Em pausa'}</h2>
             {!s.hidden && <button className="primary big">▶ Continuar</button>}
-            {!s.hidden && <div style={{ marginTop: 14 }}><button onClick={(e) => { e.stopPropagation(); setExiting(true); }}>Terminar sessão</button></div>}
+            {!s.hidden && <div style={{ marginTop: 14 }}><button onClick={(e) => { e.stopPropagation(); setExiting(true); }}>Terminar jogo</button></div>}
           </div>
         </div>
       )}
-      {exiting && <ExitDialog game={game} canLeave={false} onClose={() => setExiting(false)} />}
+      {exiting && <ExitDialog game={game} onClose={() => setExiting(false)} />}
       {!s.connected && <div className="notice">○ Sem ligação: a tentar reconectar…</div>}
       {s.notice && <div className="notice" style={{ bottom: 50 }}>{s.notice}</div>}
     </div>

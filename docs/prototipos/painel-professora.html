@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel da professora (protótipo)</title>
+<style>
+:root {
+  --bg:#14161f; --panel:#1f2330; --panel2:#2a2f40; --text:#eef0f7; --muted:#a6adc4;
+  --gold:#ffb21a; --green:#2ecc71; --red:#e74c3c; --ink:#1b1b24;
+  font:16px/1.35 system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--text);-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+button{font:inherit;color:inherit;cursor:pointer;border:0;border-radius:16px;min-height:56px;padding:0 22px;background:var(--panel2);font-weight:700;touch-action:manipulation}
+button:focus-visible,summary:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button:active{transform:scale(.98)}
+button.primary{background:var(--gold);color:var(--ink)}
+button.ghost{background:transparent;color:var(--muted)}
+button.danger{background:#c0392b;color:#fff}
+h1,h2,h3,p{margin:0}
+.muted{color:var(--muted)}
+.screen{display:none;min-height:100%}
+.screen.on{display:flex;flex-direction:column}
+
+/* barra de demonstração (não faz parte do painel) */
+.demo{display:flex;gap:8px;align-items:center;justify-content:center;padding:8px;background:#0b0c12;font-size:.85rem;color:var(--muted);flex-wrap:wrap}
+.demo button{min-height:40px;padding:0 14px;border-radius:10px;font-size:.85rem}
+.demo button.on{background:var(--gold);color:var(--ink)}
+
+/* ---- Jogar ---- */
+.wrap{width:min(100%,760px);margin:0 auto;padding:20px 20px 150px;display:grid;gap:22px;align-content:start;flex:1}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.top h1{font-size:1.5rem}
+.top .nav{display:flex;gap:8px}
+.top .nav button{min-height:48px;padding:0 16px;font-size:.95rem}
+.hero{background:var(--panel);border-radius:24px;padding:22px;display:grid;gap:16px;border:2px solid var(--gold)}
+.hero .lbl{color:var(--muted);font-weight:600}
+.hero .what{font-size:1.5rem;font-weight:800;line-height:1.2}
+.hero .tags{display:flex;gap:8px;flex-wrap:wrap}
+.tag{background:var(--panel2);border-radius:999px;padding:6px 14px;font-weight:700;font-size:.95rem}
+.hero .go{font-size:1.6rem;min-height:76px;border-radius:20px}
+h2.sec{font-size:1.1rem;color:var(--muted);font-weight:700}
+.group{display:grid;gap:10px}
+.chips{display:flex;gap:10px;flex-wrap:wrap}
+.chip{min-height:56px;padding:0 20px;border-radius:16px;border:3px solid transparent;text-align:left}
+.chip.sel{border-color:var(--gold);background:#3a3f55}
+.chip small{display:block;font-weight:600;color:var(--muted);font-size:.8rem}
+.quizlist{display:grid;gap:10px}
+.quiz{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:64px;padding:10px 18px;border-radius:16px;text-align:left;border:3px solid transparent;width:100%}
+.quiz.sel{border-color:var(--gold);background:#3a3f55}
+.quiz small{display:block;color:var(--muted);font-weight:600}
+.quiz .ok{color:var(--gold);font-size:1.4rem}
+details{background:var(--panel);border-radius:18px}
+summary{list-style:none;min-height:60px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-weight:700;cursor:pointer;border-radius:18px}
+summary::-webkit-details-marker{display:none}
+summary .sum{color:var(--muted);font-weight:600;font-size:.95rem;margin-left:12px;text-align:right}
+summary::after{content:'›';font-size:1.6rem;margin-left:12px;transition:transform .2s;color:var(--muted)}
+details[open] summary::after{transform:rotate(90deg)}
+.adv{padding:4px 20px 20px;display:grid;gap:18px}
+.field{display:grid;gap:8px}
+.field>b{font-weight:700}
+.seg{display:flex;gap:8px}
+.seg button{flex:1;min-height:56px;padding:0 8px}
+.seg button.on{background:var(--gold);color:var(--ink)}
+.stepper{display:flex;align-items:center;gap:12px}
+.stepper button{width:56px;padding:0;font-size:1.5rem}
+.stepper output{min-width:3ch;text-align:center;font-size:1.3rem;font-weight:800}
+.ghost-row{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:60px;padding:8px 16px;border-radius:14px;background:var(--panel2);width:100%;text-align:left;border:3px solid transparent}
+.ghost-row.sel{border-color:var(--gold)}
+.open-note{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#3a3320;border-radius:16px;padding:10px 10px 10px 18px}
+.open-note button{min-height:48px;padding:0 16px}
+
+.bar{position:fixed;left:0;right:0;bottom:0;padding:14px 20px calc(14px + env(safe-area-inset-bottom));background:linear-gradient(transparent,var(--bg) 28%);display:flex;justify-content:center}
+.bar button{width:min(100%,720px);font-size:1.5rem;min-height:72px;border-radius:20px}
+
+/* folha de baixo (jogos abertos / todos os quizzes) */
+.sheet-bg{position:fixed;inset:0;background:#000a;display:none;align-items:flex-end;justify-content:center;z-index:20}
+.sheet-bg.on{display:flex}
+.sheet{background:var(--panel);width:min(100%,760px);border-radius:24px 24px 0 0;padding:22px;display:grid;gap:12px;max-height:85%;overflow:auto}
+.sheet .row{display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--panel2);border-radius:14px;padding:10px 10px 10px 16px}
+.sheet .row button{min-height:48px;padding:0 16px}
+
+/* ---- Lobby ---- */
+.lobby{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:3vmin;padding:4vmin;flex:1;min-height:0;align-items:stretch}
+.join{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vmin;text-align:center}
+.pin{font-size:clamp(48px,13vmin,150px);font-weight:900;letter-spacing:.08em;color:var(--gold);line-height:1;font-variant-numeric:tabular-nums}
+.qr{width:min(26vmin,100%);aspect-ratio:1;background:#fff;border-radius:16px;padding:10px}
+.qr svg{width:100%;height:100%;display:block}
+.who{display:flex;flex-direction:column;min-height:0;gap:14px}
+.who h2{font-size:clamp(20px,4vmin,40px)}
+.car{display:flex;align-items:center;gap:14px;background:#0003;border-radius:14px;padding:10px 14px}
+.car .ico{font-size:2.4rem}
+.players{display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;flex:1;overflow:auto}
+.pl{background:var(--panel2);border-radius:999px;padding:8px 18px;font-size:clamp(16px,2.6vmin,28px);font-weight:700;animation:pop .25s}
+@keyframes pop{from{transform:scale(.6);opacity:0}}
+.lobbybar{display:flex;gap:12px;align-items:center;justify-content:space-between}
+.lobbybar .start{font-size:1.6rem;min-height:76px;flex:1;max-width:420px;border-radius:20px}
+.lobbybar .back{min-height:56px}
+.race{display:grid;place-items:center;flex:1;text-align:center;font-size:2rem;font-weight:800;gap:16px}
+@media (max-aspect-ratio:1/1){.lobby{grid-template-columns:1fr;grid-template-rows:auto 1fr}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="demo" role="group" aria-label="Demonstração">
+  Protótipo, não é a app. Estado:
+  <button id="st-new">Primeira vez</button>
+  <button id="st-old" class="on">Já tem histórico</button>
+  <button id="st-reset">Voltar ao início</button>
+</div>
+
+<!-- ======= JOGAR ======= -->
+<main id="jogar" class="screen on">
+  <div class="wrap">
+    <div class="top">
+      <h1>🏎️ Olá, Mara</h1>
+      <div class="nav">
+        <button id="b-rev">Revisão</button>
+        <button id="b-prep">Preparar</button>
+        <button class="ghost" id="b-out">Sair</button>
+      </div>
+    </div>
+
+    <!-- com histórico: repetir o último -->
+    <section id="again" class="hero" aria-labelledby="againH">
+      <div class="lbl" id="againH">Repetir o último jogo</div>
+      <div class="what" id="againWhat"></div>
+      <div class="tags" id="againTags"></div>
+      <button class="primary go" id="againGo">🏁 Abrir sala</button>
+    </section>
+
+    <!-- jogo aberto: uma linha discreta, só se existir -->
+    <div id="openNote" class="open-note" hidden>
+      <span id="openText"></span>
+      <span style="display:flex;gap:8px">
+        <button id="openGo" class="primary">Continuar</button>
+        <button id="openMore" class="ghost" aria-label="Ver jogos abertos">⋯</button>
+      </span>
+    </div>
+
+    <section class="group" id="newGame">
+      <h2 class="sec" id="newH">Outro jogo</h2>
+      <div class="group">
+        <b>Quiz</b>
+        <div class="quizlist" id="quizzes"></div>
+        <button class="ghost" id="allQuizzes" style="justify-self:start;min-height:48px">Ver todos os quizzes</button>
+      </div>
+      <div class="group">
+        <b>Turma</b>
+        <div class="chips" id="classes" role="radiogroup" aria-label="Turma"></div>
+      </div>
+      <details id="more">
+        <summary><span>Ajustar corrida</span><span class="sum" id="moreSum"></span></summary>
+        <div class="adv">
+          <div class="field"><b>Bots</b>
+            <div class="seg" id="segBots" role="radiogroup" aria-label="Dificuldade dos bots"></div></div>
+          <div class="field"><b>Voltas</b>
+            <div class="stepper"><button id="lapM" aria-label="Menos voltas">−</button><output id="lapV">3</output><button id="lapP" aria-label="Mais voltas">+</button>
+            <span class="muted" id="lapNote"></span></div></div>
+          <div class="field"><b>Tempo por pergunta</b>
+            <div class="seg" id="segTime" role="radiogroup" aria-label="Tempo por pergunta"></div></div>
+          <div class="field" id="ghostField"><b>Fantasmas de outras turmas</b>
+            <div class="group" id="ghosts"></div></div>
+        </div>
+      </details>
+    </section>
+  </div>
+  <div class="bar" id="mainBar"><button class="primary" id="create">🏁 Abrir sala</button></div>
+</main>
+
+<!-- ======= LOBBY ======= -->
+<main id="lobby" class="screen">
+  <div class="lobby">
+    <div class="join">
+      <div class="muted" style="font-size:clamp(16px,3vmin,30px)">Entra em</div>
+      <div class="muted" style="font-size:clamp(14px,2.2vmin,24px)">grande-premio-portugues.vercel.app</div>
+      <div class="pin" id="pin">482 913</div>
+      <div class="qr" id="qr" role="img" aria-label="QR code para entrar"></div>
+    </div>
+    <div class="who">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px">
+        <h2 id="lobbyTitle"></h2><span class="muted" id="count">0 na corrida</span>
+      </div>
+      <div class="muted" id="lobbyMeta"></div>
+      <div class="car"><span class="ico">🏎️</span><div><b>Carro da turma</b><div class="muted">Os alunos votam no telemóvel</div></div></div>
+      <div class="players" id="players" aria-live="polite"><span class="muted" id="wait" style="font-size:clamp(16px,3vmin,28px)">À espera dos alunos…</span></div>
+      <div class="lobbybar">
+        <button class="back" id="lobbyBack">← Sair</button>
+        <button class="primary start" id="start" disabled>🏁 Começar corrida</button>
+      </div>
+    </div>
+  </div>
+  <div class="demo">Demo: <button id="addPl">+ aluno entra</button></div>
+</main>
+
+<main id="race" class="screen"><div class="race"><div>🏁 Aqui começa a corrida</div><button id="raceBack">Voltar ao painel</button></div></main>
+
+<!-- folha: jogos abertos / quizzes -->
+<div class="sheet-bg" id="sheetBg"><div class="sheet" id="sheet" role="dialog" aria-modal="true"></div></div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const QUIZZES = [
+  { id: 'q1', t: 'Figuras de estilo', y: 9, n: 18 },
+  { id: 'q2', t: 'Gramática: todos os tipos', y: 9, n: 9 },
+  { id: 'q3', t: 'Pessoa e heterónimos', y: 12, n: 12 },
+  { id: 'q4', t: 'Fernando Pessoa: ortónimo', y: 12, n: 18 },
+  { id: 'q5', t: 'Os Lusíadas: o Consílio', y: 12, n: 14 },
+];
+const CLASSES = ['9.º A', '9.º B', '12.º C'];
+const BOTS = [['facil', 'Fácil'], ['medio', 'Médio'], ['dificil', 'Difícil']];
+const TIMES = [[0, 'Do quiz'], [15, '15 s'], [30, '30 s'], [45, '45 s']];
+const GHOSTS = [{ id: 'g1', t: '9.º B · 2º lugar · 3:12' }, { id: 'g2', t: '9.º A · 1º lugar · 2:58 ⭐' }];
+
+let mode = 'old';
+let st, open, dirty = false;
+const reset = () => {
+  st = { quiz: 'q1', cls: '9.º A', bots: 'medio', laps: 3, time: 0, ghosts: [], showAll: false };
+  open = []; // sair da sessão termina o jogo: não há jogos abertos para mostrar
+};
+const quizOf = (id) => QUIZZES.find((q) => q.id === id);
+const botLabel = () => BOTS.find((b) => b[0] === st.bots)[1];
+const timeLabel = () => TIMES.find((x) => x[0] === st.time)[1];
+const last = () => ({ quiz: 'q1', cls: '9.º A', bots: 'medio', laps: 3, time: 0 });
+
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k === 'class') e.className = v; else if (k.startsWith('on')) e.addEventListener(k.slice(2), v); else e.setAttribute(k, v);
+  }
+  kids.flat().forEach((c) => e.append(c));
+  return e;
+}
+
+function renderJogar() {
+  const old = mode === 'old';
+  // jogos abertos
+  const on = $('#openNote');
+  on.hidden = open.length === 0;
+  if (open.length) {
+    $('#openText').textContent = open.length === 1 ? `Tens 1 jogo aberto: ${open[0].t}` : `Tens ${open.length} jogos abertos`;
+    $('#openGo').onclick = () => (open.length === 1 ? goLobby(open[0].t) : openSheet('open'));
+  }
+  // repetir
+  const again = $('#again');
+  again.hidden = !old;
+  if (old) {
+    const l = last(), q = quizOf(l.quiz);
+    $('#againWhat').textContent = `${q.t} · ${l.cls}`;
+    $('#againTags').replaceChildren(...[`Bots ${BOTS.find((b) => b[0] === l.bots)[1].toLowerCase()}`, `${l.laps} voltas`, 'Tempo do quiz'].map((x) => el('span', { class: 'tag' }, x)));
+    $('#againGo').onclick = () => goLobby(q.t, l.cls);
+  }
+  $('#newH').textContent = old ? 'Ou escolher outro jogo' : 'Novo jogo';
+  $('#mainBar').hidden = old && !dirty; // com histórico, o botão grande já está no topo
+  $('#create').textContent = old ? '🏁 Abrir sala com esta escolha' : '🏁 Abrir sala';
+  // quizzes: recentes primeiro; resto em "ver todos"
+  const list = st.showAll ? QUIZZES : QUIZZES.slice(0, 3);
+  $('#quizzes').replaceChildren(...list.map((q) => el('button', { class: 'quiz' + (st.quiz === q.id ? ' sel' : ''), role: 'radio', 'aria-checked': String(st.quiz === q.id), onclick: () => { dirty = true; st.quiz = q.id; st.ghosts = []; renderJogar(); } },
+    el('span', {}, el('b', {}, q.t), el('small', {}, `${q.y}.º ano · ${q.n} perguntas`)), st.quiz === q.id ? el('span', { class: 'ok', 'aria-hidden': 'true' }, '✓') : '')));
+  $('#allQuizzes').hidden = st.showAll;
+  $('#allQuizzes').onclick = () => { st.showAll = true; dirty = true; renderJogar(); };
+  // turmas
+  $('#classes').replaceChildren(...[...CLASSES, 'Sem turma'].map((c) => el('button', { class: 'chip' + (st.cls === c ? ' sel' : ''), role: 'radio', 'aria-checked': String(st.cls === c), onclick: () => { dirty = true; st.cls = c; renderJogar(); } }, c)));
+  // ajustar
+  const q = quizOf(st.quiz);
+  const maxLaps = Math.min(5, q.n);
+  st.laps = Math.min(st.laps, maxLaps);
+  $('#moreSum').textContent = `Bots ${botLabel().toLowerCase()} · ${st.laps} voltas${st.time ? ' · ' + timeLabel() : ''}${st.ghosts.length ? ' · ' + st.ghosts.length + ' 👻' : ''}`;
+  $('#segBots').replaceChildren(...BOTS.map(([k, l]) => el('button', { class: st.bots === k ? 'on' : '', role: 'radio', 'aria-checked': String(st.bots === k), onclick: () => { dirty = true; st.bots = k; renderJogar(); } }, l)));
+  $('#segTime').replaceChildren(...TIMES.map(([k, l]) => el('button', { class: st.time === k ? 'on' : '', role: 'radio', 'aria-checked': String(st.time === k), onclick: () => { dirty = true; st.time = k; renderJogar(); } }, l)));
+  $('#lapV').textContent = st.laps;
+  $('#lapM').disabled = st.laps <= 1; $('#lapP').disabled = st.laps >= maxLaps;
+  $('#lapM').onclick = () => { dirty = true; st.laps--; renderJogar(); };
+  $('#lapP').onclick = () => { dirty = true; st.laps++; renderJogar(); };
+  $('#lapNote').textContent = `${Math.floor(q.n / st.laps)} perguntas por volta`;
+  // fantasmas só se existirem (só com histórico)
+  $('#ghostField').hidden = !old;
+  $('#ghosts').replaceChildren(...GHOSTS.map((g) => el('button', { class: 'ghost-row' + (st.ghosts.includes(g.id) ? ' sel' : ''), onclick: () => { dirty = true; st.ghosts = st.ghosts.includes(g.id) ? st.ghosts.filter((x) => x !== g.id) : [...st.ghosts, g.id].slice(0, 3); renderJogar(); } },
+    el('span', {}, g.t), st.ghosts.includes(g.id) ? el('span', { class: 'ok', 'aria-hidden': 'true' }, '✓') : '')));
+  $('#create').onclick = () => goLobby(q.t, st.cls);
+}
+
+/* folha */
+function openSheet(kind) {
+  const s = $('#sheet');
+  s.replaceChildren(el('h2', {}, 'Jogos abertos'), el('p', { class: 'muted' }, 'Só tu vês isto. Os alunos já não conseguem entrar nos que terminares.'),
+    ...open.map((o, i) => el('div', { class: 'row' }, el('span', {}, el('b', {}, o.t), ' ', el('span', { class: 'muted' }, o.status)),
+      el('span', { style: 'display:flex;gap:8px' }, el('button', { class: 'danger', onclick: () => { open.splice(i, 1); closeSheet(); renderJogar(); if (open.length) openSheet(); } }, 'Terminar'), el('button', { class: 'primary', onclick: () => { closeSheet(); goLobby(o.t); } }, 'Abrir')))),
+    open.length > 1 ? el('button', { class: 'danger', onclick: () => { if (confirm('Terminar todos os jogos abertos? Nada fica guardado.')) { open = []; closeSheet(); renderJogar(); } } }, 'Terminar todos') : '',
+    el('button', { onclick: closeSheet }, 'Fechar'));
+  $('#sheetBg').classList.add('on');
+}
+function closeSheet() { $('#sheetBg').classList.remove('on'); }
+$('#openMore').onclick = () => openSheet();
+$('#sheetBg').addEventListener('click', (e) => { if (e.target.id === 'sheetBg') closeSheet(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSheet(); });
+
+/* ecrãs */
+function show(id) { closeSheet(); document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === id)); window.scrollTo(0, 0); }
+let players = 0;
+const NAMES = ['Rato Veloz', 'Pantera', 'Foguete', 'Estrela', 'Trovão', 'Cometa', 'Raposa', 'Falcão'];
+function qrSvg() {
+  let r = '', seed = 7;
+  const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  for (let y = 0; y < 21; y++) for (let x = 0; x < 21; x++) {
+    const f = (x < 7 && y < 7) || (x > 13 && y < 7) || (x < 7 && y > 13);
+    if (f ? ((x % 6 === 0 || y % 6 === 0 || (x % 6 > 1 && x % 6 < 5 && y % 6 > 1 && y % 6 < 5)) || ((x > 13 ? x - 14 : x) % 6 === 0)) && true : rnd() > .52) r += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
+  }
+  return `<svg viewBox="0 0 21 21" shape-rendering="crispEdges" fill="#111">${r}</svg>`;
+}
+function goLobby(title, cls) {
+  players = 0;
+  $('#lobbyTitle').textContent = title;
+  $('#lobbyMeta').textContent = `${cls || st.cls} · bots ${botLabel().toLowerCase()} · ${st.laps} voltas`;
+  $('#players').replaceChildren(el('span', { class: 'muted', id: 'wait', style: 'font-size:clamp(16px,3vmin,28px)' }, 'À espera dos alunos…'));
+  $('#count').textContent = '0 na corrida';
+  $('#start').disabled = true;
+  $('#pin').textContent = String(100 + Math.floor(Math.random() * 899)) + ' ' + String(100 + Math.floor(Math.random() * 899));
+  $('#qr').innerHTML = qrSvg();
+  show('lobby');
+}
+$('#addPl').onclick = () => {
+  if (players >= NAMES.length) return;
+  $('#wait')?.remove();
+  $('#players').append(el('span', { class: 'pl' }, NAMES[players++]));
+  $('#count').textContent = `${players} na corrida`;
+  $('#start').disabled = false;
+};
+$('#start').onclick = () => show('race');
+$('#raceBack').onclick = () => show('jogar');
+$('#lobbyBack').onclick = () => show('jogar');
+$('#b-rev').onclick = $('#b-prep').onclick = $('#b-out').onclick = () => alert('(Protótipo) Fora do âmbito.');
+
+/* estados */
+function setMode(m) {
+  mode = m; reset(); dirty = false;
+  $('#st-new').classList.toggle('on', m === 'new'); $('#st-old').classList.toggle('on', m === 'old');
+  if (m === 'new') st.cls = 'Sem turma';
+  $('#more').open = false;
+  show('jogar'); renderJogar();
+}
+$('#st-new').onclick = () => setMode('new');
+$('#st-old').onclick = () => setMode('old');
+$('#st-reset').onclick = () => setMode(mode);
+setMode('old');
+</script>
+</body>
+</html>
