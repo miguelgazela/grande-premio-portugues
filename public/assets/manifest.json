@@ -172,12 +172,12 @@
   "ui-logo": {
     "file": "ui-logo.png",
     "w": 768,
-    "h": 496,
+    "h": 412,
     "anchor": [
       0.5,
       0.5
     ],
-    "notes": "Logo Grande Prémio de Português"
+    "notes": "Logo com escritores (variante 3, medalhões); o original está em ui-logo-classico"
   },
   "ui-trophy": {
     "file": "ui-trophy.png",
@@ -1528,5 +1528,55 @@
       0.5
     ],
     "notes": "Carrinha amarelo (cores originais, riscas de corrida, sem número); virado para +x, 256x128, caixa ajustada ao lado maior"
+  },
+  "ui-logo-autores-1": {
+    "file": "ui-logo-autores-1.png",
+    "w": 768,
+    "h": 449,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Logo com escritores portugueses: bustos por cima do título"
+  },
+  "ui-logo-autores-2": {
+    "file": "ui-logo-autores-2.png",
+    "w": 768,
+    "h": 436,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Logo com escritores portugueses: pilotos de capacete"
+  },
+  "ui-logo-autores-3": {
+    "file": "ui-logo-autores-3.png",
+    "w": 768,
+    "h": 412,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Logo com escritores portugueses: medalhões laterais (em uso)"
+  },
+  "ui-logo-autores-4": {
+    "file": "ui-logo-autores-4.png",
+    "w": 768,
+    "h": 430,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Logo com escritores portugueses: Pessoa a conduzir"
+  },
+  "ui-logo-classico": {
+    "file": "ui-logo-classico.png",
+    "w": 768,
+    "h": 496,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Logo original sem escritores"
   }
 }
