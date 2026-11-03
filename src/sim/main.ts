@@ -2,12 +2,13 @@ import './sim.css';
 import { DEFAULT_CONFIG, type RaceConfig } from '../engine/config';
 import { DEFAULT_SIM, buildRace, runBatch, type SimOptions } from '../engine/batch';
 import { BOT_FIELDS, type BotField } from '../engine/drivers';
-import { Track, DEFAULT_TRACK_POINTS } from '../engine/track';
+import { Road } from '../engine/track';
 import { pickAwards, scoreRace } from '../engine/scoring';
-import type { Effect, Race } from '../engine/race';
+import { type Effect, type Race } from '../engine/race';
 import { RaceView } from '../render/raceView';
 
-const track = new Track(DEFAULT_TRACK_POINTS);
+// Estrada longa o bastante para qualquer corrida do simulador; a meta é posta por corrida (`view.reset`).
+const track = new Road(1, 400000);
 const config: RaceConfig = { ...DEFAULT_CONFIG };
 const sim: SimOptions = { ...DEFAULT_SIM, botSkills: [...DEFAULT_SIM.botSkills] };
 let botField: BotField = 'medio';
@@ -101,7 +102,7 @@ function renderMatrix() {
 }
 
 // ---------- Live race ----------
-const view = new RaceView(track);
+const view = new RaceView(track, { follow: true });
 let race: Race | null = null;
 let raceData: ReturnType<typeof buildRace> | null = null;
 let shownEvents = 0;
@@ -114,7 +115,7 @@ function startRace() {
   const seed = Math.floor(Math.random() * 1e9);
   raceData = buildRace(config, sim, seed);
   race = raceData.race;
-  view.reset();
+  view.reset(race.raceLength);
   shownEvents = 0;
   $('#log').innerHTML = '';
   $('#results').innerHTML = '';

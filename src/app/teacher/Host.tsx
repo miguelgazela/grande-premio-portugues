@@ -183,7 +183,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   const showReveal = s.phase === 'reveal' && s.reveal;
 
   useEffect(() => {
-    const view = new RaceView(game.track, { sprites: true, follow: true, trackId: game.trackId });
+    const view = new RaceView(game.track, { sprites: true, follow: true, trackId: game.trackId, raceLength: game.race.raceLength });
     let mounted = false;
     let gone = false;
     let lastRank = 0;

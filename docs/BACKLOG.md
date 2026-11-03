@@ -57,9 +57,6 @@ Problemas vistos nos testes, com o diagnóstico e a proposta de solução. Resol
 ## Ritmo da corrida (adiado)
 
 ### 6. A corrida acaba antes das perguntas, e o carro fica parado na meta
-**Visto** (teste com um aluno a acertar sempre): o carro chegou à meta antes de a última pergunta acabar e ficou parado até ao fim.
-**Causa**: a velocidade base (`baseSpeed` em `src/engine/race.ts`) está calibrada para uma turma de 70% de acerto. Turmas melhores andam mais depressa (fator até ~1,57, com nitro e volta final ×2 pode passar de 2), por isso uma turma de ~90% chega à meta por volta da pergunta 14 de 18.
-**Decisão**: **adiado**. Duas soluções foram discutidas e descartadas por serem fracas:
-- Segurar o carro antes da meta até à última revelação: o carro anda muito lento no fim, pouco emocionante.
-- Terminar a corrida quando a turma chega à meta: corta perguntas, falha dados do relatório e dos fantasmas.
-**Direção para depois**: tornar a corrida mais dinâmica, ajustando-se à velocidade do jogo e do carro (por exemplo, o comprimento ou o número de voltas adaptar-se ao ritmo da turma, ou a meta definida por distância no fim das perguntas). É uma mudança de desenho da corrida, não só de calibração, e mexe em `src/engine/race.ts`, no sprint final de `hostGame.ts`, nos fantasmas (tempos gravados) e nos testes de equilíbrio.
+**Resolvido no branch `claude/ritmo-corrida-d1a93d` (por rever e juntar ao main).**
+Nova abordagem: velocidade de cruzeiro constante (`cruiseSpeed`), efeitos das respostas pequenos (`effectScale`) como subida/descida suave no reveal, e meta a `cruiseSpeed × (perguntas × ciclo + ganho máximo possível)`. Ninguém chega antes da última pergunta, e o tempo de meta depende só das respostas de cada carro (comparável com fantasmas). A pista deixou de ter voltas: é uma estrada aberta gerada por semente (`Road`), desenhada aos blocos à volta da câmara.
+**Por ver**: fantasmas/recordes gravados com o motor antigo têm tempos de meta que já não batem com o motor novo; o HUD ainda fala em "Volta x/y" (a volta final ×2 mantém-se por agora).
