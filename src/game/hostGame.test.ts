@@ -115,3 +115,39 @@ describe('HostGame: voto no carro', () => {
     for (const m of sent as { event: string; payload: object }[]) if (m.event === 'lobby') expect(m.payload).toEqual({ count: expect.any(Number) });
   });
 });
+
+describe('HostGame: re-sincronização', () => {
+  const evs = (sent: unknown[]) => (sent as { event: string }[]).map((m) => m.event);
+
+  it('o beacon repete a pergunta atual com o tempo que falta', async () => {
+    const { priv, sent } = await setup();
+    priv.qElapsed = 5;
+    sent.length = 0;
+    (priv as unknown as { beacon(): void }).beacon();
+    const q = sent[0] as { event: string; payload: { question_id: string; time: number } };
+    expect(q.event).toBe('question');
+    expect(q.payload.question_id).toBe('q0');
+    expect(q.payload.time).toBe(15);
+  });
+
+  it('o beacon não envia nada fora do jogo (ex.: terminado)', async () => {
+    const { priv, sent } = await setup();
+    priv.snap.phase = 'finished';
+    sent.length = 0;
+    (priv as unknown as { beacon(): void }).beacon();
+    expect(sent).toEqual([]);
+  });
+
+  it('um hello apanhado pelo limite de 1 s recebe o estado logo a seguir', async () => {
+    const { priv, sent } = await setup();
+    const timers: (() => void)[] = [];
+    (globalThis as unknown as { window: { setTimeout: unknown } }).window.setTimeout = (f: () => void) => timers.push(f);
+    (priv as unknown as { resync(force: boolean): void }).resync(true);
+    sent.length = 0;
+    priv.onMessage({ event: 'hello', payload: { player_id: 'p1' } }); // dentro de 1 s: adiado, não perdido
+    expect(evs(sent)).toEqual([]);
+    expect(timers).toHaveLength(1);
+    timers[0]();
+    expect(evs(sent)).toEqual(['question']);
+  });
+});

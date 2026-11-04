@@ -66,17 +66,74 @@ export function Play() {
     if (!player) nav('/', { replace: true });
   }, [player, nav]);
 
-  // Volta a ligar quando o Safari regressa do segundo plano.
+  // Volta a ligar quando o Safari regressa do segundo plano ou a rede volta.
   useEffect(() => {
-    const onVisible = () => document.visibilityState === 'visible' && setEpoch((n) => n + 1);
+    const reconnect = () => setEpoch((n) => n + 1);
+    const onVisible = () => document.visibilityState === 'visible' && reconnect();
     document.addEventListener('visibilitychange', onVisible);
-    return () => document.removeEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', reconnect);
+    window.addEventListener('pageshow', reconnect);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('online', reconnect);
+      window.removeEventListener('pageshow', reconnect);
+    };
   }, []);
 
   useEffect(() => {
     if (!api || !player) return;
     let closed = false;
     let ch: Channel | null = null;
+    // O canal abre já, sem esperar pelo RPC: a confirmação de que ainda estamos na sessão corre em paralelo.
+    ch = api.openChannel(
+      player.session_id,
+      (m) => {
+        switch (m.event) {
+          case 'lobby':
+            if (viewRef.current.k === 'wait') setView({ k: 'wait', count: m.payload.count });
+            break;
+          case 'question': {
+            const cur = viewRef.current;
+            const same = cur.k === 'question' && cur.q.question_id === m.payload.question_id;
+            lastBody.current = { id: m.payload.question_id, body: m.payload.body };
+            setView({ k: 'question', q: m.payload, at: Date.now(), full: same ? cur.full : m.payload.time });
+            const prev = chosenRef.current[m.payload.question_id];
+            if (prev !== undefined) ch?.send({ event: 'answer', payload: { player_id: player.player_id, question_id: m.payload.question_id, value: prev } });
+            break;
+          }
+          case 'pause': {
+            const cur = viewRef.current;
+            if (cur.k === 'question') setView({ ...cur, q: { ...cur.q, time: m.payload.time }, at: Date.now(), paused: m.payload.paused });
+            break;
+          }
+          case 'reveal':
+            setView({ k: 'reveal', r: m.payload, body: lastBody.current?.id === m.payload.question_id ? lastBody.current.body : null });
+            break;
+          case 'end':
+            try { localStorage.setItem(`gpp.end.${player.session_id}`, JSON.stringify(m.payload)); } catch { /* sem armazenamento */ }
+            setView({ k: 'end', e: m.payload });
+            break;
+          case 'aborted':
+            try { localStorage.setItem(`gpp.aborted.${player.session_id}`, '1'); } catch { /* sem armazenamento */ }
+            setView({ k: 'aborted' });
+            break;
+          case 'renamed':
+            if (m.payload.player_id === player.player_id && typeof m.payload.nickname === 'string') {
+              savePlayer({ ...player, nickname: m.payload.nickname });
+              setNickname(m.payload.nickname);
+            }
+            break;
+          case 'kicked':
+            if (m.payload.player_id === player.player_id) {
+              clearPlayer();
+              nav('/', { replace: true });
+            }
+            break;
+        }
+      },
+      (ok) => ok && ch?.send({ event: 'hello', payload: { player_id: player.player_id, avatar: loadAvatar() ?? undefined, car: carRef.current ?? undefined } }),
+    );
+    channel.current = ch;
     void (async () => {
       try {
         // Confirma que ainda estamos na sessão (e não fomos expulsos).
@@ -91,10 +148,12 @@ export function Play() {
         const savedEnd = msg === 'PIN inválido' ? readEnd(player.session_id) : null;
         if (savedEnd) {
           setView({ k: 'end', e: savedEnd });
+          ch?.close();
           return;
         }
         if (msg === 'PIN inválido' && localStorage.getItem(`gpp.aborted.${player.session_id}`)) {
           setView({ k: 'aborted' });
+          ch?.close();
           return;
         }
         if (msg === 'PIN inválido' || msg.startsWith('Removido')) {
@@ -104,56 +163,6 @@ export function Play() {
         }
         if (msg !== 'A corrida já começou') setProblem(msg);
       }
-      if (closed) return;
-      ch = api.openChannel(
-        player.session_id,
-        (m) => {
-          switch (m.event) {
-            case 'lobby':
-              if (viewRef.current.k === 'wait') setView({ k: 'wait', count: m.payload.count });
-              break;
-            case 'question': {
-              const cur = viewRef.current;
-              const same = cur.k === 'question' && cur.q.question_id === m.payload.question_id;
-              lastBody.current = { id: m.payload.question_id, body: m.payload.body };
-              setView({ k: 'question', q: m.payload, at: Date.now(), full: same ? cur.full : m.payload.time });
-              const prev = chosenRef.current[m.payload.question_id];
-              if (prev !== undefined) ch?.send({ event: 'answer', payload: { player_id: player.player_id, question_id: m.payload.question_id, value: prev } });
-              break;
-            }
-            case 'pause': {
-              const cur = viewRef.current;
-              if (cur.k === 'question') setView({ ...cur, q: { ...cur.q, time: m.payload.time }, at: Date.now(), paused: m.payload.paused });
-              break;
-            }
-            case 'reveal':
-              setView({ k: 'reveal', r: m.payload, body: lastBody.current?.id === m.payload.question_id ? lastBody.current.body : null });
-              break;
-            case 'end':
-              try { localStorage.setItem(`gpp.end.${player.session_id}`, JSON.stringify(m.payload)); } catch { /* sem armazenamento */ }
-              setView({ k: 'end', e: m.payload });
-              break;
-            case 'aborted':
-              try { localStorage.setItem(`gpp.aborted.${player.session_id}`, '1'); } catch { /* sem armazenamento */ }
-              setView({ k: 'aborted' });
-              break;
-            case 'renamed':
-              if (m.payload.player_id === player.player_id && typeof m.payload.nickname === 'string') {
-                savePlayer({ ...player, nickname: m.payload.nickname });
-                setNickname(m.payload.nickname);
-              }
-              break;
-            case 'kicked':
-              if (m.payload.player_id === player.player_id) {
-                clearPlayer();
-                nav('/', { replace: true });
-              }
-              break;
-          }
-        },
-        (ok) => ok && ch?.send({ event: 'hello', payload: { player_id: player.player_id, avatar: loadAvatar() ?? undefined, car: carRef.current ?? undefined } }),
-      );
-      channel.current = ch;
     })();
     return () => {
       closed = true;

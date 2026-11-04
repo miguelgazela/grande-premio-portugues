@@ -91,6 +91,7 @@ export class HostGame {
   private roster: PlayerRow[] = [];
   private lastMsg: HostEvent | null = null;
   private lastResync = 0;
+  private resyncT: number | undefined;
   private pollTimer = 0;
   private timeBucket = -1;
   private votes = new Map<string, StyleVote>();
@@ -150,6 +151,7 @@ export class HostGame {
     this.connect();
     this.pollTimer = window.setInterval(() => {
       if (this.snap.phase === 'lobby' || this.snap.phase === 'resume') void this.refreshPlayers();
+      this.beacon();
     }, 2500);
     document.addEventListener('visibilitychange', this.onVisibility);
     this.lastTs = performance.now();
@@ -164,6 +166,7 @@ export class HostGame {
 
   destroy(): void {
     this.stopped = true;
+    clearTimeout(this.resyncT);
     music.stop();
     cancelAnimationFrame(this.raf);
     clearInterval(this.pollTimer);
@@ -241,7 +244,16 @@ export class HostGame {
   /** Repete o último estado (alunos a reconectar). Limita a 1×/s para não inundar o canal. */
   private resync(force = false) {
     const now = performance.now();
-    if (!force && now - this.lastResync < 1000) return;
+    if (!force && now - this.lastResync < 1000) {
+      // Não perde o pedido: um `hello` apanhado pelo limite recebe o estado logo a seguir.
+      if (this.resyncT === undefined) {
+        this.resyncT = window.setTimeout(() => {
+          this.resyncT = undefined;
+          if (!this.stopped) this.resync(true);
+        }, 1000);
+      }
+      return;
+    }
     this.lastResync = now;
     const m = this.lastMsg;
     if (!m) {
@@ -254,6 +266,16 @@ export class HostGame {
     } else {
       this.channel?.send(m);
     }
+  }
+
+  /**
+   * Repete o estado atual a cada poucos segundos: o Realtime não guarda mensagens, por isso um telemóvel
+   * com a ligação morta (sem o saber) perdia a pergunta e ficava preso até o heartbeat o detetar.
+   * É uma só mensagem para toda a turma; quem já está nesse estado ignora-a.
+   */
+  private beacon(): void {
+    if (!['lobby', 'countdown', 'question', 'reveal'].includes(this.snap.phase)) return;
+    this.resync(true);
   }
 
   private onMessage(m: AnyEvent) {
