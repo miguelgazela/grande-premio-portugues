@@ -5,6 +5,7 @@ import { mulberry32 } from '../engine/rng';
 import { CURB_W, ROAD_W, type Road } from '../engine/track';
 import type { CarState, Race } from '../engine/race';
 import { themeForTrack, themeKeys, type Theme } from '../engine/theme';
+import { fallbackCar } from '../game/teamStyle';
 import { loadRaceTextures, type RaceTextures } from './assets';
 import { Particles } from './particles';
 
@@ -42,6 +43,8 @@ interface CarNode {
   sparkT?: number;
   nitro?: Sprite;
   smoke?: Sprite;
+  /** Tema água: esteira atrás do barco. */
+  wake?: Sprite;
 }
 
 /**
@@ -360,14 +363,26 @@ export class RaceView {
 
   private carNode(car: CarState): CarNode {
     const root = new Container();
-    const tex = this.t(car.driver.car ?? 'car-grey');
+    const water = this.theme.vehicle === 'barco';
+    const tex = this.t(car.driver.car ?? fallbackCar(this.theme.vehicle));
     const node: CarNode = { root };
 
     if (tex) {
       const body = new Sprite(tex);
       body.anchor.set(0.5);
       body.scale.set((CAR_LEN * 1.12) / tex.width);
-      const smokeTex = this.t('fx-smoke');
+      // Água: a esteira e o jato (fx-wake/fx-splash) substituem o fumo e as chamas do turbo/nitro.
+      const smokeTex = water ? undefined : this.t('fx-smoke');
+      const wakeTex = water ? this.t('fx-wake') : undefined;
+      if (wakeTex) {
+        node.wake = new Sprite(wakeTex);
+        node.wake.anchor.set(1, 0.5);
+        node.wake.position.set(-CAR_LEN / 2 + 6, 0);
+        node.wake.scale.set(40 / wakeTex.width);
+        node.wake.alpha = 0.8;
+        node.wake.visible = false;
+        root.addChild(node.wake);
+      }
       if (smokeTex) {
         node.smoke = new Sprite(smokeTex);
         node.smoke.anchor.set(0.5);
@@ -375,7 +390,7 @@ export class RaceView {
         node.smoke.visible = false;
         root.addChild(node.smoke);
       }
-      const turbo = this.t('fx-turbo');
+      const turbo = this.t(water ? 'fx-splash' : 'fx-turbo');
       if (turbo) {
         node.turbo = new Sprite(turbo);
         node.turbo.anchor.set(1, 0.5);
@@ -384,7 +399,7 @@ export class RaceView {
         node.turbo.visible = false;
         root.addChild(node.turbo);
       }
-      const nitro = this.t('fx-nitro');
+      const nitro = this.t(water ? 'fx-splash' : 'fx-nitro');
       if (nitro) {
         node.nitro = new Sprite(nitro);
         node.nitro.anchor.set(1, 0.5);
@@ -435,7 +450,7 @@ export class RaceView {
       const node = this.cars.get(car.driver.id) ?? this.carNode(car);
       const sprite = node.root;
       const lane = (i - (n - 1) / 2) * (ROAD_W / (n + 1));
-      const jit = this.jitter(car.driver.id, clock);
+      const jit = this.jitter(car.driver.id, race.time, Math.min(1, race.time / 3) * Math.min(1, ((race.finishLine ?? Infinity) - car.distance) / 600)); // tempo da corrida: parado na contagem e na pausa
       const pose = this.track.poseAt(Math.max(0, Math.min(this.shownDistance(race, car) + jit.along, race.finishLine ?? Infinity)));
       sprite.position.set(pose.x + pose.nx * (lane + jit.lane), pose.y + pose.ny * (lane + jit.lane));
       const spinning = car.spinLeft > 0;
@@ -462,6 +477,10 @@ export class RaceView {
         node.nitro.visible = nitroOn;
         node.nitro.scale.x = (42 / node.nitro.texture.width) * flicker;
       }
+      if (node.wake) {
+        node.wake.visible = running;
+        node.wake.scale.x = (40 / node.wake.texture.width) * (race.bursting && (nitroOn || turboOn) ? 1.5 : 0.85 + 0.15 * flicker);
+      }
       this.emit(node, car, sprite, pose.angle, { spinning, nitroOn, turboOn }, dt);
       if (node.smoke) {
         node.smoke.visible = spinning;
@@ -485,6 +504,14 @@ export class RaceView {
   private emit(node: CarNode, car: CarState, sprite: Container, heading: number, st: { spinning: boolean; nitroOn: boolean; turboOn: boolean }, dt: number): void {
     const isTeam = car.driver.kind === 'team';
     const P = this.particles;
+    if (this.theme.vehicle === 'barco') {
+      if (isTeam && car.crossed && !node.finished) {
+        node.finished = true;
+        for (let k = 0; k < 70; k++) P.confetti(sprite.x, sprite.y);
+        this.cheer();
+      }
+      return;
+    }
     const cos = Math.cos(heading);
     const sin = Math.sin(heading);
     if (st.spinning) {
@@ -520,14 +547,14 @@ export class RaceView {
   }
 
   /** Só visual: cada carro tem um pequeno avanço fixo e uma oscilação lenta, para não andarem todos exatamente lado a lado. */
-  private jitter(id: string, clock: number): { along: number; lane: number } {
+  private jitter(id: string, t: number, k: number): { along: number; lane: number } {
     let h = 2166136261;
     for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
     const u = ((h >>> 0) % 1000) / 1000;
     const v = (((h >>> 10) >>> 0) % 1000) / 1000;
     return {
-      along: u * 55 + Math.sin(clock * (0.5 + v * 0.5) + v * 6.28) * 7,
-      lane: Math.sin(clock * (0.35 + u * 0.4) + u * 6.28) * 4,
+      along: k * (u * 55 + Math.sin(t * (0.5 + v * 0.5) + v * 6.28) * 7),
+      lane: k * Math.sin(t * (0.35 + u * 0.4) + u * 6.28) * 4,
     };
   }
 

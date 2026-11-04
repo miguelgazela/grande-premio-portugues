@@ -7,7 +7,7 @@ import type { AnswerValue } from '../../lib/types';
 import { useApi } from '../useApi';
 import { Asset } from '../ui/Asset';
 import { CarPicker } from '../ui/TeamPicker';
-import { carDef } from '../../game/teamStyle';
+import { carDef, type Category } from '../../game/teamStyle';
 import { StudentInput, solutionView } from '../ui/Question';
 import { clearPlayer, deviceToken, loadAvatar, loadPlayer, savePlayer } from './session';
 
@@ -55,6 +55,7 @@ export function Play() {
   const channel = useRef<Channel | null>(null);
   const [car, setCar] = useState<string | null>(() => readVote(player?.player_id));
   const carRef = useRef(car);
+  const [cat, setCat] = useState<Category>('carro');
   const [leaving, setLeaving] = useState(false);
   const vote = (next: string) => {
     carRef.current = next;
@@ -112,6 +113,7 @@ export function Play() {
         }
         switch (m.event) {
           case 'lobby':
+            setCat(m.payload.cat === 'barco' ? 'barco' : 'carro');
             if (fresh || viewRef.current.k === 'wait') setView({ k: 'wait', count: m.payload.count });
             break;
           case 'question': {
@@ -254,9 +256,9 @@ export function Play() {
             </div>
           </section>
           <section className="wait-vote">
-            <h2>Vota no carro da turma</h2>
+            <h2>{cat === 'barco' ? 'Vota no barco da turma' : 'Vota no carro da turma'}</h2>
             <p className="lead">O mais votado ganha.</p>
-            <CarPicker value={car} onPick={vote} />
+            <CarPicker value={car} onPick={vote} cat={cat} />
           </section>
         </main>
       )}

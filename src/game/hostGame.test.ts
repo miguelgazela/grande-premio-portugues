@@ -15,11 +15,11 @@ const questions = Array.from({ length: 6 }, (_, i) => ({
 })) as QuestionRow[];
 const session = { id: 's1', game_id: 'g1', game_number: 1, settings: { botField: 'medio' }, state: null, status: 'lobby' } as unknown as SessionRow;
 
-async function setup() {
+async function setup(settings?: Record<string, unknown>) {
   const { HostGame } = await import('./hostGame');
   const sent: unknown[] = [];
   const api = { openChannel: () => ({ send: (m: unknown) => sent.push(m), close() {} }), listPlayers: async () => [], kickPlayer: async () => {}, renamePlayer: vi.fn(async (_id: string, n: string) => n.trim()), saveAnswers: async () => {}, updateGame: async () => {}, leavePlayer: async () => {}, removePlayer: async () => {} } as unknown as Api;
-  const g = new HostGame(api, session, questions);
+  const g = new HostGame(api, settings ? ({ ...session, settings: { ...session.settings, ...settings } } as typeof session) : session, questions);
   const priv = g as unknown as {
     snap: { players: unknown[]; phase: string };
     roster: unknown[];
@@ -96,6 +96,21 @@ describe('HostGame: renomear', () => {
   });
 });
 
+describe('HostGame: votos na pista de água', () => {
+  it('só aceita barcos, o lobby anuncia a categoria e os bots são barcos', async () => {
+    const { g, priv, sent } = await setup({ trackId: 'canal' });
+    priv.snap.phase = 'lobby';
+    expect(g.getSnapshot().team.car).toBe('boat-lancha');
+    priv.onMessage({ event: 'vote', payload: { player_id: 'p1', car: 'car-red' } });
+    expect(g.getSnapshot().voters).toBe(0);
+    priv.onMessage({ event: 'vote', payload: { player_id: 'p1', car: 'boat-mota' } });
+    expect(g.getSnapshot().team.car).toBe('boat-mota');
+    expect((sent as { event: string; payload: { cat?: string } }[]).filter((m) => m.event === 'lobby').every((m) => m.payload.cat === 'barco')).toBe(true);
+    const race = (g as unknown as { race: { cars: { driver: { car?: string; kind: string } }[] } }).race;
+    expect(race.cars.every((c) => c.driver.car?.startsWith('boat-'))).toBe(true);
+  });
+});
+
 describe('HostGame: voto no carro', () => {
   it('conta o voto do vote e do hello; ignora formatos antigos; o lobby não leva o carro', async () => {
     const { g, priv, sent } = await setup();
@@ -112,7 +127,7 @@ describe('HostGame: voto no carro', () => {
     priv.onMessage({ event: 'hello', payload: { player_id: 'p5', car: 'car-inexistente' } });
     expect(g.getSnapshot().voters).toBe(3);
     expect(sent.slice(before).filter((m) => (m as { event: string }).event === 'vote')).toEqual([]);
-    for (const m of sent as { event: string; payload: object }[]) if (m.event === 'lobby') expect(m.payload).toEqual({ count: expect.any(Number), game: 1 });
+    for (const m of sent as { event: string; payload: object }[]) if (m.event === 'lobby') expect(m.payload).toEqual({ count: expect.any(Number), game: 1, cat: 'carro' });
   });
 });
 

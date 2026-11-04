@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { THEMES, themeForTrack, themeKeys } from '../engine/theme';
-import { TRACKS } from '../engine/track';
-import { CARS, DEFAULT_STYLE, MODELS, botCars, carDef, carsOfModel, cleanVote, modelDef, modelShowcase, parseStyle, tally } from './teamStyle';
+import { THEMES, themeForTrack, themeKeys, vehicleForTrack } from '../engine/theme';
+import { TRACKS, trackFor } from '../engine/track';
+import { CARS, DEFAULT_STYLE, MODELS, botCars, carDef, carsOfCat, carsOfModel, cleanVote, defaultCar, modelsOf, modelDef, modelShowcase, parseStyle, tally } from './teamStyle';
 
 describe('teamStyle', () => {
   it('sem votos dá o carro por defeito', () => {
@@ -56,9 +56,45 @@ describe('teamStyle', () => {
   });
 });
 
+describe('barcos (tema água)', () => {
+  it('a pista de água usa barcos e as outras carros', () => {
+    expect(themeForTrack('canal').id).toBe('agua');
+    expect(themeForTrack('canal').suffix).toBe('water');
+    expect(vehicleForTrack('canal')).toBe('barco');
+    for (const id of ['classico', 'triangulo', 'losango', 'tecnico', 'antiga']) expect(vehicleForTrack(id)).toBe('carro');
+    expect(carsOfCat('barco').map((c) => c.key).sort()).toEqual(['boat-dragao', 'boat-lancha', 'boat-mota', 'boat-veleiro']);
+    expect(modelsOf('barco').every((m) => m.colors.length === 1)).toBe(true);
+  });
+  it('o voto é validado contra a categoria', () => {
+    expect(cleanVote({ car: 'boat-mota' }, 'barco')).toEqual({ car: 'boat-mota' });
+    expect(cleanVote({ car: 'car-red' }, 'barco')).toEqual({});
+    expect(cleanVote({ car: 'boat-mota' })).toEqual({});
+    expect(cleanVote({ car: 'boat-mota' }, 'carro')).toEqual({});
+  });
+  it('sem votos fica o barco por defeito; registos antigos com carros dão um barco válido', () => {
+    expect(tally([], 's', 'barco').style.car).toBe(defaultCar('barco'));
+    expect(parseStyle({ car: 'car-red' }, 'barco')).toEqual({ car: 'boat-lancha' });
+    expect(parseStyle({ car: 'boat-veleiro' }, 'barco')).toEqual({ car: 'boat-veleiro' });
+    expect(parseStyle({ car: 'boat-veleiro' })).toEqual(DEFAULT_STYLE);
+  });
+  it('bots na água são todos barcos, mesmo havendo mais bots que barcos', () => {
+    const bots = botCars('boat-lancha', 7, 'barco');
+    expect(bots).toHaveLength(7);
+    expect(bots.every((b) => b.cat === 'barco' && b.key !== 'boat-lancha')).toBe(true);
+    expect(botCars('car-team', 6).every((b) => b.cat === 'carro')).toBe(true);
+  });
+  it('a pista sorteada por sessão nunca é a de água (sessões antigas mantêm a pista)', () => {
+    for (let i = 0; i < 200; i++) expect(trackFor(`s${i}`).id).not.toBe('canal');
+  });
+  it('as chaves de textura do tema água incluem barcos e efeitos', () => {
+    expect(themeKeys(themeForTrack('canal'))).toEqual(expect.arrayContaining(['bg-water', 'track-asphalt-water', 'track-curb-water', 'prop-w-whale', 'boat-lancha', 'fx-wake', 'fx-splash']));
+  });
+});
+
 describe('temas', () => {
   it('cada pista tem um tema fixo e pistas desconhecidas ficam com relva', () => {
     expect(new Set(TRACKS.map((t) => themeForTrack(t.id).id)).size).toBe(THEMES.length);
+    expect(THEMES).toHaveLength(5);
     expect(themeForTrack('antiga').id).toBe('relva');
   });
   it('as chaves de textura seguem o manifest', () => {

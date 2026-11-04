@@ -98,7 +98,7 @@ export interface EndMsg {
 /** Anfitrião → alunos. */
 export type HostEvent =
   /** `game`: nº do jogo da sala. Um número novo (ou superior ao do ecrã final) = a professora abriu outro jogo na mesma sala. */
-  | { event: 'lobby'; payload: { count: number; game?: number } }
+  | { event: 'lobby'; payload: { count: number; game?: number; /** Categoria de veículo da pista (ausente = carro). */ cat?: 'carro' | 'barco' } }
   | { event: 'question'; payload: PublicQuestion }
   | { event: 'reveal'; payload: RevealMsg }
   | { event: 'end'; payload: EndMsg }
