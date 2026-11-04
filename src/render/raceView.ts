@@ -12,6 +12,9 @@ const CAR_LEN = 34;
 /** Zoom da câmara em relação ao "caber 1000 de largura no ecrã". */
 const FOLLOW_ZOOM = 2.2;
 const LOOK_AHEAD = 70;
+/** A câmara afasta-se até aqui para manter os rivais mais próximos à vista; os que não cabem ficam com marcador no bordo. */
+const MIN_FOLLOW_ZOOM = 0.55;
+const FRAME_MARGIN = 80;
 const CURB_STRIPE = 18;
 /** A pista desenha-se aos bocados, só à volta da câmara: a estrada vai "nascendo" à frente do carro. */
 const CHUNK = 1000;
@@ -57,6 +60,10 @@ export class RaceView {
   private miniDots = new Graphics();
   private miniW = 200;
   private miniLabels = new Map<string, Text>();
+  /** Marcadores no bordo do ecrã para os carros que ficaram fora de vista. */
+  private edge = new Container();
+  private edgeDots = new Graphics();
+  private edgeLabels = new Map<string, Text>();
   private theme: Theme;
   private particles = new Particles();
   private lastRender = 0;
@@ -103,6 +110,8 @@ export class RaceView {
     this.cam.y = start.y;
     this.app.stage.addChild(this.mini);
     this.mini.addChild(this.miniDots);
+    this.edge.addChild(this.edgeDots);
+    this.app.stage.addChild(this.edge);
     const fit = () => {
       if (this.destroyed) return;
       // `resizeTo` só reage ao resize da janela; a pista muda de altura quando a pergunta aparece/desaparece.
@@ -530,9 +539,9 @@ export class RaceView {
   private followCamera(race: Race, team: CarState, root: Container, clock: number): void {
     const dt = Math.min(0.1, Math.max(0, clock - this.lastClock));
     this.lastClock = clock;
-    const pose = this.track.poseAt(team.distance);
-    const tx = root.x + Math.cos(pose.angle) * LOOK_AHEAD;
-    const ty = root.y + Math.sin(pose.angle) * LOOK_AHEAD;
+    const lookX = root.x + Math.cos(this.track.poseAt(team.distance).angle) * LOOK_AHEAD;
+    const lookY = root.y + Math.sin(this.track.poseAt(team.distance).angle) * LOOK_AHEAD;
+    const { tx, ty, fit } = this.frame(race, team, root, lookX, lookY);
     const cam = this.cam;
     if (!cam.snapped) {
       cam.x = tx;
@@ -547,10 +556,11 @@ export class RaceView {
     cam.y += (ty - cam.y) * k;
     const spinning = team.spinLeft > 0;
     const boosted = !team.crossed && !spinning && race.bursting;
-    const targetZoom = boosted && team.nitroActive ? 0.84 : boosted && team.lastEffect === 'turbo' ? 0.92 : 1;
+    const targetZoom = Math.min(fit, boosted && team.nitroActive ? 0.84 : boosted && team.lastEffect === 'turbo' ? 0.92 : 1);
     cam.zoom += (targetZoom - cam.zoom) * (1 - Math.exp(-dt * 2.5));
     this.ensureChunks(team.distance);
     this.applyCamera(spinning ? 10 : 0);
+    this.edgeMarkers(race, team);
 
     // Minimapa: um ponto por carro, o da turma maior e por cima.
     const d = this.miniDots;
@@ -575,6 +585,68 @@ export class RaceView {
         t.position.set(x, y - 5);
       }
     }
+  }
+
+  /**
+   * Enquadramento: o carro da turma mais os rivais por ordem de proximidade, enquanto couberem com o zoom mínimo.
+   * Devolve o centro e o zoom que os abrange (1 = sem afastar).
+   */
+  private frame(race: Race, team: CarState, root: Container, lookX: number, lookY: number): { tx: number; ty: number; fit: number } {
+    const s0 = this.baseScale() * FOLLOW_ZOOM;
+    if (!s0 || !this.view.w) return { tx: lookX, ty: lookY, fit: 1 };
+    let x0 = Math.min(root.x, lookX), x1 = Math.max(root.x, lookX);
+    let y0 = Math.min(root.y, lookY), y1 = Math.max(root.y, lookY);
+    const zoomFor = (a: number, b: number, c: number, d: number) => Math.min(this.view.w / (s0 * (b - a + FRAME_MARGIN * 2)), this.view.h / (s0 * (d - c + FRAME_MARGIN * 2)));
+    const others = race.cars.filter((c) => c !== team && !c.crossed).sort((a, b) => Math.abs(a.distance - team.distance) - Math.abs(b.distance - team.distance));
+    for (const c of others) {
+      const r = this.cars.get(c.driver.id)?.root;
+      if (!r) continue;
+      const nx0 = Math.min(x0, r.x), nx1 = Math.max(x1, r.x), ny0 = Math.min(y0, r.y), ny1 = Math.max(y1, r.y);
+      if (zoomFor(nx0, nx1, ny0, ny1) < MIN_FOLLOW_ZOOM) break;
+      x0 = nx0; x1 = nx1; y0 = ny0; y1 = ny1;
+    }
+    return { tx: (x0 + x1) / 2, ty: (y0 + y1) / 2, fit: Math.max(MIN_FOLLOW_ZOOM, Math.min(1, zoomFor(x0, x1, y0, y1))) };
+  }
+
+  /** Um ponto no bordo do ecrã, com a diferença em segundos, para cada carro que está fora de vista. */
+  private edgeMarkers(race: Race, team: CarState): void {
+    const g = this.edgeDots;
+    g.clear();
+    const used = new Set<string>();
+    const w = this.view.w;
+    const h = this.view.h;
+    const m = 26;
+    const k = this.world.scale.x;
+    for (const c of race.cars) {
+      if (c === team || c.crossed) continue;
+      const r = this.cars.get(c.driver.id)?.root;
+      if (!r) continue;
+      const sx = this.world.x + r.x * k;
+      const sy = this.world.y + r.y * k;
+      if (sx >= 0 && sx <= w && sy >= 0 && sy <= h) continue;
+      // Sobre o raio do centro do ecrã até ao carro, para a direção (e não só o canto) se perceber.
+      const cx = w / 2;
+      const cy = h / 2;
+      const dx = sx - cx;
+      const dy = sy - cy;
+      const t = Math.min((cx - m) / Math.abs(dx || 1e-6), (cy - 70) / Math.abs(dy || 1e-6));
+      const ex = cx + dx * t;
+      const ey = cy + dy * t;
+      g.circle(ex, ey, 9).fill(c.driver.kind === 'ghost' ? 0xbfc5cc : c.driver.color || 0x95a5a6).stroke({ width: 2, color: 0xffffff });
+      const gap = (c.distance - team.distance) / race.baseSpeed;
+      let lab = this.edgeLabels.get(c.driver.id);
+      if (!lab) {
+        lab = new Text({ text: '', style: { fontFamily: 'system-ui', fontSize: 12, fontWeight: '800', fill: 0xffffff, stroke: { color: 0x1b1b24, width: 3 } } });
+        lab.anchor.set(0.5, 0);
+        this.edge.addChild(lab);
+        this.edgeLabels.set(c.driver.id, lab);
+      }
+      lab.text = `${gap >= 0 ? '+' : '−'}${Math.abs(gap).toFixed(0)}s`;
+      lab.position.set(ex, ey + 11);
+      lab.visible = true;
+      used.add(c.driver.id);
+    }
+    for (const [id, t] of this.edgeLabels) if (!used.has(id)) t.visible = false;
   }
 
   destroy(): void {
