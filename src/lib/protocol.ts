@@ -93,7 +93,7 @@ export interface EndMsg {
 
 /** Anfitrião → alunos. */
 export type HostEvent =
-  | { event: 'lobby'; payload: { count: number } }
+  | { event: 'lobby'; payload: { count: number; /** Categoria de veículo da pista (ausente = carro). */ cat?: 'carro' | 'barco' } }
   | { event: 'question'; payload: PublicQuestion }
   | { event: 'reveal'; payload: RevealMsg }
   | { event: 'end'; payload: EndMsg }

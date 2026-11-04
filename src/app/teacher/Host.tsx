@@ -145,9 +145,9 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
           <div className="carbox carshow" aria-live="polite">
             <CarPreview car={s.team.car} size={110} />
             <div>
-              <b>🏎️ Carro da turma: {carDef(s.team.car)?.label ?? ''}</b>
+              <b>{carDef(s.team.car)?.cat === 'barco' ? '🚤 Barco' : '🏎️ Carro'} da turma: {carDef(s.team.car)?.label ?? ''}</b>
               <div className="muted" style={{ fontSize: 'clamp(13px,2.2vmin,22px)' }}>
-                {s.tie ? `Empate nos votos: carro sorteado · ${s.voters} votos` : s.voters ? `Mais votado · ${s.voters} voto${s.voters > 1 ? 's' : ''}` : 'Por defeito: os alunos podem votar no telemóvel'}
+                {s.tie ? `Empate nos votos: ${carDef(s.team.car)?.cat === 'barco' ? 'barco' : 'carro'} sorteado · ${s.voters} votos` : s.voters ? `Mais votado · ${s.voters} voto${s.voters > 1 ? 's' : ''}` : 'Por defeito: os alunos podem votar no telemóvel'}
               </div>
             </div>
           </div>

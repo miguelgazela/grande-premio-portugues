@@ -5,6 +5,7 @@ import { Race, raceLengthFor, type Driver } from '../engine/race';
 import { mulberry32 } from '../engine/rng';
 import { pickAwards, scoreRace } from '../engine/scoring';
 import { TRACKS, Road, roadSeed, trackFor } from '../engine/track';
+import { vehicleForTrack } from '../engine/theme';
 import type { Api, Channel } from '../lib/api';
 import { music, play, unlockAudio } from '../lib/audio';
 import { ghostLabel, makeTimeline, type GhostRecord } from '../lib/ghosts';
@@ -14,7 +15,7 @@ import { grade, prepare, solutionOf, toCanonical, type Prepared } from '../lib/q
 import type { AnswerValue, PlayerRow, QuestionRow, ReviewResult, SavedState, SessionRow } from '../lib/types';
 import { MAX_PLAYERS, RateLimiter, answerSizeOk, isId, senderOf } from './guards';
 import { raceConfigFor } from './raceSettings';
-import { DEFAULT_STYLE, TEAM_NAME, botCars, carDef, cleanVote, parseStyle, tally, type StyleVote, type TeamStyle } from './teamStyle';
+import { DEFAULT_STYLE, TEAM_NAME, botCars, carDef, cleanVote, defaultCar, fallbackCar, parseStyle, tally, type Category, type StyleVote, type TeamStyle } from './teamStyle';
 
 export type Phase = 'lobby' | 'countdown' | 'resume' | 'question' | 'reveal' | 'sprint' | 'finishing' | 'finished';
 
@@ -99,6 +100,8 @@ export class HostGame {
   private timeBucket = -1;
   private votes = new Map<string, StyleVote>();
   private style: TeamStyle = DEFAULT_STYLE;
+  /** Categoria de veículo da pista (o tema decide): só ela é votável. */
+  private cat: Category = 'carro';
   private teacherPaused = false;
   private pageHidden = false;
   private perPlayer = new RateLimiter(12, 4);
@@ -114,6 +117,8 @@ export class HostGame {
     const { config, used } = raceConfigFor(questions, session.settings);
     const def = TRACKS.find((t) => t.id === session.settings?.trackId) ?? trackFor(session.id);
     this.trackId = def.id;
+    this.cat = vehicleForTrack(def.id);
+    this.style = { car: defaultCar(this.cat) };
     this.config = config;
     this.track = new Road(roadSeed(session.id), raceLengthFor(config));
     this.questions = questions.slice(0, used);
@@ -123,7 +128,7 @@ export class HostGame {
     this.snap = {
       phase: 'lobby', paused: false, hidden: false, connected: false, players: [], qIndex: 0, total: this.questions.length,
       questionTime: config.questionTime, timeLeft: config.questionTime, count: 3, avatars: session.state?.avatars ?? {}, answered: 0, answeredIds: [], question: null, reveal: null, final: null, review: null, notice: null,
-      team: DEFAULT_STYLE, voters: 0, tie: false,
+      team: this.style, voters: 0, tie: false,
     };
   }
 
@@ -194,9 +199,11 @@ export class HostGame {
     const field = BOT_FIELDS[this.session.settings?.botField ?? 'medio'];
     // Os fantasmas ocupam o lugar dos bots mais fracos: o número de carros não muda.
     const ghosts = this.extras.ghosts.slice(0, 3).map((g) => makeGhost(`ghost-${g.session_id}`, ghostLabel(g), g.outcomes));
+    // Fantasmas na água são barcos (o sprite de recurso dos carros não faz sentido lá).
+    if (this.cat === 'barco') for (const g of ghosts) g.car = fallbackCar(this.cat);
     const bots = field.slice(ghosts.length).map((skill, i) => makeBot(rng, i, skill));
     // Cada bot tem um carro diferente (modelo e cor), nunca da cor da turma.
-    const cars = botCars(this.style.car, bots.length);
+    const cars = botCars(this.style.car, bots.length, this.cat);
     bots.forEach((b, i) => {
       b.car = cars[i]?.key;
       b.color = cars[i]?.color ?? b.color;
@@ -207,7 +214,7 @@ export class HostGame {
   }
 
   private async restore(state: SavedState): Promise<void> {
-    this.style = parseStyle(state.team);
+    this.style = parseStyle(state.team, this.cat);
     this.set({ team: this.style });
     this.outcomes = state.outcomes.slice(0, state.next);
     this.race = this.buildRace();
@@ -269,7 +276,7 @@ export class HostGame {
     this.lastResync = now;
     const m = this.lastMsg;
     if (!m) {
-      this.channel?.send({ event: 'lobby', payload: { count: this.snap.players.length } });
+      this.channel?.send({ event: 'lobby', payload: { count: this.snap.players.length, cat: this.cat } });
       return;
     }
     if (m.event === 'question' && this.current) {
@@ -315,7 +322,7 @@ export class HostGame {
   /** Guarda o voto de um aluno (vem num `vote` ou no `hello`); formatos antigos ou desconhecidos são ignorados. */
   private recordVote(playerId: string, raw: unknown): void {
     if (this.snap.phase !== 'lobby') return;
-    const vote = cleanVote(raw);
+    const vote = cleanVote(raw, this.cat);
     if (!vote.car || this.votes.get(playerId)?.car === vote.car) return;
     if (!this.votes.has(playerId) && this.votes.size >= 300) return;
     this.votes.set(playerId, vote);
@@ -324,10 +331,10 @@ export class HostGame {
 
   /** O carro da turma é o mais votado pelos alunos (o por defeito, sem votos; sorteado, num empate). */
   private updateStyle(): void {
-    const { style, count, tie } = tally(this.votes.values(), this.session.id);
+    const { style, count, tie } = tally(this.votes.values(), this.session.id, this.cat);
     this.style = { car: style.car };
     this.set({ team: this.style, voters: count, tie });
-    this.send({ event: 'lobby', payload: { count: this.snap.players.length } });
+    this.send({ event: 'lobby', payload: { count: this.snap.players.length, cat: this.cat } });
   }
 
   async refreshPlayers(): Promise<void> {
@@ -338,7 +345,7 @@ export class HostGame {
         const changed = active.length !== this.snap.players.length || active.some((p, i) => this.snap.players[i]?.id !== p.id);
         if (changed) {
           this.set({ players: active });
-          this.send({ event: 'lobby', payload: { count: active.length } });
+          this.send({ event: 'lobby', payload: { count: active.length, cat: this.cat } });
         }
       }
     } catch (e) {
@@ -361,7 +368,7 @@ export class HostGame {
     this.dropFromRace(playerId);
     this.set({ players: this.snap.players.filter((p) => p.id !== playerId) });
     if (inLobby) this.updateStyle();
-    else this.send({ event: 'lobby', payload: { count: this.snap.players.length } });
+    else this.send({ event: 'lobby', payload: { count: this.snap.players.length, cat: this.cat } });
   }
 
   async kick(playerId: string): Promise<void> {
@@ -371,7 +378,7 @@ export class HostGame {
       this.votes.delete(playerId);
       this.dropFromRace(playerId);
       this.set({ players: this.snap.players.filter((p) => p.id !== playerId) });
-      this.send({ event: 'lobby', payload: { count: this.snap.players.length } });
+      this.send({ event: 'lobby', payload: { count: this.snap.players.length, cat: this.cat } });
     } catch (e) {
       this.notice(`Não consegui expulsar: ${(e as Error).message}`);
     }

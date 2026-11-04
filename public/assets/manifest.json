@@ -1608,5 +1608,185 @@
       0.5
     ],
     "notes": "Fundo do lobby, tema cidade; mesma composição do menu-title (centro livre). Original 1344x752 ampliado"
+  },
+  "boat-lancha": {
+    "file": "boat-lancha.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Lancha vermelha, vista de cima, proa para +x, sem número"
+  },
+  "boat-mota": {
+    "file": "boat-mota.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Mota de água amarela, vista de cima, proa para +x, sem número"
+  },
+  "boat-veleiro": {
+    "file": "boat-veleiro.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Veleiro turquesa, vista de cima, proa para +x, sem número"
+  },
+  "boat-dragao": {
+    "file": "boat-dragao.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Barco-dragão verde, vista de cima, proa para +x, sem número"
+  },
+  "bg-water": {
+    "file": "bg-water.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile 512 opaco, mar aberto"
+  },
+  "track-asphalt-water": {
+    "file": "track-asphalt-water.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile 512 opaco, água do canal, mais clara"
+  },
+  "track-curb-water": {
+    "file": "track-curb-water.png",
+    "w": 512,
+    "h": 57,
+    "anchor": [
+      0,
+      0.5
+    ],
+    "notes": "Fila horizontal de boias laranja/brancas, 512 de largura"
+  },
+  "prop-w-island": {
+    "file": "prop-w-island.png",
+    "w": 227,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Ilha com palmeira, vista de cima"
+  },
+  "prop-w-lighthouse": {
+    "file": "prop-w-lighthouse.png",
+    "w": 246,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Farol num ilhéu, vista de cima"
+  },
+  "prop-w-dolphin": {
+    "file": "prop-w-dolphin.png",
+    "w": 256,
+    "h": 147,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Golfinho (cabeça para +x), vista de cima"
+  },
+  "prop-w-whale": {
+    "file": "prop-w-whale.png",
+    "w": 256,
+    "h": 204,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Baleia com jato (cabeça para +x), vista de cima"
+  },
+  "prop-w-turtle": {
+    "file": "prop-w-turtle.png",
+    "w": 256,
+    "h": 238,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Tartaruga (cabeça para +x), vista de cima"
+  },
+  "prop-w-dock": {
+    "file": "prop-w-dock.png",
+    "w": 254,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Pontão com barco a remos, vista de cima"
+  },
+  "prop-w-rocks": {
+    "file": "prop-w-rocks.png",
+    "w": 236,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Rochas com gaivotas, vista de cima"
+  },
+  "prop-w-cargo": {
+    "file": "prop-w-cargo.png",
+    "w": 256,
+    "h": 93,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Cargueiro de contentores (proa para +x), vista de cima"
+  },
+  "fx-wake": {
+    "file": "fx-wake.png",
+    "w": 256,
+    "h": 122,
+    "anchor": [
+      1,
+      0.5
+    ],
+    "notes": "Esteira de espuma do barco; aponta para -x, anchor [1,0.5] na popa"
+  },
+  "fx-splash": {
+    "file": "fx-splash.png",
+    "w": 256,
+    "h": 129,
+    "anchor": [
+      1,
+      0.5
+    ],
+    "notes": "Jato de água do turbo/nitro; aponta para -x, anchor [1,0.5] na popa"
+  },
+  "menu-title-water": {
+    "file": "menu-title-water.jpg",
+    "w": 1920,
+    "h": 1086,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Fundo do lobby, tema água (porto); mesma composição do menu-title. Original 1344x752 ampliado"
   }
 }
