@@ -66,7 +66,21 @@ h1, h2, h3 { margin: 0 0 .5em; }
 .opt.T { background: var(--optT); } .opt.F { background: var(--optF); }
 .opt.dim { opacity: .28; }
 .opt.right { outline: 5px solid #fff; transform: scale(1.02); }
-.meta { display: flex; justify-content: space-between; color: var(--muted); font-size: clamp(14px, 2.2vmin, 24px); min-height: 1.4em; }
+.meta { display: flex; align-items: center; justify-content: space-between; gap: 1.6vmin; color: var(--muted); font-size: clamp(14px, 2.2vmin, 24px); height: 1.4em; }
+.meta .expl { flex: 1; min-width: 0; }
+.meta .tally { flex: none; font-variant-numeric: tabular-nums; white-space: nowrap; display: inline-flex; gap: .5em; }
+.meta .tally b { color: var(--text); font-weight: 800; }
+.meta .tally .low { color: var(--red); font-weight: 800; }
+.answers { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; }
+.answers-grid { display: grid; gap: 3px; }
+.ans { display: grid; place-items: center; border-radius: 50%; overflow: visible; filter: grayscale(1); opacity: .35; transition: filter .3s, opacity .3s; }
+.ans .ans-img, .ans i { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: var(--panel2); font: 800 .8em/1 inherit; display: grid; place-items: center; font-style: normal; color: #fff; }
+.ans.on { filter: none; opacity: 1; animation: ans-pop .35s cubic-bezier(.3, 1.6, .5, 1); }
+.ans.right { box-shadow: 0 0 0 var(--ring, 2px) var(--green); }
+.ans.part { box-shadow: 0 0 0 var(--ring, 2px) var(--gold); }
+.ans.wrong { box-shadow: 0 0 0 var(--ring, 2px) var(--red); }
+@keyframes ans-pop { 0% { transform: scale(.6); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .ans.on { animation: none; } .ans { transition: none; } }
 .ctl { position: absolute; right: 10px; top: 10px; display: flex; gap: 8px; opacity: .55; z-index: 5; }
 .ctl button { padding: 8px 14px; font-size: 1.1rem; background: #0006; }
 .overlay { position: absolute; inset: 0; background: #000b; display: grid; place-items: center; z-index: 10; text-align: center; padding: 20px; }
@@ -323,7 +337,7 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
 
 .carpick { display: grid; justify-items: center; gap: 4px; min-height: 96px; padding: 10px 6px; background: #0004; border: 3px solid transparent; border-radius: 14px; }
 .carpick small { font-size: 13px; }
-.carpick.on { border-color: var(--gold); background: #ffffff22; box-shadow: 0 0 0 2px var(--gold); }
+.carpick.on { border-color: var(--gold); background: #ffffff22; box-shadow: 0 0 0 var(--ring, 2px) var(--gold); }
 
 /* Escolha de avatar (ecrã de entrada do aluno): avatar atual + folha com categorias */
 .nick-row { display: flex; align-items: center; gap: 12px; }

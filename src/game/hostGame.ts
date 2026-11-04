@@ -33,6 +33,8 @@ export interface HostSnapshot {
   count: number;
   avatars: Record<string, string>;
   answered: number;
+  /** Ids de quem já respondeu à pergunta atual (para a fila de avatares do anfitrião). */
+  answeredIds: string[];
   question: { prompt: string; body: PublicBody } | null;
   reveal: RevealMsg | null;
   final: EndMsg | null;
@@ -120,7 +122,7 @@ export class HostGame {
     if (import.meta.env.DEV) (window as unknown as { __game?: HostGame }).__game = this; // só para depurar no browser
     this.snap = {
       phase: 'lobby', paused: false, hidden: false, connected: false, players: [], qIndex: 0, total: this.questions.length,
-      questionTime: config.questionTime, timeLeft: config.questionTime, count: 3, avatars: session.state?.avatars ?? {}, answered: 0, question: null, reveal: null, final: null, review: null, notice: null,
+      questionTime: config.questionTime, timeLeft: config.questionTime, count: 3, avatars: session.state?.avatars ?? {}, answered: 0, answeredIds: [], question: null, reveal: null, final: null, review: null, notice: null,
       team: DEFAULT_STYLE, voters: 0, tie: false,
     };
   }
@@ -378,7 +380,7 @@ export class HostGame {
   /** Expulso ou saído: deixa de contar nas respostas e nos resultados. */
   private dropFromRace(playerId: string) {
     this.roster = this.roster.filter((p) => p.id !== playerId);
-    if (this.answers.delete(playerId)) this.set({ answered: this.answers.size });
+    if (this.answers.delete(playerId)) this.set({ answered: this.answers.size, answeredIds: [...this.answers.keys()] });
   }
 
   /** A professora muda a alcunha (só no lobby). O servidor aplica o filtro e a unicidade. */
@@ -473,7 +475,7 @@ export class HostGame {
     const payload: PublicQuestion = { question_id: q.id, index, total: this.questions.length, prompt: q.prompt, body: prep.body, time: this.config.questionTime };
     this.send({ event: 'question', payload });
     this.set({
-      phase: 'question', qIndex: index, question: { prompt: q.prompt, body: prep.body }, reveal: null, answered: 0, timeLeft: this.config.questionTime,
+      phase: 'question', qIndex: index, question: { prompt: q.prompt, body: prep.body }, reveal: null, answered: 0, answeredIds: [], timeLeft: this.config.questionTime,
     });
   }
 
@@ -486,7 +488,7 @@ export class HostGame {
     const value = toCanonical(cur.q, cur.prep, raw);
     if (value === null) return;
     this.answers.set(playerId, { value, credit: grade(cur.q, value), ms: Math.round(this.qElapsed * 1000) });
-    this.set({ answered: this.answers.size });
+    this.set({ answered: this.answers.size, answeredIds: [...this.answers.keys()] });
   }
 
   /** Professora encerra a pergunta antes do tempo (ou passa a revelação). */
@@ -531,7 +533,7 @@ export class HostGame {
     this.send({ event: 'reveal', payload: reveal });
     play(res.nitro ? 'nitro' : res.effect);
     this.revealT = 0;
-    this.set({ phase: 'reveal', reveal, answered: this.answers.size });
+    this.set({ phase: 'reveal', reveal, answered: this.answers.size, answeredIds: [...this.answers.keys()] });
     void this.api
       .updateSession(this.session.id, { state: this.savedState(q + 1) })
       .catch((e) => this.notice(`Estado por gravar: ${(e as Error).message}`));

@@ -16,6 +16,7 @@ import { isMuted, play, setMuted } from '../../lib/audio';
 import { assetUrl } from '../../render/assets';
 import { themeForTrack } from '../../engine/theme';
 import { Asset, Countdown, Flames, Place } from '../ui/Asset';
+import { fitAvatars } from '../../lib/avatarRow';
 import { carDef } from '../../game/teamStyle';
 import { CarPreview } from '../ui/TeamPicker';
 import { HostBody } from '../ui/Question';
@@ -282,8 +283,16 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
           </div>
           <HostBody body={panel.body} solution={showReveal ? s.reveal!.solution : undefined} />
           <div className="meta">
-            <span>{inQuestion ? `${s.answered}/${s.players.length} responderam · ${Math.ceil(s.timeLeft)}s` : ''}</span>
-            <span>{showReveal ? s.reveal!.explanation ?? '' : ''}</span>
+            {showReveal && s.reveal!.explanation ? (
+              <span className="expl">{s.reveal!.explanation}</span>
+            ) : (
+              <AnswerRow s={s} reveal={showReveal ? s.reveal : null} />
+            )}
+            {inQuestion && (
+              <span className="tally">
+                <b>{s.answered}/{s.players.length}</b> <span className={low ? 'low' : ''}>{Math.ceil(s.timeLeft)}s</span>
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -428,5 +437,37 @@ function ReviewSummary({ game }: { game: HostGame }) {
         </div>
       )}
     </>
+  );
+}
+
+/** Fila de avatares: cinzento até responder, a cores depois; na revelação, anel verde (certo) ou vermelho (errado). */
+function AnswerRow({ s, reveal }: { s: HostSnapshot; reveal: HostSnapshot['reveal'] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setBox({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const done = new Set(s.answeredIds);
+  const fit = fitAvatars(s.players.length, box.w, box.h);
+  return (
+    <div ref={ref} className="answers" role="list" aria-label="Quem já respondeu">
+      <div className="answers-grid" style={{ gridTemplateColumns: `repeat(${fit.cols || 1}, ${fit.size}px)`, gridAutoRows: `${fit.size}px`, '--ring': fit.size < 16 ? '1px' : '2px' } as React.CSSProperties}>
+        {s.players.map((p) => {
+          const has = done.has(p.id);
+          const verdict = reveal && has ? (reveal.results[p.id] ? 'right' : (reveal.partial?.[p.id] ?? 0) > 0 ? 'part' : 'wrong') : '';
+          return (
+            <span key={p.id} role="listitem" className={`ans ${has ? 'on' : ''} ${verdict}`} title={`${p.nickname}${has ? '' : ' (ainda não respondeu)'}`}>
+              {s.avatars[p.id] ? <Asset name={s.avatars[p.id]} alt={p.nickname} className="ans-img" fallback={<i>{p.nickname.slice(0, 1)}</i>} /> : <i>{p.nickname.slice(0, 1).toUpperCase()}</i>}
+            </span>
+          );
+        })}
+      </div>
+    </div>
   );
 }
