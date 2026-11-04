@@ -503,3 +503,6 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
 .avatar-change { font-size: 1rem; }
 .join-card button.big { min-height: 72px; }
 @media (prefers-reduced-motion: reduce) { .wait-dots i { animation: none; opacity: 1; } }
+/* Contagem inicial: o painel já tem a cor e o espaço finais; o conteúdo da 1.ª pergunta aparece desfocado. */
+.host .qpanel.preview > * { filter: blur(14px); opacity: .55; pointer-events: none; user-select: none; }
+.host .qpanel { transition: none; }

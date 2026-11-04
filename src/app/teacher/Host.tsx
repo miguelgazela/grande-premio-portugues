@@ -275,7 +275,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
       </div>
 
       {panel && (
-        <div className="qpanel" style={s.question ? undefined : { visibility: 'hidden' }} aria-hidden={s.question ? undefined : true}>
+        <div className={`qpanel ${s.question ? '' : 'preview'}`} aria-hidden={s.question ? undefined : true}>
           <div className="prompt">{panel.prompt}</div>
           <div className={`timer ${low && inQuestion ? 'low' : ''}`}>
             <i style={{ width: `${inQuestion ? (s.timeLeft / s.questionTime) * 100 : showReveal ? 0 : 100}%` }} />
