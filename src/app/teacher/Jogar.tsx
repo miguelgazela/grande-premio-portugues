@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { VersionTag } from '../ui/VersionTag';
 import { useNavigate } from 'react-router-dom';
 import type { BotField } from '../../engine/drivers';
+import { themeForTrack } from '../../engine/theme';
+import { TRACKS } from '../../engine/track';
 import { MAX_LAPS, maxQuestionsPerLap, raceConfigFor } from '../../game/raceSettings';
 import { errorMessage } from '../../lib/api';
 import { endSessions } from '../../lib/endSessions';
@@ -20,11 +22,16 @@ const TIMES: { value: number; label: string }[] = [
   { value: 30, label: '30 s' },
   { value: 45, label: '45 s' },
 ];
+/** Pista por tema (relva, deserto, neve, cidade); '' = sorteada pela sessão. */
+const TRACK_CHOICES: { id: string; label: string }[] = [
+  { id: '', label: 'Aleatória' },
+  ...TRACKS.map((t) => ({ id: t.id, label: themeForTrack(t.id).name })),
+];
 const RECENT = 3;
 const LAST_KEY = 'gpp.lastGame';
 
 /** Última escolha da professora, guardada neste iPad. */
-interface LastGame { quizId: string; classId: string; field: BotField; laps: number; time: number }
+interface LastGame { quizId: string; classId: string; field: BotField; laps: number; time: number; track: string }
 
 function readLast(): LastGame | null {
   try {
@@ -36,6 +43,7 @@ function readLast(): LastGame | null {
       field: FIELDS.some((f) => f.key === v.field) ? (v.field as BotField) : 'medio',
       laps: typeof v.laps === 'number' && v.laps >= 1 ? v.laps : 3,
       time: typeof v.time === 'number' ? v.time : 0,
+      track: typeof v.track === 'string' && TRACKS.some((t) => t.id === v.track) ? v.track : '',
     };
   } catch {
     return null;
@@ -62,6 +70,7 @@ export function Jogar() {
   const [field, setField] = useState<BotField>('medio');
   const [laps, setLaps] = useState(3);
   const [time, setTime] = useState(0); // 0 = o do quiz
+  const [track, setTrack] = useState('');
   const [showAll, setShowAll] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [questions, setQuestions] = useState<QuestionRow[]>([]);
@@ -88,6 +97,7 @@ export function Jogar() {
           setField(usable.field);
           setLaps(usable.laps);
           setTime(usable.time);
+          setTrack(usable.track);
         }
         if (first) setQuizId(first.id);
       } catch (e) {
@@ -145,6 +155,7 @@ export function Jogar() {
     setError('');
     try {
       const settings: SessionSettings = { botField: game.field, laps: Math.min(game.laps, Math.max(1, Math.min(MAX_LAPS, target.questionCount))), questionsPerLap: null, questionTime: game.time || null };
+      if (game.track && !ghosts.length) settings.trackId = game.track;
       if (ghosts.length) {
         settings.trackId = ghosts[0].trackId;
         settings.ghosts = ghosts.map((g) => ({ sessionId: g.session_id, name: ghostLabel(g) }));
@@ -234,7 +245,7 @@ export function Jogar() {
           <details className="more">
             <summary>
               <span>Ajustar corrida</span>
-              <span className="sum">Bots {botLabel(field).toLowerCase()} · {effLaps} voltas{time ? ` · ${timeLabel(time)}` : ''}{validPicked.length ? ` · ${validPicked.length} 👻` : ''}</span>
+              <span className="sum">Bots {botLabel(field).toLowerCase()} · {effLaps} voltas{time ? ` · ${timeLabel(time)}` : ''}{track && !validPicked.length ? ` · ${TRACK_CHOICES.find((t) => t.id === track)?.label}` : ''}{validPicked.length ? ` · ${validPicked.length} 👻` : ''}</span>
             </summary>
             <div className="adv">
               <div className="field">
@@ -262,6 +273,15 @@ export function Jogar() {
                   ))}
                 </div>
               </div>
+              <div className="field">
+                <b>Pista</b>
+                <div className="seg" role="radiogroup" aria-label="Tema da pista">
+                  {TRACK_CHOICES.map((t) => (
+                    <button key={t.id || 'rnd'} role="radio" aria-checked={track === t.id} disabled={validPicked.length > 0} className={track === t.id ? 'on' : ''} onClick={() => change(() => setTrack(t.id))}>{t.label}</button>
+                  ))}
+                </div>
+                {validPicked.length > 0 && <span className="muted">Com fantasmas, a pista é a deles.</span>}
+              </div>
               {compat.length > 0 && (
                 <div className="field">
                   <b>Fantasmas de outras turmas</b>
@@ -288,7 +308,7 @@ export function Jogar() {
       <VersionTag />
       {showBar && (
         <div className="actionbar">
-          <button className="primary big" disabled={!quiz || busy || n < 1} onClick={() => quiz && void open(quiz, { quizId: quiz.id, classId, field, laps: effLaps, time }, chosen)}>
+          <button className="primary big" disabled={!quiz || busy || n < 1} onClick={() => quiz && void open(quiz, { quizId: quiz.id, classId, field, laps: effLaps, time, track }, chosen)}>
             {busy ? 'A abrir…' : '🏁 Abrir sala'}
           </button>
         </div>
