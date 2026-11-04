@@ -53,10 +53,6 @@ export class RaceView {
   private cam = { x: 0, y: 0, zoom: 1, snapped: false };
   private lastClock = 0;
   private lastTeamDist = 0;
-  private mini = new Container();
-  private miniDots = new Graphics();
-  private miniW = 200;
-  private miniLabels = new Map<string, Text>();
   private theme: Theme;
   private particles = new Particles();
   private lastRender = 0;
@@ -99,14 +95,11 @@ export class RaceView {
     const start = this.track.poseAt(0);
     this.cam.x = start.x + LOOK_AHEAD;
     this.cam.y = start.y;
-    this.app.stage.addChild(this.mini);
-    this.mini.addChild(this.miniDots);
     const fit = () => {
       if (this.destroyed) return;
       // `resizeTo` só reage ao resize da janela; a pista muda de altura quando a pergunta aparece/desaparece.
       if (el.clientWidth && el.clientHeight) this.app.renderer.resize(el.clientWidth, el.clientHeight);
       this.view = { w: el.clientWidth, h: el.clientHeight };
-      this.layoutMinimap();
       this.applyCamera(0);
     };
     new ResizeObserver(fit).observe(el);
@@ -137,20 +130,6 @@ export class RaceView {
       this.bg.position.set(x, y);
       this.bg.tilePosition.set(-x, -y);
     }
-  }
-
-  /** Barra de progresso: um ponto por carro ao longo da corrida (a pista é longa demais para um mapa). */
-  private layoutMinimap(): void {
-    const w = Math.max(220, Math.min(420, this.view.w * 0.34));
-    this.miniW = w;
-    this.mini.position.set(this.view.w - w - 18, this.view.h - 26);
-    const bg = new Graphics();
-    bg.roundRect(-10, -14, w + 20, 28, 12).fill({ color: 0x14141c, alpha: 0.55 });
-    bg.moveTo(0, 0).lineTo(w, 0).stroke({ width: 4, color: 0xffffff, alpha: 0.85, cap: 'round' });
-    bg.rect(w - 3, -9, 6, 18).fill(0xffd23f);
-    const labels = new Set<unknown>(this.miniLabels.values());
-    this.mini.children.filter((c) => c !== this.miniDots && !labels.has(c)).forEach((c) => c.destroy());
-    this.mini.addChildAt(bg, 0);
   }
 
   private t(key: string): Texture | undefined {
@@ -541,30 +520,6 @@ export class RaceView {
     cam.zoom += (targetZoom - cam.zoom) * (1 - Math.exp(-dt * 2.5));
     this.ensureChunks(team.distance);
     this.applyCamera(spinning ? 10 : 0);
-
-    // Minimapa: um ponto por carro, o da turma maior e por cima.
-    const d = this.miniDots;
-    d.clear();
-    const order = [...race.cars].sort((a, b) => Number(a === team) - Number(b === team));
-    for (const c of order) {
-      const node = this.cars.get(c.driver.id);
-      if (!node) continue;
-      const isTeam = c === team;
-      const x = Math.min(1, Math.max(0, c.distance / this.raceLength)) * this.miniW;
-      const y = isTeam ? 0 : ((c.driver.kind === 'ghost' ? 1 : -1) * 7 * ((this.cars.size + order.indexOf(c)) % 2 ? 1 : -1));
-      d.circle(x, y, isTeam ? 6 : 3.5).fill(c.driver.kind === 'ghost' ? 0xbfc5cc : c.driver.color || 0x95a5a6);
-      if (isTeam) d.circle(x, y, 6).stroke({ width: 2, color: 0xffffff });
-      if (c.driver.kind === 'ghost') {
-        let t = this.miniLabels.get(c.driver.id);
-        if (!t) {
-          t = new Text({ text: c.driver.name, style: { fontFamily: 'system-ui', fontSize: 10, fontWeight: '800', fill: 0xffffff, stroke: { color: 0x1b1b24, width: 3 } } });
-          t.anchor.set(0.5, 1);
-          this.mini.addChild(t);
-          this.miniLabels.set(c.driver.id, t);
-        }
-        t.position.set(x, y - 5);
-      }
-    }
   }
 
   destroy(): void {
@@ -591,7 +546,5 @@ export class RaceView {
     this.carLayer.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.cars.clear();
     this.particles.clear();
-    this.miniLabels.forEach((t) => t.destroy());
-    this.miniLabels.clear();
   }
 }
