@@ -184,7 +184,7 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
 function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [rank, setRank] = useState(0);
-  const [pop, setPop] = useState(0);
+  const [pop, setPop] = useState({ n: 0, gained: 0 });
   const [muted, setMutedState] = useState(isMuted());
   const [exiting, setExiting] = useState(false);
   const [stageError, setStageError] = useState<string | null>(null);
@@ -198,7 +198,9 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
     let mounted = false;
     let gone = false;
     let lastRank = 0;
-    let lastPop = -10;
+    // Subidas seguidas contam como um só aviso: espera que o lugar estabilize e diz quantos lugares se ganharam no total.
+    let baseRank = 0;
+    let changedAt = 0;
     view.mount(stageRef.current!).then(
       () => {
         if (gone) view.destroy();
@@ -214,17 +216,25 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
       if (!mounted) return;
       view.render(game.race, clock);
       const r = game.race.rankOf(game.race.team!);
+      const ph = game.getSnapshot().phase;
+      const racing = ['question', 'reveal', 'sprint'].includes(ph);
       if (r !== lastRank) {
-        const ph = game.getSnapshot().phase;
-        // Só conta como ultrapassagem a corrida a sério (não a grelha de partida) e com intervalo entre avisos.
-        if (lastRank && r < lastRank && ['question', 'reveal', 'sprint'].includes(ph) && clock - lastPop > 2) {
-          lastPop = clock;
-          setPop((n) => n + 1);
-          play('overtake');
-          view.cheer();
+        // Só conta a corrida a sério (não a grelha de partida).
+        if (lastRank && racing) {
+          if (!baseRank) baseRank = lastRank;
+          changedAt = clock;
         }
         lastRank = r;
         setRank(r);
+      }
+      if (baseRank && clock - changedAt > 1) {
+        const gained = baseRank - lastRank;
+        baseRank = 0;
+        if (gained > 0) {
+          setPop((p) => ({ n: p.n + 1, gained }));
+          play('overtake');
+          view.cheer();
+        }
       }
     });
     return () => {
@@ -269,9 +279,9 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
             {s.reveal!.nitro ? 'NITRO!' : EFFECT_TEXT[s.reveal!.effect]} <small style={{ fontSize: '.5em' }}>{Math.round(s.reveal!.accuracy * 100)}% certas</small>
           </div>
         )}
-        {pop > 0 && (
-          <div key={pop} className="overtake" style={{ backgroundImage: `url(${assetUrl('ui-banner.png')})` }}>
-            <Asset name="ui-star" className="star" fallback="⭐" /> +1 POSIÇÃO!
+        {pop.n > 0 && (
+          <div key={pop.n} className="overtake" style={{ backgroundImage: `url(${assetUrl('ui-banner.png')})` }}>
+            <Asset name="ui-star" className="star" fallback="⭐" /> {pop.gained === 1 ? 'Ganhaste 1 posição!' : `Ganhaste ${pop.gained} posições!`}
           </div>
         )}
         {s.phase === 'finishing' && <div className="banner turbo">🏁 META!</div>}
