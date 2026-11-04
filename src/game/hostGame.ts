@@ -1,4 +1,4 @@
-import type { RaceConfig } from '../engine/config';
+import { inFinalStretch, type RaceConfig } from '../engine/config';
 import { BOT_FIELDS, makeBot, makeGhost } from '../engine/drivers';
 import { outcomeFromAnswers, type PlayerAnswer, type QuestionOutcome } from '../engine/outcome';
 import { Race, raceLengthFor, type Driver } from '../engine/race';
@@ -27,7 +27,6 @@ export interface HostSnapshot {
   players: PlayerRow[];
   qIndex: number;
   total: number;
-  laps: number;
   questionTime: number;
   timeLeft: number;
   /** 3, 2, 1, 0 (VAI!) durante a contagem inicial. */
@@ -117,7 +116,7 @@ export class HostGame {
     this.race = this.buildRace();
     if (import.meta.env.DEV) (window as unknown as { __game?: HostGame }).__game = this; // só para depurar no browser
     this.snap = {
-      phase: 'lobby', paused: false, hidden: false, connected: false, players: [], qIndex: 0, total: this.questions.length, laps: config.laps,
+      phase: 'lobby', paused: false, hidden: false, connected: false, players: [], qIndex: 0, total: this.questions.length,
       questionTime: config.questionTime, timeLeft: config.questionTime, count: 3, avatars: session.state?.avatars ?? {}, answered: 0, question: null, reveal: null, final: null, review: null, notice: null,
       team: DEFAULT_STYLE, voters: 0, tie: false,
     };
@@ -417,7 +416,7 @@ export class HostGame {
 
   private startQuestion(index: number) {
     const q = this.questions[index];
-    music.setFinalLap(Math.floor(index / this.config.questionsPerLap) + 1 >= this.config.laps);
+    music.setFinalLap(inFinalStretch(this.config, index));
     const prep = prepare(q, this.seed);
     this.current = { index, q, prep };
     this.answers = new Map();

@@ -84,21 +84,6 @@ export function selectFailed(stats: FailureStat[], threshold: number, count: num
     .map((s) => s.id);
 }
 
-/** Voltas que aproveitam mais perguntas (3, 2 ou 1; o motor deixa de fora o resto da divisão). */
-export function reviewLaps(n: number): number {
-  let best = 1;
-  let bestUsed = 0;
-  for (const laps of [3, 2, 1]) {
-    if (laps > n) continue;
-    const used = laps * Math.floor(n / laps);
-    if (used > bestUsed) {
-      best = laps;
-      bestUsed = used;
-    }
-  }
-  return best;
-}
-
 export const reviewTitle = (className: string | null, n: number) => `Revisão · ${className ?? 'sem turma'} · ${n} pergunta${n === 1 ? '' : 's'}`;
 
 export function buildReviewSettings(

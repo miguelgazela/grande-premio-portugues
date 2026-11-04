@@ -1,5 +1,5 @@
 import { clamp } from './rng';
-import { cycleTime, totalQuestions, type RaceConfig } from './config';
+import { cycleTime, inFinalStretch, totalQuestions, type RaceConfig } from './config';
 import type { QuestionOutcome } from './outcome';
 
 const MAX_STEP = 0.25;
@@ -69,7 +69,7 @@ export function effectFor(c: RaceConfig, accuracy: number): Effect {
  * `streak` é o número de turbos seguidos *incluindo* esta pergunta; devolve também se o nitro disparou.
  */
 export function questionMult(c: RaceConfig, q: number, accuracy: number, speedBonus: number, streak: number): { mult: number; nitro: boolean } {
-  const finalLap = q >= (c.laps - 1) * c.questionsPerLap;
+  const finalLap = inFinalStretch(c, q);
   let f = baseFactor(c, accuracy);
   if (effectFor(c, accuracy) === 'spin') f *= c.spinPenaltyMult;
   f *= 1 + c.speedBonusMax * speedBonus;
@@ -124,7 +124,7 @@ export class Race {
   manual = false;
   /** Instante (tempo da corrida) da última resolução; o efeito dura `overheadTime` a partir daí. */
   private lastResolve = Number.NEGATIVE_INFINITY;
-  /** Só para a rubber-band dos bots (diferença em "voltas"). */
+  /** Só para a rubber-band dos bots (diferença em terços da corrida). */
   private readonly lapLength: number;
   readonly baseSpeed: number;
   readonly questionCount: number;
@@ -140,7 +140,7 @@ export class Race {
     this.cycle = cycleTime(config);
     this.maxLength = raceLengthFor(config);
     this.baseSpeed = config.cruiseSpeed;
-    this.lapLength = this.maxLength / config.laps;
+    this.lapLength = this.maxLength / 3;
     this.cars = drivers.map((driver) => ({
       driver,
       distance: 0,
@@ -298,7 +298,7 @@ export class Race {
 
   private resolveQuestion(q: number): void {
     const c = this.config;
-    const finalLap = q >= (c.laps - 1) * c.questionsPerLap;
+    const finalLap = inFinalStretch(c, q);
     const team = this.team;
     const teamRankBefore = team ? this.rankOf(team) : 0;
     const results: QuestionResult[] = [];

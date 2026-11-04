@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  buildReviewSettings, compareReview, improved, lastSessions, questionStats, repeatSettings, reviewLaps, reviewTitle, selectFailed, stillFailing,
+  buildReviewSettings, compareReview, improved, lastSessions, questionStats, repeatSettings, reviewTitle, selectFailed, stillFailing,
   type FailureStat,
 } from './review';
 import type { AnswerRow, ReviewQuestion, ReviewSession } from './types';
@@ -89,16 +89,6 @@ describe('selectFailed', () => {
     const stats = [st('a', 0.7), st('b', 0.5)];
     expect(selectFailed(stats, 0.8, 12)).toEqual(['b', 'a']);
     expect(selectFailed(stats, 0.4, 12)).toEqual([]);
-  });
-});
-
-describe('reviewLaps', () => {
-  it('aproveita todas as perguntas que puder', () => {
-    expect(reviewLaps(12)).toBe(3);
-    expect(reviewLaps(14)).toBe(2);
-    expect(reviewLaps(13)).toBe(1); // 3×4 e 2×6 deixariam uma pergunta de fora
-    expect(reviewLaps(2)).toBe(2);
-    expect(reviewLaps(1)).toBe(1);
   });
 });
 

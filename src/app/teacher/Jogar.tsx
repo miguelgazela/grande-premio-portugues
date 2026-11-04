@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { BotField } from '../../engine/drivers';
-import { MAX_LAPS, maxQuestionsPerLap, raceConfigFor } from '../../game/raceSettings';
+import { raceConfigFor } from '../../game/raceSettings';
 import { errorMessage } from '../../lib/api';
 import { endSessions } from '../../lib/endSessions';
 import { bestPerClass, compatibleRecords, fmtTime, ghostLabel, sameTrackAs, trackRecord, type GhostRecord } from '../../lib/ghosts';
@@ -23,7 +23,7 @@ const RECENT = 3;
 const LAST_KEY = 'gpp.lastGame';
 
 /** Última escolha da professora, guardada neste iPad. */
-interface LastGame { quizId: string; classId: string; field: BotField; laps: number; time: number }
+interface LastGame { quizId: string; classId: string; field: BotField; time: number }
 
 function readLast(): LastGame | null {
   try {
@@ -33,7 +33,6 @@ function readLast(): LastGame | null {
       quizId: v.quizId,
       classId: typeof v.classId === 'string' ? v.classId : '',
       field: FIELDS.some((f) => f.key === v.field) ? (v.field as BotField) : 'medio',
-      laps: typeof v.laps === 'number' && v.laps >= 1 ? v.laps : 3,
       time: typeof v.time === 'number' ? v.time : 0,
     };
   } catch {
@@ -72,7 +71,6 @@ export function Jogar() {
   const [quizId, setQuizId] = useState('');
   const [classId, setClassId] = useState('');
   const [field, setField] = useState<BotField>('medio');
-  const [laps, setLaps] = useState(3);
   const [time, setTime] = useState(0); // 0 = o do quiz
   const [showAll, setShowAll] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -99,7 +97,6 @@ export function Jogar() {
           setLast({ ...usable, classId: c.some((x) => x.id === usable.classId) ? usable.classId : '' });
           setClassId(c.some((x) => x.id === usable.classId) ? usable.classId : '');
           setField(usable.field);
-          setLaps(usable.laps);
           setTime(usable.time);
         }
         if (first) setQuizId(first.id);
@@ -112,9 +109,6 @@ export function Jogar() {
 
   const quiz = quizzes?.find((q) => q.id === quizId);
   const n = quiz?.questionCount ?? 0;
-  const maxLaps = Math.max(1, Math.min(MAX_LAPS, n));
-  const effLaps = Math.min(laps, maxLaps);
-  const perLapAll = maxQuestionsPerLap(n, effLaps);
 
   // Corridas anteriores do quiz escolhido (para fantasmas e recorde).
   useEffect(() => {
@@ -136,7 +130,7 @@ export function Jogar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [api, quizId, quizzes]);
 
-  const shape = raceConfigFor(questions, { botField: field, laps: effLaps, questionsPerLap: null, questionTime: time || null }).config;
+  const shape = raceConfigFor(questions, { botField: field, questionTime: time || null }).config;
   const compat = compatibleRecords(records, shape);
   const chosen = picked.flatMap((id) => compat.filter((g) => g.session_id === id));
   const shown = sameTrackAs(compat, chosen);
@@ -157,7 +151,7 @@ export function Jogar() {
     setBusy(true);
     setError('');
     try {
-      const settings: SessionSettings = { botField: game.field, laps: Math.min(game.laps, Math.max(1, Math.min(MAX_LAPS, target.questionCount))), questionsPerLap: null, questionTime: game.time || null };
+      const settings: SessionSettings = { botField: game.field, questionTime: game.time || null };
       if (ghosts.length) {
         settings.trackId = ghosts[0].trackId;
         settings.ghosts = ghosts.map((g) => ({ sessionId: g.session_id, name: ghostLabel(g) }));
@@ -199,7 +193,6 @@ export function Jogar() {
             <div className="hero-what">{lastQuiz.title}{lastClass ? ` · ${lastClass.name}` : ''}</div>
             <div className="tags">
               <span className="tag">Bots {botLabel(last.field).toLowerCase()}</span>
-              <span className="tag">{Math.min(last.laps, Math.max(1, Math.min(MAX_LAPS, lastQuiz.questionCount)))} voltas</span>
               <span className="tag">Tempo {last.time ? `${last.time} s` : 'do quiz'}</span>
             </div>
             <button className="primary big" disabled={busy} onClick={() => void open(lastQuiz, last, [])}>{busy ? 'A abrir…' : '🏁 Abrir sala'}</button>
@@ -247,7 +240,7 @@ export function Jogar() {
           <details className="more" open={landscape || undefined} key={landscape ? 'l' : 'p'}>
             <summary>
               <span>Ajustar corrida</span>
-              <span className="sum">Bots {botLabel(field).toLowerCase()} · {effLaps} voltas{time ? ` · ${timeLabel(time)}` : ''}{validPicked.length ? ` · ${validPicked.length} 👻` : ''}</span>
+              <span className="sum">Bots {botLabel(field).toLowerCase()}{time ? ` · ${timeLabel(time)}` : ''}{validPicked.length ? ` · ${validPicked.length} 👻` : ''}</span>
             </summary>
             <div className="adv">
               <div className="field">
@@ -256,15 +249,6 @@ export function Jogar() {
                   {FIELDS.map((f) => (
                     <button key={f.key} role="radio" aria-checked={field === f.key} className={field === f.key ? 'on' : ''} onClick={() => change(() => setField(f.key))}>{f.label}</button>
                   ))}
-                </div>
-              </div>
-              <div className="field">
-                <b>Voltas</b>
-                <div className="stepper">
-                  <button aria-label="Menos voltas" disabled={effLaps <= 1} onClick={() => change(() => setLaps(effLaps - 1))}>−</button>
-                  <output>{effLaps}</output>
-                  <button aria-label="Mais voltas" disabled={effLaps >= maxLaps} onClick={() => change(() => setLaps(effLaps + 1))}>+</button>
-                  {quiz && <span className="muted">{perLapAll} perguntas por volta</span>}
                 </div>
               </div>
               <div className="field">
@@ -300,7 +284,7 @@ export function Jogar() {
 
       {showBar && (
         <div className="actionbar">
-          <button className="primary big" disabled={!quiz || busy || n < 1} onClick={() => quiz && void open(quiz, { quizId: quiz.id, classId, field, laps: effLaps, time }, chosen)}>
+          <button className="primary big" disabled={!quiz || busy || n < 1} onClick={() => quiz && void open(quiz, { quizId: quiz.id, classId, field, time }, chosen)}>
             {busy ? 'A abrir…' : '🏁 Abrir sala'}
           </button>
         </div>
