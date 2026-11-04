@@ -30,12 +30,17 @@ export interface Api {
   /** Apaga; se já tem sessões, arquiva (esconde da biblioteca, mantém o histórico). */
   deleteQuiz(id: string): Promise<'deleted' | 'archived'>;
   listRaces(filter?: { classId?: string; quizId?: string }): Promise<RaceSummary[]>;
-  loadReport(sessionId: string): Promise<ReportData>;
-  /** Sessões em lobby/running. Antes de listar, termina as que estão abertas há mais de 12 h. */
+  /** Relatório de um jogo (`gameId`). */
+  loadReport(gameId: string): Promise<ReportData>;
+  /** Salas com um jogo em lobby/running. Antes de listar, termina as que estão abertas há mais de 12 h. */
   listOpenSessions(): Promise<SessionRow[]>;
-  /** Termina uma sessão a meio: `aborted` + `finished_at`, sem race_record (fica fora do histórico). */
+  /** Termina o jogo atual da sala a meio: `aborted` + `finished_at`, sem race_record (fica fora do histórico). */
   abortSession(id: string): Promise<void>;
+  /** Abre uma sala nova com o jogo nº 1. */
   createSession(quiz: QuizRow, classId: string | null, settings: SessionSettings): Promise<SessionRow>;
+  /** Abre o jogo seguinte numa sala cujo jogo acabou: mesmo PIN, canal e alunos. Falha se o jogo atual ainda decorre. */
+  createGame(sessionId: string, quiz: QuizRow, settings: SessionSettings): Promise<SessionRow>;
+  /** A sala com o seu jogo atual (o último). */
   getSession(id: string): Promise<SessionRow>;
   loadQuestions(quizId: string, version: number): Promise<QuestionRow[]>;
   /** Perguntas por id (de vários quizzes/versões), pela ordem pedida; as que já não existem ficam de fora. */
@@ -48,9 +53,12 @@ export interface Api {
   renamePlayer(playerId: string, nickname: string): Promise<string>;
   /** Apaga o aluno (saiu no lobby): pode voltar a entrar mais tarde. */
   removePlayer(playerId: string): Promise<void>;
+  /** O aluno saiu a meio do jogo: fica de fora dele, mas pode voltar no lobby do seguinte (ao contrário de `kickPlayer`). */
+  leavePlayer(playerId: string): Promise<void>;
   saveAnswers(rows: AnswerRow[]): Promise<void>;
-  loadAnswers(sessionId: string): Promise<AnswerRow[]>;
-  updateSession(id: string, patch: { status?: SessionStatus; state?: SavedState | null; started?: boolean; finished?: boolean }): Promise<void>;
+  loadAnswers(gameId: string): Promise<AnswerRow[]>;
+  /** Atualiza o jogo (estado, início, fim); a sala espelha o estado do último jogo. */
+  updateGame(gameId: string, patch: { status?: SessionStatus; state?: SavedState | null; started?: boolean; finished?: boolean }): Promise<void>;
   saveRaceRecord(row: RaceRecordRow): Promise<void>;
   /** Corridas gravadas de um quiz+versão com dados para replay (formato v2). */
   listGhostRecords(quizId: string, version: number): Promise<GhostRecord[]>;

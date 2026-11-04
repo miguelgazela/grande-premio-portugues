@@ -1,31 +1,66 @@
 import { mulberry32 } from '../engine/rng';
 
 /** Carros disponíveis para a turma (cada um é um asset do manifest, com as cores originais). */
+export type Category = 'carro' | 'barco' | 'nave';
+
 export interface CarDef {
   key: string;
   model: string;
+  /** Categoria de veículo: o tema da pista decide qual é oferecida. */
+  cat: Category;
   /** Cor dominante (minimapa, pontos). */
   color: number;
   label: string;
 }
 
 const C = { blue: 0x2f6bff, red: 0xe74c3c, orange: 0xf39c12, green: 0x2ecc71, purple: 0x9b59b6, pink: 0xe84393, teal: 0x1abc9c, grey: 0x95a5a6, yellow: 0xf7d21e, white: 0xf2f2f2 };
+export const CATEGORIES: Category[] = ['carro', 'barco', 'nave'];
+
+/** Palavras da UI por categoria (o género muda: o carro/barco, a nave). */
+export const VEHICLE_WORDS: Record<Category, { emoji: string; label: string; noun: string; vote: string; model: string; drawn: string }> = {
+  carro: { emoji: '🏎️', label: 'Carro', noun: 'carro', vote: 'Vota no carro da turma', model: 'Modelo do carro', drawn: 'sorteado' },
+  barco: { emoji: '🚤', label: 'Barco', noun: 'barco', vote: 'Vota no barco da turma', model: 'Modelo do barco', drawn: 'sorteado' },
+  nave: { emoji: '🚀', label: 'Nave', noun: 'nave', vote: 'Vota na nave da turma', model: 'Modelo da nave', drawn: 'sorteada' },
+};
 const NAMES: Record<string, string> = { blue: 'Azul', red: 'Vermelho', orange: 'Laranja', green: 'Verde', purple: 'Roxo', pink: 'Rosa', teal: 'Turquesa', grey: 'Cinzento', yellow: 'Amarelo', white: 'Branco' };
 
-export const MODELS: { id: string; label: string; colors: (keyof typeof C)[] }[] = [
-  { id: 'classico', label: 'Clássico', colors: ['blue', 'red', 'orange', 'green', 'purple', 'pink', 'teal', 'grey'] },
-  { id: 'coupe', label: 'Coupé', colors: ['red', 'yellow', 'teal'] },
-  { id: 'rally', label: 'Rali', colors: ['blue', 'orange', 'white'] },
-  { id: 'pickup', label: 'Pickup', colors: ['green', 'red', 'purple'] },
-  { id: 'van', label: 'Carrinha', colors: ['yellow', 'pink', 'blue'] },
-  { id: 'kart', label: 'Kart', colors: ['orange', 'green', 'purple'] },
+export const MODELS: { id: string; label: string; cat: Category; colors: (keyof typeof C)[] }[] = [
+  { id: 'classico', cat: 'carro', label: 'Clássico', colors: ['blue', 'red', 'orange', 'green', 'purple', 'pink', 'teal', 'grey'] },
+  { id: 'coupe', cat: 'carro', label: 'Coupé', colors: ['red', 'yellow', 'teal'] },
+  { id: 'rally', cat: 'carro', label: 'Rali', colors: ['blue', 'orange', 'white'] },
+  { id: 'pickup', cat: 'carro', label: 'Pickup', colors: ['green', 'red', 'purple'] },
+  { id: 'van', cat: 'carro', label: 'Carrinha', colors: ['yellow', 'pink', 'blue'] },
+  { id: 'kart', cat: 'carro', label: 'Kart', colors: ['orange', 'green', 'purple'] },
+  // Barcos (tema água): uma cor por modelo, asset `boat-<id>`. O dragão é experimental (remadores estáticos): apagar a linha retira-o.
+  { id: 'lancha', cat: 'barco', label: 'Lancha', colors: ['red'] },
+  { id: 'mota', cat: 'barco', label: 'Mota de água', colors: ['yellow'] },
+  { id: 'veleiro', cat: 'barco', label: 'Veleiro', colors: ['teal'] },
+  { id: 'dragao', cat: 'barco', label: 'Barco-dragão', colors: ['green'] },
+  // Naves (tema espaço): uma cor por modelo, asset `ship-<id>`.
+  { id: 'cacador', cat: 'nave', label: 'Caça', colors: ['red'] },
+  { id: 'disco', cat: 'nave', label: 'Disco voador', colors: ['yellow'] },
+  { id: 'foguetao', cat: 'nave', label: 'Foguetão', colors: ['teal'] },
+  { id: 'bolha', cat: 'nave', label: 'Nave-bolha', colors: ['purple'] },
+  { id: 'delta', cat: 'nave', label: 'Nave delta', colors: ['green'] },
+  { id: 'vaivem', cat: 'nave', label: 'Vaivém', colors: ['pink'] },
+  { id: 'crescente', cat: 'nave', label: 'Crescente', colors: ['blue'] },
 ];
 
 const classicKey = (c: string) => (c === 'blue' ? 'car-team' : `car-${c}`);
 
+const keyOf = (m: (typeof MODELS)[number], c: string) => (m.cat === 'barco' ? `boat-${m.id}` : m.cat === 'nave' ? `ship-${m.id}` : m.id === 'classico' ? classicKey(c) : `car-${m.id}-${c}`);
+
 export const CARS: CarDef[] = MODELS.flatMap((m) =>
-  m.colors.map((c) => ({ key: m.id === 'classico' ? classicKey(c) : `car-${m.id}-${c}`, model: m.id, color: C[c], label: `${m.label} ${NAMES[c].toLowerCase()}` })),
+  m.colors.map((c) => ({ key: keyOf(m, c), model: m.id, cat: m.cat, color: C[c], label: m.cat !== 'carro' ? m.label : `${m.label} ${NAMES[c].toLowerCase()}` })),
 );
+
+/** Modelos e veículos de uma categoria. */
+export const modelsOf = (cat: Category) => MODELS.filter((m) => m.cat === cat);
+export const carsOfCat = (cat: Category) => CARS.filter((c) => c.cat === cat);
+/** Veículo por defeito da categoria (o da turma sem votos). */
+export const defaultCar = (cat: Category): string => (cat === 'barco' ? 'boat-lancha' : cat === 'nave' ? 'ship-cacador' : DEFAULT_STYLE.car);
+/** Sprite de recurso (bots/fantasmas sem veículo atribuído). */
+export const fallbackCar = (cat: Category): string => (cat === 'barco' ? 'boat-lancha' : cat === 'nave' ? 'ship-disco' : 'car-grey');
 
 export const carDef = (key: string | undefined): CarDef | undefined => CARS.find((c) => c.key === key);
 export const carsOfModel = (model: string) => CARS.filter((c) => c.model === model);
@@ -43,9 +78,9 @@ export const TEAM_NAME = 'Turma';
 export const DEFAULT_STYLE: TeamStyle = { car: 'car-team' };
 
 /** Valida um voto vindo da rede; ignora o que não conhecemos. */
-export function cleanVote(raw: unknown): StyleVote {
+export function cleanVote(raw: unknown, cat: Category = 'carro'): StyleVote {
   const car = (raw as { car?: unknown } | null)?.car;
-  return typeof car === 'string' && carDef(car) ? { car } : {};
+  return typeof car === 'string' && carDef(car)?.cat === cat ? { car } : {};
 }
 
 function hashSeed(s: string): number {
@@ -60,7 +95,7 @@ function hashSeed(s: string): number {
  * do empate), para o carro não mudar a cada atualização do lobby, e só volta a sortear quando
  * os votos mudarem.
  */
-export function tally(votes: Iterable<StyleVote>, seed = ''): { style: TeamStyle; count: number; tie: boolean } {
+export function tally(votes: Iterable<StyleVote>, seed = '', cat: Category = 'carro'): { style: TeamStyle; count: number; tie: boolean } {
   const counts = new Map<string, number>();
   let count = 0;
   for (const v of votes) {
@@ -70,26 +105,28 @@ export function tally(votes: Iterable<StyleVote>, seed = ''): { style: TeamStyle
   }
   const top = Math.max(0, ...counts.values());
   const tied = [...counts].filter(([, n]) => n === top && n > 0).map(([k]) => k).sort();
-  if (tied.length === 0) return { style: { car: DEFAULT_STYLE.car }, count, tie: false };
+  if (tied.length === 0) return { style: { car: defaultCar(cat) }, count, tie: false };
   if (tied.length === 1) return { style: { car: tied[0] }, count, tie: false };
   const pick = tied[Math.floor(mulberry32(hashSeed(`${seed}|${tied.join(',')}|${top}`))() * tied.length)];
   return { style: { car: pick }, count, tie: true };
 }
 
 /** Lê um estilo gravado em `session.state.team`; o formato antigo (`color`) e lixo dão um carro válido. */
-export function parseStyle(raw: unknown): TeamStyle {
-  const v = cleanVote(raw);
+export function parseStyle(raw: unknown, cat: Category = 'carro'): TeamStyle {
+  const v = cleanVote(raw, cat);
   if (v.car) return { car: v.car };
+  if (cat !== 'carro') return { car: defaultCar(cat) }; // registo de carros numa pista de água ou espaço
   const color = (raw as { color?: unknown } | null)?.color;
   return { car: CARS.find((c) => c.model === 'classico' && c.color === color)?.key ?? DEFAULT_STYLE.car };
 }
 
 /** Carros para os bots: variam de modelo e nunca repetem cor (nem a da turma). */
-export function botCars(team: string, count: number): CarDef[] {
+export function botCars(team: string, count: number, cat: Category = 'carro'): CarDef[] {
   const used = new Set([carDef(team)?.color]);
   const order: CarDef[] = [];
-  const rows = MODELS.map((m) => carsOfModel(m.id));
-  for (let i = 0; order.length < CARS.length; i++) {
+  const pool = carsOfCat(cat);
+  const rows = modelsOf(cat).map((m) => carsOfModel(m.id));
+  for (let i = 0; order.length < pool.length; i++) {
     for (const r of rows) if (r[i]) order.push(r[i]);
   }
   const out: CarDef[] = [];
@@ -100,5 +137,8 @@ export function botCars(team: string, count: number): CarDef[] {
       out.push(c);
     }
   }
+  // Poucos barcos/naves: repete modelos (menos o da turma) em vez de deixar bots sem veículo.
+  const rest = cat !== 'carro' ? order.filter((c) => c.key !== team) : [];
+  for (let i = 0; out.length < count && rest.length; i++) out.push(rest[i % rest.length]);
   return out;
 }

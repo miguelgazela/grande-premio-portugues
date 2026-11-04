@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MODELS, carDef, carsOfModel, modelDef, modelShowcase } from '../../game/teamStyle';
+import { VEHICLE_WORDS, carDef, carsOfModel, modelDef, modelShowcase, modelsOf, type Category } from '../../game/teamStyle';
 import { assetUrl } from '../../render/assets';
 
 export const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
@@ -12,9 +12,10 @@ export function CarPreview({ car, size = 120 }: { car: string; size?: number }) 
 /** Escolha em 2 passos: modelo, depois cor. Só a cor conta como voto. */
 type Step = { k: 'done' } | { k: 'models' } | { k: 'colors'; model: string };
 
-export function CarPicker({ value, onPick }: { value: string | null; onPick(car: string): void }) {
+export function CarPicker({ value, onPick, cat = 'carro' }: { value: string | null; onPick(car: string): void; cat?: Category }) {
   const [step, setStep] = useState<Step>(() => (value ? { k: 'done' } : { k: 'models' }));
-  const voted = carDef(value ?? undefined);
+  const found = carDef(value ?? undefined);
+  const voted = found?.cat === cat ? found : undefined; // um voto de outra categoria (sessão antiga) não conta
 
   if (step.k === 'done' && voted) {
     return (
@@ -58,12 +59,12 @@ export function CarPicker({ value, onPick }: { value: string | null; onPick(car:
           <b>Escolhe o modelo</b>
         </div>
       )}
-      <div className="modelgrid" role="radiogroup" aria-label="Modelo do carro">
-        {MODELS.map((m) => {
+      <div className="modelgrid" role="radiogroup" aria-label={VEHICLE_WORDS[cat].model}>
+        {modelsOf(cat).map((m) => {
           const show = modelShowcase(m.id)!;
           const cur = voted?.model === m.id;
           return (
-            <button key={m.id} type="button" role="radio" aria-checked={cur} aria-label={`${m.label}, ${m.colors.length} cores`} className={`carpick ${cur ? 'on' : ''}`} onClick={() => setStep({ k: 'colors', model: m.id })}>
+            <button key={m.id} type="button" role="radio" aria-checked={cur} aria-label={m.colors.length > 1 ? `${m.label}, ${m.colors.length} cores` : m.label} className={`carpick ${cur ? 'on' : ''}`} onClick={() => (m.colors.length > 1 ? setStep({ k: 'colors', model: m.id }) : (onPick(show.key), setStep({ k: 'done' })))}>
               <CarPreview car={cur && voted ? voted.key : show.key} size={156} />
               <small>{m.label}</small>
             </button>

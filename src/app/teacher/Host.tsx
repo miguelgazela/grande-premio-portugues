@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
 import { VersionTag } from '../ui/VersionTag';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { inFinalStretch } from '../../engine/config';
 import { HostGame, type HostSnapshot } from '../../game/hostGame';
 import { raceConfigFor } from '../../game/raceSettings';
@@ -16,7 +16,8 @@ import { isMuted, play, setMuted } from '../../lib/audio';
 import { assetUrl } from '../../render/assets';
 import { themeForTrack } from '../../engine/theme';
 import { Asset, Countdown, Flames, Place } from '../ui/Asset';
-import { carDef } from '../../game/teamStyle';
+import { fitAvatars } from '../../lib/avatarRow';
+import { VEHICLE_WORDS, carDef } from '../../game/teamStyle';
 import { CarPreview } from '../ui/TeamPicker';
 import { HostBody } from '../ui/Question';
 import { useTeacher } from './TeacherGate';
@@ -25,6 +26,8 @@ const EFFECT_TEXT = { turbo: 'TURBO!', normal: 'Bom ritmo', slow: '🐢 A abrand
 
 export function Host() {
   const { id } = useParams();
+  // `key` muda a cada navegação: abrir o jogo seguinte da mesma sala (mesmo `id`) volta a montar o anfitrião.
+  const { key: navKey } = useLocation();
   const { api } = useTeacher();
   const [game, setGame] = useState<HostGame | null>(null);
   const [error, setError] = useState('');
@@ -42,7 +45,7 @@ export function Host() {
         // Uma revisão não tem fantasmas nem recorde.
         const all = review ? [] : await api.listGhostRecords(session.quiz_id, session.quiz_version).catch(() => []);
         const usable = usableRecords(all);
-        const ghosts = (session.settings?.ghosts ?? []).flatMap((x) => usable.filter((r) => r.session_id === x.sessionId));
+        const ghosts = (session.settings?.ghosts ?? []).flatMap((x) => usable.filter((r) => r.game_id === x.gameId));
         g = new HostGame(api, session, questions, { ghosts, record: trackRecord(all, config) });
         await g.init();
         if (cancelled) g.destroy();
@@ -55,7 +58,7 @@ export function Host() {
       cancelled = true;
       g?.destroy();
     };
-  }, [api, id]);
+  }, [api, id, navKey]);
 
   useEffect(() => keepAwake(), []);
 
@@ -68,7 +71,7 @@ function HostScreen({ game }: { game: HostGame }) {
   const s = useSyncExternalStore(game.subscribe, game.getSnapshot);
   const nav = useNavigate();
 
-  if (s.phase === 'finished') return <Podium game={game} s={s} onExit={() => nav('/prof')} />;
+  if (s.phase === 'finished') return <Podium game={game} s={s} onExit={() => nav('/prof')} onNext={() => nav(`/prof?sala=${game.session.id}`)} />;
   if (s.phase === 'lobby') return <Lobby game={game} s={s} />;
   return <RaceScreen game={game} s={s} />;
 }
@@ -144,9 +147,9 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
           <div className="carbox carshow" aria-live="polite">
             <CarPreview car={s.team.car} size={110} />
             <div>
-              <b>🏎️ Carro da turma: {carDef(s.team.car)?.label ?? ''}</b>
+              <b>{VEHICLE_WORDS[carDef(s.team.car)?.cat ?? 'carro'].emoji} {VEHICLE_WORDS[carDef(s.team.car)?.cat ?? 'carro'].label} da turma: {carDef(s.team.car)?.label ?? ''}</b>
               <div className="muted" style={{ fontSize: 'clamp(13px,2.2vmin,22px)' }}>
-                {s.tie ? `Empate nos votos: carro sorteado · ${s.voters} votos` : s.voters ? `Mais votado · ${s.voters} voto${s.voters > 1 ? 's' : ''}` : 'Por defeito: os alunos podem votar no telemóvel'}
+                {s.tie ? `Empate nos votos: ${VEHICLE_WORDS[carDef(s.team.car)?.cat ?? 'carro'].noun} ${VEHICLE_WORDS[carDef(s.team.car)?.cat ?? 'carro'].drawn} · ${s.voters} votos` : s.voters ? `Mais votado · ${s.voters} voto${s.voters > 1 ? 's' : ''}` : 'Por defeito: os alunos podem votar no telemóvel'}
               </div>
             </div>
           </div>
@@ -282,8 +285,16 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
           </div>
           <HostBody body={panel.body} solution={showReveal ? s.reveal!.solution : undefined} />
           <div className="meta">
-            <span>{inQuestion ? `${s.answered}/${s.players.length} responderam · ${Math.ceil(s.timeLeft)}s` : ''}</span>
-            <span>{showReveal ? s.reveal!.explanation ?? '' : ''}</span>
+            {showReveal && s.reveal!.explanation ? (
+              <span className="expl">{s.reveal!.explanation}</span>
+            ) : (
+              <AnswerRow s={s} reveal={showReveal ? s.reveal : null} />
+            )}
+            {inQuestion && (
+              <span className="tally">
+                <b>{s.answered}/{s.players.length}</b> <span className={low ? 'low' : ''}>{Math.ceil(s.timeLeft)}s</span>
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -318,7 +329,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   );
 }
 
-function Podium({ game, s, onExit }: { game: HostGame; s: HostSnapshot; onExit(): void }) {
+function Podium({ game, s, onExit, onNext }: { game: HostGame; s: HostSnapshot; onExit(): void; onNext(): void }) {
   const f = s.final!.final;
   return (
     <div className="host menubg" style={{ backgroundImage: `url(${assetUrl('menu-results.jpg')})` }}>
@@ -369,7 +380,8 @@ function Podium({ game, s, onExit }: { game: HostGame; s: HostSnapshot; onExit()
         </div>
         {s.review && <ReviewSummary game={game} />}
         <div style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
-          <button className="primary big" onClick={onExit}>Voltar aos quizzes</button>
+          <button className="primary big" onClick={onNext}>Outro quiz, mesma sala</button>{' '}
+          <button className="big" onClick={onExit}>Voltar aos quizzes</button>
         </div>
       </div>
     </div>
@@ -395,7 +407,7 @@ function ReviewSummary({ game }: { game: HostGame }) {
     try {
       const anchor = { id: game.session.quiz_id, title: next.title, year: null, topic: null, version: game.session.quiz_version, questionCount: next.questionIds.length, lastPlayed: null };
       const settings = { botField: game.session.settings.botField, review: next };
-      const s = await api.createSession(anchor, game.session.class_id, settings);
+      const s = await api.createGame(game.session.id, anchor, settings); // mesma sala: os alunos ficam
       nav(`/prof/jogo/${s.id}`);
     } catch (e) {
       setErr(errorMessage(e));
@@ -428,5 +440,37 @@ function ReviewSummary({ game }: { game: HostGame }) {
         </div>
       )}
     </>
+  );
+}
+
+/** Fila de avatares: cinzento até responder, a cores depois; na revelação, anel verde (certo) ou vermelho (errado). */
+function AnswerRow({ s, reveal }: { s: HostSnapshot; reveal: HostSnapshot['reveal'] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [box, setBox] = useState({ w: 0, h: 0 });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => setBox({ w: el.clientWidth, h: el.clientHeight });
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  const done = new Set(s.answeredIds);
+  const fit = fitAvatars(s.players.length, box.w, box.h);
+  return (
+    <div ref={ref} className="answers" role="list" aria-label="Quem já respondeu">
+      <div className="answers-grid" style={{ gridTemplateColumns: `repeat(${fit.cols || 1}, ${fit.size}px)`, gridAutoRows: `${fit.size}px`, '--ring': fit.size < 16 ? '1px' : '2px' } as React.CSSProperties}>
+        {s.players.map((p) => {
+          const has = done.has(p.id);
+          const verdict = reveal && has ? (reveal.results[p.id] ? 'right' : (reveal.partial?.[p.id] ?? 0) > 0 ? 'part' : 'wrong') : '';
+          return (
+            <span key={p.id} role="listitem" className={`ans ${has ? 'on' : ''} ${verdict}`} title={`${p.nickname}${has ? '' : ' (ainda não respondeu)'}`}>
+              {s.avatars[p.id] ? <Asset name={s.avatars[p.id]} alt={p.nickname} className="ans-img" fallback={<i>{p.nickname.slice(0, 1)}</i>} /> : <i>{p.nickname.slice(0, 1).toUpperCase()}</i>}
+            </span>
+          );
+        })}
+      </div>
+    </div>
   );
 }

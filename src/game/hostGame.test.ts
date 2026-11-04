@@ -13,13 +13,13 @@ beforeAll(() => {
 const questions = Array.from({ length: 6 }, (_, i) => ({
   id: `q${i}`, position: i + 1, prompt: `P${i}`, type: 'multiple_choice', payload: { options: ['a', 'b', 'c', 'd'] }, correct: { index: 1 }, time_limit: 20, explanation: null,
 })) as QuestionRow[];
-const session = { id: 's1', settings: { botField: 'medio' }, state: null, status: 'lobby' } as unknown as SessionRow;
+const session = { id: 's1', game_id: 'g1', game_number: 1, settings: { botField: 'medio' }, state: null, status: 'lobby' } as unknown as SessionRow;
 
-async function setup() {
+async function setup(settings?: Record<string, unknown>) {
   const { HostGame } = await import('./hostGame');
   const sent: unknown[] = [];
-  const api = { openChannel: () => ({ send: (m: unknown) => sent.push(m), close() {} }), listPlayers: async () => [], kickPlayer: async () => {}, renamePlayer: vi.fn(async (_id: string, n: string) => n.trim()), saveAnswers: async () => {}, updateSession: async () => {} } as unknown as Api;
-  const g = new HostGame(api, session, questions);
+  const api = { openChannel: () => ({ send: (m: unknown) => sent.push(m), close() {} }), listPlayers: async () => [], kickPlayer: async () => {}, renamePlayer: vi.fn(async (_id: string, n: string) => n.trim()), saveAnswers: async () => {}, updateGame: async () => {}, leavePlayer: async () => {}, removePlayer: async () => {} } as unknown as Api;
+  const g = new HostGame(api, settings ? ({ ...session, settings: { ...session.settings, ...settings } } as typeof session) : session, questions);
   const priv = g as unknown as {
     snap: { players: unknown[]; phase: string };
     roster: unknown[];
@@ -29,7 +29,7 @@ async function setup() {
     answers: Map<string, unknown>;
     qElapsed: number;
   };
-  priv.snap.players = [{ id: 'p1', nickname: 'Ana', kicked: false }, { id: 'p2', nickname: 'Rui', kicked: false }];
+  priv.snap.players = [{ id: 'p1', nickname: 'Ana', kicked: false, left: false }, { id: 'p2', nickname: 'Rui', kicked: false, left: false }];
   priv.roster = [...priv.snap.players];
   priv.channel = { send: (m: unknown) => sent.push(m), close() {} };
   priv.startQuestion(0);
@@ -96,6 +96,21 @@ describe('HostGame: renomear', () => {
   });
 });
 
+describe('HostGame: votos na pista de água', () => {
+  it('só aceita barcos, o lobby anuncia a categoria e os bots são barcos', async () => {
+    const { g, priv, sent } = await setup({ trackId: 'canal' });
+    priv.snap.phase = 'lobby';
+    expect(g.getSnapshot().team.car).toBe('boat-lancha');
+    priv.onMessage({ event: 'vote', payload: { player_id: 'p1', car: 'car-red' } });
+    expect(g.getSnapshot().voters).toBe(0);
+    priv.onMessage({ event: 'vote', payload: { player_id: 'p1', car: 'boat-mota' } });
+    expect(g.getSnapshot().team.car).toBe('boat-mota');
+    expect((sent as { event: string; payload: { cat?: string } }[]).filter((m) => m.event === 'lobby').every((m) => m.payload.cat === 'barco')).toBe(true);
+    const race = (g as unknown as { race: { cars: { driver: { car?: string; kind: string } }[] } }).race;
+    expect(race.cars.every((c) => c.driver.car?.startsWith('boat-'))).toBe(true);
+  });
+});
+
 describe('HostGame: voto no carro', () => {
   it('conta o voto do vote e do hello; ignora formatos antigos; o lobby não leva o carro', async () => {
     const { g, priv, sent } = await setup();
@@ -112,7 +127,7 @@ describe('HostGame: voto no carro', () => {
     priv.onMessage({ event: 'hello', payload: { player_id: 'p5', car: 'car-inexistente' } });
     expect(g.getSnapshot().voters).toBe(3);
     expect(sent.slice(before).filter((m) => (m as { event: string }).event === 'vote')).toEqual([]);
-    for (const m of sent as { event: string; payload: object }[]) if (m.event === 'lobby') expect(m.payload).toEqual({ count: expect.any(Number) });
+    for (const m of sent as { event: string; payload: object }[]) if (m.event === 'lobby') expect(m.payload).toEqual({ count: expect.any(Number), game: 1, cat: 'carro' });
   });
 });
 
@@ -149,5 +164,35 @@ describe('HostGame: re-sincronização', () => {
     expect(timers).toHaveLength(1);
     timers[0]();
     expect(evs(sent)).toEqual(['question']);
+  });
+});
+
+describe('HostGame: vários jogos na mesma sala', () => {
+  it('o lobby, a pergunta e o fim levam o nº do jogo', async () => {
+    const { priv, sent } = await setup();
+    const withGame = (ev: string) => (sent as { event: string; payload: { game?: number } }[]).filter((m) => m.event === ev).every((m) => m.payload.game === 1);
+    (priv as unknown as { resync(force: boolean): void }).resync(true);
+    expect(withGame('question')).toBe(true);
+    expect((sent as { event: string }[]).some((m) => m.event === 'question')).toBe(true);
+  });
+
+  it('quem sai a meio do jogo fica de fora dele mas não é expulso (pode voltar no seguinte)', async () => {
+    const { priv, api } = await setup();
+    const leave = vi.fn(async () => {});
+    const kick = vi.fn(async () => {});
+    Object.assign(api, { leavePlayer: leave, kickPlayer: kick });
+    priv.snap.phase = 'question';
+    priv.onMessage({ event: 'leave', payload: { player_id: 'p1' } });
+    await Promise.resolve();
+    expect(leave).toHaveBeenCalledWith('p1');
+    expect(kick).not.toHaveBeenCalled();
+  });
+
+  it('no ecrã final, sair ou expulsar não manda `lobby` (tirava os alunos do resultado)', async () => {
+    const { g, priv, sent } = await setup();
+    priv.snap.phase = 'finished';
+    sent.length = 0;
+    await g.kick('p1');
+    expect((sent as { event: string }[]).map((m) => m.event)).not.toContain('lobby');
   });
 });

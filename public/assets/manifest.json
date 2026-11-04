@@ -1608,5 +1608,505 @@
       0.5
     ],
     "notes": "Fundo do lobby, tema cidade; mesma composição do menu-title (centro livre). Original 1344x752 ampliado"
+  },
+  "boat-lancha": {
+    "file": "boat-lancha.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Lancha vermelha, vista de cima, proa para +x, sem número"
+  },
+  "boat-mota": {
+    "file": "boat-mota.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Mota de água amarela, vista de cima, proa para +x, sem número"
+  },
+  "boat-veleiro": {
+    "file": "boat-veleiro.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Veleiro turquesa, vista de cima, proa para +x, sem número"
+  },
+  "boat-dragao": {
+    "file": "boat-dragao.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Barco-dragão verde, vista de cima, proa para +x, sem número"
+  },
+  "bg-water": {
+    "file": "bg-water.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile 512 opaco, mar aberto"
+  },
+  "track-asphalt-water": {
+    "file": "track-asphalt-water.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile 512 opaco, água do canal, mais clara"
+  },
+  "track-curb-water": {
+    "file": "track-curb-water.png",
+    "w": 512,
+    "h": 57,
+    "anchor": [
+      0,
+      0.5
+    ],
+    "notes": "Fila horizontal de boias laranja/brancas, 512 de largura"
+  },
+  "prop-w-island": {
+    "file": "prop-w-island.png",
+    "w": 227,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Ilha com palmeira, vista de cima"
+  },
+  "prop-w-lighthouse": {
+    "file": "prop-w-lighthouse.png",
+    "w": 246,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Farol num ilhéu, vista de cima"
+  },
+  "prop-w-dolphin": {
+    "file": "prop-w-dolphin.png",
+    "w": 256,
+    "h": 147,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Golfinho (cabeça para +x), vista de cima"
+  },
+  "prop-w-whale": {
+    "file": "prop-w-whale.png",
+    "w": 256,
+    "h": 204,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Baleia com jato (cabeça para +x), vista de cima"
+  },
+  "prop-w-turtle": {
+    "file": "prop-w-turtle.png",
+    "w": 256,
+    "h": 238,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Tartaruga (cabeça para +x), vista de cima"
+  },
+  "prop-w-dock": {
+    "file": "prop-w-dock.png",
+    "w": 254,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Pontão com barco a remos, vista de cima"
+  },
+  "prop-w-rocks": {
+    "file": "prop-w-rocks.png",
+    "w": 236,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Rochas com gaivotas, vista de cima"
+  },
+  "prop-w-cargo": {
+    "file": "prop-w-cargo.png",
+    "w": 256,
+    "h": 93,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Cargueiro de contentores (proa para +x), vista de cima"
+  },
+  "fx-wake": {
+    "file": "fx-wake.png",
+    "w": 256,
+    "h": 122,
+    "anchor": [
+      1,
+      0.5
+    ],
+    "notes": "Esteira de espuma do barco; aponta para -x, anchor [1,0.5] na popa"
+  },
+  "fx-splash": {
+    "file": "fx-splash.png",
+    "w": 256,
+    "h": 129,
+    "anchor": [
+      1,
+      0.5
+    ],
+    "notes": "Jato de água do turbo/nitro; aponta para -x, anchor [1,0.5] na popa"
+  },
+  "menu-title-water": {
+    "file": "menu-title-water.jpg",
+    "w": 1920,
+    "h": 1086,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Fundo do lobby, tema água (porto); mesma composição do menu-title. Original 1344x752 ampliado"
+  },
+  "bg-candy": {
+    "file": "bg-candy.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile opaco, tema doces (glacê rosa liso com granulado miúdo, sem costura)"
+  },
+  "track-asphalt-candy": {
+    "file": "track-asphalt-candy.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile opaco, chocolate liso com glacê (tema doces)"
+  },
+  "track-curb-candy": {
+    "file": "track-curb-candy.png",
+    "w": 512,
+    "h": 78,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Lomba horizontal de bengalas de açúcar vermelhas e brancas, 512 de largura"
+  },
+  "prop-ca-cupcake": {
+    "file": "prop-ca-cupcake.png",
+    "w": 242,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: cupcake"
+  },
+  "prop-ca-lollipop": {
+    "file": "prop-ca-lollipop.png",
+    "w": 155,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: pirulito grande"
+  },
+  "prop-ca-donut": {
+    "file": "prop-ca-donut.png",
+    "w": 247,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: donut gigante"
+  },
+  "prop-ca-icecream": {
+    "file": "prop-ca-icecream.png",
+    "w": 168,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: gelado de 3 bolas"
+  },
+  "prop-ca-cake": {
+    "file": "prop-ca-cake.png",
+    "w": 227,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: bolo de camadas"
+  },
+  "prop-ca-gummies": {
+    "file": "prop-ca-gummies.png",
+    "w": 248,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: pilha de gomas"
+  },
+  "prop-ca-gingerbread": {
+    "file": "prop-ca-gingerbread.png",
+    "w": 222,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: casa de gengibre"
+  },
+  "prop-ca-cottoncandy": {
+    "file": "prop-ca-cottoncandy.png",
+    "w": 193,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: árvore de algodão doce"
+  },
+  "menu-title-candy": {
+    "file": "menu-title-candy.jpg",
+    "w": 1920,
+    "h": 1086,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Fundo do lobby, tema doces; mesma composição do menu-title. Original 1344x752 ampliado"
+  },
+  "ship-cacador": {
+    "file": "ship-cacador.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Caça vermelho, proa para +x"
+  },
+  "ship-disco": {
+    "file": "ship-disco.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Disco voador amarelo, proa (motor) para +x"
+  },
+  "ship-foguetao": {
+    "file": "ship-foguetao.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Foguetão retro azul-petróleo, proa para +x"
+  },
+  "ship-bolha": {
+    "file": "ship-bolha.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Nave-bolha roxa, proa para +x"
+  },
+  "ship-delta": {
+    "file": "ship-delta.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Nave delta verde (furtiva), proa para +x"
+  },
+  "ship-vaivem": {
+    "file": "ship-vaivem.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Vaivém rosa e branco, proa para +x"
+  },
+  "ship-crescente": {
+    "file": "ship-crescente.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Nave crescente azul, proa para +x"
+  },
+  "bg-space": {
+    "file": "bg-space.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile 512 opaco, estrelas e nebulosas, sem costura"
+  },
+  "track-asphalt-space": {
+    "file": "track-asphalt-space.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile 512 opaco, painel de luz azul com hexágonos (a primeira versão era uma estrada sinuosa, rejeitada)"
+  },
+  "track-curb-space": {
+    "file": "track-curb-space.png",
+    "w": 512,
+    "h": 65,
+    "anchor": [
+      0,
+      0.5
+    ],
+    "notes": "Fila horizontal de balizas de néon ciano/magenta, 512 de largura"
+  },
+  "prop-sp-planet": {
+    "file": "prop-sp-planet.png",
+    "w": 256,
+    "h": 184,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Planeta laranja com anéis roxos"
+  },
+  "prop-sp-asteroid": {
+    "file": "prop-sp-asteroid.png",
+    "w": 250,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Asteroide com crateras"
+  },
+  "prop-sp-satellite": {
+    "file": "prop-sp-satellite.png",
+    "w": 256,
+    "h": 189,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Satélite com painéis solares"
+  },
+  "prop-sp-station": {
+    "file": "prop-sp-station.png",
+    "w": 256,
+    "h": 251,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Estação espacial modular"
+  },
+  "prop-sp-ufo": {
+    "file": "prop-sp-ufo.png",
+    "w": 251,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "OVNI verde com alienígena (circular)"
+  },
+  "prop-sp-astronaut": {
+    "file": "prop-sp-astronaut.png",
+    "w": 256,
+    "h": 242,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Astronauta à deriva, cabeça para +x"
+  },
+  "prop-sp-comet": {
+    "file": "prop-sp-comet.png",
+    "w": 256,
+    "h": 108,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Cometa, cabeça para +x, cauda para -x"
+  },
+  "prop-sp-moon": {
+    "file": "prop-sp-moon.png",
+    "w": 252,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Lua cinzenta com crateras"
+  },
+  "fx-trail-space": {
+    "file": "fx-trail-space.png",
+    "w": 256,
+    "h": 91,
+    "anchor": [
+      1,
+      0.5
+    ],
+    "notes": "Rasto de brilho ciano; aponta para -x, anchor na popa"
+  },
+  "menu-title-space": {
+    "file": "menu-title-space.jpg",
+    "w": 1920,
+    "h": 1086,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "JPEG 1920×1086 (ampliado de 1344×752): plataforma de lançamento, pórtico, bancadas com alienígenas"
   }
 }

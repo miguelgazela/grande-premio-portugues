@@ -5,6 +5,7 @@ import { Race, raceLengthFor, type Driver } from '../engine/race';
 import { mulberry32 } from '../engine/rng';
 import { pickAwards, scoreRace } from '../engine/scoring';
 import { TRACKS, Road, roadSeed, trackFor } from '../engine/track';
+import { vehicleForTrack } from '../engine/theme';
 import type { Api, Channel } from '../lib/api';
 import { music, play, unlockAudio } from '../lib/audio';
 import { ghostLabel, makeTimeline, type GhostRecord } from '../lib/ghosts';
@@ -14,7 +15,7 @@ import { grade, prepare, solutionOf, toCanonical, type Prepared } from '../lib/q
 import type { AnswerValue, PlayerRow, QuestionRow, ReviewResult, SavedState, SessionRow } from '../lib/types';
 import { MAX_PLAYERS, RateLimiter, answerSizeOk, isId, senderOf } from './guards';
 import { raceConfigFor } from './raceSettings';
-import { DEFAULT_STYLE, TEAM_NAME, botCars, carDef, cleanVote, parseStyle, tally, type StyleVote, type TeamStyle } from './teamStyle';
+import { DEFAULT_STYLE, TEAM_NAME, botCars, carDef, cleanVote, defaultCar, fallbackCar, parseStyle, tally, type Category, type StyleVote, type TeamStyle } from './teamStyle';
 
 export type Phase = 'lobby' | 'countdown' | 'resume' | 'question' | 'reveal' | 'sprint' | 'finishing' | 'finished';
 
@@ -33,6 +34,8 @@ export interface HostSnapshot {
   count: number;
   avatars: Record<string, string>;
   answered: number;
+  /** Ids de quem já respondeu à pergunta atual (para a fila de avatares do anfitrião). */
+  answeredIds: string[];
   question: { prompt: string; body: PublicBody } | null;
   reveal: RevealMsg | null;
   final: EndMsg | null;
@@ -53,6 +56,9 @@ const FINISH_HOLD = 2.5;
 const COUNT_STEP = 0.9;
 
 export { raceConfigFor };
+
+/** Aluno presente no jogo: nem expulso pela professora nem saído. */
+const active = (p: PlayerRow): boolean => !p.kicked && !p.left;
 
 type Listener = () => void;
 
@@ -97,6 +103,8 @@ export class HostGame {
   private timeBucket = -1;
   private votes = new Map<string, StyleVote>();
   private style: TeamStyle = DEFAULT_STYLE;
+  /** Categoria de veículo da pista (o tema decide): só ela é votável. */
+  private cat: Category = 'carro';
   private teacherPaused = false;
   private pageHidden = false;
   private perPlayer = new RateLimiter(12, 4);
@@ -110,18 +118,20 @@ export class HostGame {
     readonly extras: { ghosts: GhostRecord[]; record: GhostRecord | null } = { ghosts: [], record: null },
   ) {
     const { config, used } = raceConfigFor(questions, session.settings);
-    const def = TRACKS.find((t) => t.id === session.settings?.trackId) ?? trackFor(session.id);
+    const def = TRACKS.find((t) => t.id === session.settings?.trackId) ?? trackFor(session.game_id);
     this.trackId = def.id;
+    this.cat = vehicleForTrack(def.id);
+    this.style = { car: defaultCar(this.cat) };
     this.config = config;
-    this.track = new Road(roadSeed(session.id), raceLengthFor(config));
+    this.track = new Road(roadSeed(session.game_id), raceLengthFor(config));
     this.questions = questions.slice(0, used);
     this.seed = session.state?.seed ?? Math.floor(Math.random() * 2 ** 31);
     this.race = this.buildRace();
     if (import.meta.env.DEV) (window as unknown as { __game?: HostGame }).__game = this; // só para depurar no browser
     this.snap = {
       phase: 'lobby', paused: false, hidden: false, connected: false, players: [], qIndex: 0, total: this.questions.length,
-      questionTime: config.questionTime, timeLeft: config.questionTime, count: 3, avatars: session.state?.avatars ?? {}, answered: 0, question: null, reveal: null, final: null, review: null, notice: null,
-      team: DEFAULT_STYLE, voters: 0, tie: false,
+      questionTime: config.questionTime, timeLeft: config.questionTime, count: 3, avatars: session.state?.avatars ?? {}, answered: 0, answeredIds: [], question: null, reveal: null, final: null, review: null, notice: null,
+      team: this.style, voters: 0, tie: false,
     };
   }
 
@@ -145,6 +155,7 @@ export class HostGame {
     const s = this.session;
     if (s.status === 'finished' && s.state?.final) {
       this.set({ phase: 'finished', final: s.state.final, review: s.state.review ?? null });
+      this.lastMsg = { event: 'end', payload: s.state.final }; // um aluno que reconecte volta a ver o fim
     } else if (s.status === 'running' && s.state) {
       await this.restore(s.state);
     }
@@ -191,10 +202,12 @@ export class HostGame {
     };
     const field = BOT_FIELDS[this.session.settings?.botField ?? 'medio'];
     // Os fantasmas ocupam o lugar dos bots mais fracos: o número de carros não muda.
-    const ghosts = this.extras.ghosts.slice(0, 3).map((g) => makeGhost(`ghost-${g.session_id}`, ghostLabel(g), g.outcomes));
+    const ghosts = this.extras.ghosts.slice(0, 3).map((g) => makeGhost(`ghost-${g.game_id}`, ghostLabel(g), g.outcomes));
+    // Fantasmas na água são barcos (o sprite de recurso dos carros não faz sentido lá).
+    if (this.cat !== 'carro') for (const g of ghosts) g.car = fallbackCar(this.cat);
     const bots = field.slice(ghosts.length).map((skill, i) => makeBot(rng, i, skill));
     // Cada bot tem um carro diferente (modelo e cor), nunca da cor da turma.
-    const cars = botCars(this.style.car, bots.length);
+    const cars = botCars(this.style.car, bots.length, this.cat);
     bots.forEach((b, i) => {
       b.car = cars[i]?.key;
       b.color = cars[i]?.color ?? b.color;
@@ -205,7 +218,7 @@ export class HostGame {
   }
 
   private async restore(state: SavedState): Promise<void> {
-    this.style = parseStyle(state.team);
+    this.style = parseStyle(state.team, this.cat);
     this.set({ team: this.style });
     this.outcomes = state.outcomes.slice(0, state.next);
     this.race = this.buildRace();
@@ -217,9 +230,9 @@ export class HostGame {
     }
     this.race.finalizeEvents();
 
-    const rows = await this.api.loadAnswers(this.session.id);
+    const rows = await this.api.loadAnswers(this.session.game_id);
     const players = await this.api.listPlayers(this.session.id);
-    this.roster = players.filter((p) => !p.kicked);
+    this.roster = players.filter(active);
     const qt = this.config.questionTime * 1000;
     for (let q = 0; q < state.next; q++) {
       const qid = this.questions[q].id;
@@ -267,7 +280,7 @@ export class HostGame {
     this.lastResync = now;
     const m = this.lastMsg;
     if (!m) {
-      this.channel?.send({ event: 'lobby', payload: { count: this.snap.players.length } });
+      this.channel?.send(this.lobbyMsg());
       return;
     }
     if (m.event === 'question' && this.current) {
@@ -313,7 +326,7 @@ export class HostGame {
   /** Guarda o voto de um aluno (vem num `vote` ou no `hello`); formatos antigos ou desconhecidos são ignorados. */
   private recordVote(playerId: string, raw: unknown): void {
     if (this.snap.phase !== 'lobby') return;
-    const vote = cleanVote(raw);
+    const vote = cleanVote(raw, this.cat);
     if (!vote.car || this.votes.get(playerId)?.car === vote.car) return;
     if (!this.votes.has(playerId) && this.votes.size >= 300) return;
     this.votes.set(playerId, vote);
@@ -322,21 +335,21 @@ export class HostGame {
 
   /** O carro da turma é o mais votado pelos alunos (o por defeito, sem votos; sorteado, num empate). */
   private updateStyle(): void {
-    const { style, count, tie } = tally(this.votes.values(), this.session.id);
+    const { style, count, tie } = tally(this.votes.values(), this.session.game_id, this.cat);
     this.style = { car: style.car };
     this.set({ team: this.style, voters: count, tie });
-    this.send({ event: 'lobby', payload: { count: this.snap.players.length } });
+    this.send(this.lobbyMsg());
   }
 
   async refreshPlayers(): Promise<void> {
     try {
       const all = await this.api.listPlayers(this.session.id);
-      const active = all.filter((p) => !p.kicked);
+      const present = all.filter(active);
       if (this.snap.phase === 'lobby' || this.snap.phase === 'resume') {
-        const changed = active.length !== this.snap.players.length || active.some((p, i) => this.snap.players[i]?.id !== p.id);
+        const changed = present.length !== this.snap.players.length || present.some((p, i) => this.snap.players[i]?.id !== p.id);
         if (changed) {
-          this.set({ players: active });
-          this.send({ event: 'lobby', payload: { count: active.length } });
+          this.set({ players: present });
+          this.send(this.lobbyMsg(present.length));
         }
       }
     } catch (e) {
@@ -344,13 +357,22 @@ export class HostGame {
     }
   }
 
-  /** Um aluno saiu pelo botão "Sair": no lobby é apagado (pode voltar); a meio da corrida deixa de contar. */
+  private lobbyMsg(count = this.snap.players.length): HostEvent {
+    return { event: 'lobby', payload: { count, game: this.session.game_number, cat: this.cat } };
+  }
+
+  /** Avisa os alunos de que o número de presentes mudou (nunca no ecrã final: o `lobby` tiraria os alunos de lá). */
+  private sendLobby(): void {
+    if (this.snap.phase !== 'finished') this.send(this.lobbyMsg());
+  }
+
+  /** Um aluno saiu pelo botão "Sair": no lobby é apagado (pode voltar); a meio da corrida fica de fora deste jogo (pode voltar no lobby do seguinte). */
   private async onLeave(playerId: string): Promise<void> {
     if (!this.snap.players.some((p) => p.id === playerId)) return;
     const inLobby = this.snap.phase === 'lobby';
     try {
       if (inLobby) await this.api.removePlayer(playerId);
-      else await this.api.kickPlayer(playerId);
+      else await this.api.leavePlayer(playerId);
     } catch (e) {
       this.notice(`Não consegui retirar o aluno: ${(e as Error).message}`);
       return;
@@ -359,7 +381,7 @@ export class HostGame {
     this.dropFromRace(playerId);
     this.set({ players: this.snap.players.filter((p) => p.id !== playerId) });
     if (inLobby) this.updateStyle();
-    else this.send({ event: 'lobby', payload: { count: this.snap.players.length } });
+    else this.sendLobby();
   }
 
   async kick(playerId: string): Promise<void> {
@@ -369,7 +391,7 @@ export class HostGame {
       this.votes.delete(playerId);
       this.dropFromRace(playerId);
       this.set({ players: this.snap.players.filter((p) => p.id !== playerId) });
-      this.send({ event: 'lobby', payload: { count: this.snap.players.length } });
+      this.sendLobby();
     } catch (e) {
       this.notice(`Não consegui expulsar: ${(e as Error).message}`);
     }
@@ -378,7 +400,7 @@ export class HostGame {
   /** Expulso ou saído: deixa de contar nas respostas e nos resultados. */
   private dropFromRace(playerId: string) {
     this.roster = this.roster.filter((p) => p.id !== playerId);
-    if (this.answers.delete(playerId)) this.set({ answered: this.answers.size });
+    if (this.answers.delete(playerId)) this.set({ answered: this.answers.size, answeredIds: [...this.answers.keys()] });
   }
 
   /** A professora muda a alcunha (só no lobby). O servidor aplica o filtro e a unicidade. */
@@ -444,7 +466,7 @@ export class HostGame {
     this.roster = this.snap.players.slice(0, MAX_PLAYERS);
     this.race = this.buildRace(); // o carro da turma já tem o aspeto final
     try {
-      await this.api.updateSession(this.session.id, { status: 'running', started: true, state: this.savedState(0) });
+      await this.api.updateGame(this.session.game_id, { status: 'running', started: true, state: this.savedState(0) });
     } catch (e) {
       this.notice(`Não consegui gravar o início: ${(e as Error).message}`);
     }
@@ -470,10 +492,10 @@ export class HostGame {
     this.answers = new Map();
     this.qElapsed = 0;
     this.timeBucket = -1;
-    const payload: PublicQuestion = { question_id: q.id, index, total: this.questions.length, prompt: q.prompt, body: prep.body, time: this.config.questionTime };
+    const payload: PublicQuestion = { question_id: q.id, index, total: this.questions.length, prompt: q.prompt, body: prep.body, time: this.config.questionTime, game: this.session.game_number };
     this.send({ event: 'question', payload });
     this.set({
-      phase: 'question', qIndex: index, question: { prompt: q.prompt, body: prep.body }, reveal: null, answered: 0, timeLeft: this.config.questionTime,
+      phase: 'question', qIndex: index, question: { prompt: q.prompt, body: prep.body }, reveal: null, answered: 0, answeredIds: [], timeLeft: this.config.questionTime,
     });
   }
 
@@ -486,7 +508,7 @@ export class HostGame {
     const value = toCanonical(cur.q, cur.prep, raw);
     if (value === null) return;
     this.answers.set(playerId, { value, credit: grade(cur.q, value), ms: Math.round(this.qElapsed * 1000) });
-    this.set({ answered: this.answers.size });
+    this.set({ answered: this.answers.size, answeredIds: [...this.answers.keys()] });
   }
 
   /** Professora encerra a pergunta antes do tempo (ou passa a revelação). */
@@ -505,7 +527,7 @@ export class HostGame {
     this.answerLog[cur.index] = list;
     this.outcomes[cur.index] = outcomeFromAnswers(list, list.length);
     const rows = [...this.answers].map(([player_id, a]) => ({
-      session_id: this.session.id, question_id: cur.q.id, player_id, value: a.value, correct: a.credit === 1, ms_taken: a.ms,
+      game_id: this.session.game_id, question_id: cur.q.id, player_id, value: a.value, correct: a.credit === 1, ms_taken: a.ms,
     }));
     void this.api.saveAnswers(rows).catch((e) => this.notice(`Respostas por gravar: ${(e as Error).message}`));
     // O efeito aplica-se já: os carros continuam à mesma velocidade e recebem o bónus (ou o travão) no reveal.
@@ -531,14 +553,14 @@ export class HostGame {
     this.send({ event: 'reveal', payload: reveal });
     play(res.nitro ? 'nitro' : res.effect);
     this.revealT = 0;
-    this.set({ phase: 'reveal', reveal, answered: this.answers.size });
+    this.set({ phase: 'reveal', reveal, answered: this.answers.size, answeredIds: [...this.answers.keys()] });
     void this.api
-      .updateSession(this.session.id, { state: this.savedState(q + 1) })
+      .updateGame(this.session.game_id, { state: this.savedState(q + 1) })
       .catch((e) => this.notice(`Estado por gravar: ${(e as Error).message}`));
   }
 
   private savedState(next: number): SavedState {
-    return { v: 1, seed: this.seed, next, outcomes: this.outcomes.slice(0, next), avatars: this.snap.avatars, team: this.style };
+    return { v: 1, seed: this.seed, next, outcomes: this.outcomes.slice(0, next), avatars: this.snap.avatars, team: this.style, players: this.roster.length || undefined };
   }
 
   // ---------- Relógio ----------
@@ -654,6 +676,7 @@ export class HostGame {
       ...this.ghostSummary(race),
     };
     const end: EndMsg = {
+      game: this.session.game_number,
       final,
       players: Object.fromEntries(scores.map((s) => [s.playerId, { points: s.points, correct: s.correct, answered: s.answered, bestStreak: s.bestStreak, top: topIds.has(s.playerId) }])),
     };
@@ -675,10 +698,10 @@ export class HostGame {
     try {
       // Uma revisão tem outro conjunto de perguntas: não é fantasma nem recorde de nenhum quiz.
       if (!rv) await this.api.saveRaceRecord({
-        session_id: this.session.id, class_id: this.session.class_id, quiz_id: this.session.quiz_id, quiz_version: this.session.quiz_version,
+        game_id: this.session.game_id, class_id: this.session.class_id, quiz_id: this.session.quiz_id, quiz_version: this.session.quiz_version,
         timeline: makeTimeline(this.trackId, this.config, this.outcomes), final_position: teamPosition, finish_time_ms: finishTime,
       });
-      await this.api.updateSession(this.session.id, { status: 'finished', finished: true, state: { ...this.savedState(this.questions.length), final: end, review } });
+      await this.api.updateGame(this.session.game_id, { status: 'finished', finished: true, state: { ...this.savedState(this.questions.length), final: end, review } });
     } catch (e) {
       this.notice(`Resultado por gravar: ${(e as Error).message}`);
     }

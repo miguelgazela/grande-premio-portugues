@@ -102,7 +102,7 @@ function renderMatrix() {
 }
 
 // ---------- Live race ----------
-const view = new RaceView(track, { follow: true });
+const view = new RaceView(track, { follow: true, sprites: new URLSearchParams(location.search).has('track'), trackId: new URLSearchParams(location.search).get('track') ?? undefined }); // ?track=orbita para ver um tema
 let race: Race | null = null;
 let raceData: ReturnType<typeof buildRace> | null = null;
 let shownEvents = 0;

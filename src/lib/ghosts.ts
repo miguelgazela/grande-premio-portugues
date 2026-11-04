@@ -51,7 +51,7 @@ export const configKey = (c: RaceShape) => `${c.questions}@${c.questionTime}`;
 
 /** Corrida anterior de um quiz, pronta a ser usada como fantasma ou recorde. */
 export interface GhostRecord {
-  session_id: string;
+  game_id: string;
   class_id: string | null;
   class_name: string | null;
   created_at: string;
@@ -85,7 +85,7 @@ export function bestPerClass(list: GhostRecord[]): Set<string> {
     const cur = best.get(k);
     if (!cur || g.finish_time_ms < cur.finish_time_ms) best.set(k, g);
   }
-  return new Set([...best.values()].map((g) => g.session_id));
+  return new Set([...best.values()].map((g) => g.game_id));
 }
 
 /** Os fantasmas partilham a pista do primeiro escolhido; os outros incompatíveis ficam de fora. */

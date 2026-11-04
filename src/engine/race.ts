@@ -126,6 +126,8 @@ export class Race {
   private lastResolve = Number.NEGATIVE_INFINITY;
   /** Só para a rubber-band dos bots (diferença em terços da corrida). */
   private readonly lapLength: number;
+  /** O resultado (`finishTime`) já foi calculado. */
+  private settled = false;
   readonly baseSpeed: number;
   readonly questionCount: number;
   readonly cycle: number;
@@ -239,6 +241,8 @@ export class Race {
       }
     }
 
+    if (this.finishLine !== null && !this.settled && !this.bursting) this.settleResult();
+
     // Safety net: never let a race run forever.
     if (this.time > this.questionCount * this.cycle * 4) {
       for (const car of this.cars) {
@@ -282,18 +286,23 @@ export class Race {
   }
 
   /**
-   * Chamado quando a última pergunta fecha: a meta fica `FINISH_TAIL` segundos à frente do líder no fim do efeito, e o
-   * resultado de cada carro fica logo decidido. `finishTime` = tempo nominal − avanço sobre o cruzeiro (em segundos),
-   * independente do ritmo a que a turma respondeu.
+   * Chamado quando a última pergunta fecha: a meta fica `FINISH_TAIL` segundos à frente do líder no fim do efeito
+   * (previsto; a margem cobre o erro). O resultado só se fecha no fim do efeito (`settleResult`).
    */
   private setFinish(): void {
-    const h = this.config.overheadTime;
     const ends = this.cars.map((c) => this.projectEnd(c));
     this.finishLine = Math.max(...ends) + this.baseSpeed * FINISH_TAIL;
-    const nominal = this.questionCount * this.cycle + h + FINISH_TAIL;
-    this.cars.forEach((c, i) => {
-      c.finishTime = nominal - (ends[i] / this.baseSpeed - (this.time + h));
-    });
+  }
+
+  /**
+   * Quando o último efeito acaba, o resultado sai das distâncias reais (não da previsão): daí em diante todos andam à mesma
+   * velocidade, por isso a ordem de chegada à meta é exatamente a ordem destes tempos. `finishTime` = tempo nominal menos o avanço
+   * sobre o cruzeiro (segundos), independente do ritmo a que a turma respondeu.
+   */
+  private settleResult(): void {
+    const nominal = this.questionCount * this.cycle + this.config.overheadTime + FINISH_TAIL;
+    for (const c of this.cars) c.finishTime = nominal - (c.distance / this.baseSpeed - this.time);
+    this.settled = true;
   }
 
   private resolveQuestion(q: number): void {

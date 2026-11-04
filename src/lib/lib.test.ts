@@ -47,7 +47,7 @@ describe('validação do editor', () => {
 
 describe('relatório', () => {
   const qs = [q(0), q(1)];
-  const ans = (qi: number, pid: string, value: number | null, correct: boolean): AnswerRow => ({ session_id: 's', question_id: `q${qi}`, player_id: pid, value, correct, ms_taken: 1000 });
+  const ans = (qi: number, pid: string, value: number | null, correct: boolean): AnswerRow => ({ game_id: 's', question_id: `q${qi}`, player_id: pid, value, correct, ms_taken: 1000 });
   const answers = [ans(0, 'a', 1, true), ans(0, 'b', 2, false), ans(0, 'c', 2, false), ans(1, 'a', 1, true)];
   const r = buildReport(qs, answers, 3);
   it('percentagens e distribuição', () => {

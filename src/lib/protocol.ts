@@ -25,6 +25,8 @@ export interface PublicQuestion {
   time: number;
   /** Só nos reenvios (aluno a reconectar): o jogo está em pausa, para o estado chegar numa só mensagem. */
   paused?: boolean;
+  /** Nº do jogo na sala (1, 2…): o aluno sabe quando começou outro jogo e limpa o que respondeu. */
+  game?: number;
 }
 
 /** A solução, só enviada na revelação. */
@@ -87,13 +89,16 @@ export interface FinalInfo {
 }
 
 export interface EndMsg {
+  /** Nº do jogo na sala que acabou. */
+  game?: number;
   final: FinalInfo;
   players: Record<string, PlayerSummary>;
 }
 
 /** Anfitrião → alunos. */
 export type HostEvent =
-  | { event: 'lobby'; payload: { count: number } }
+  /** `game`: nº do jogo da sala. Um número novo (ou superior ao do ecrã final) = a professora abriu outro jogo na mesma sala. */
+  | { event: 'lobby'; payload: { count: number; game?: number; /** Categoria de veículo da pista (ausente = carro). */ cat?: 'carro' | 'barco' | 'nave' } }
   | { event: 'question'; payload: PublicQuestion }
   | { event: 'reveal'; payload: RevealMsg }
   | { event: 'end'; payload: EndMsg }

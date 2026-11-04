@@ -109,6 +109,15 @@ const TRIANGLE: Vec[] = [{x:812,y:198},{x:940,y:243},{x:1056,y:274},{x:1190,y:29
 
 const LOSANGO: Vec[] = [{x:900,y:150},{x:1048,y:172},{x:1170,y:226},{x:1273,y:283},{x:1388,y:331},{x:1518,y:387},{x:1621,y:469},{x:1640,y:570},{x:1562,y:663},{x:1431,y:727},{x:1313,y:772},{x:1230,y:823},{x:1154,y:893},{x:1045,y:960},{x:900,y:990},{x:752,y:968},{x:630,y:914},{x:527,y:857},{x:412,y:809},{x:282,y:753},{x:179,y:671},{x:160,y:570},{x:238,y:477},{x:369,y:413},{x:487,y:368},{x:570,y:317},{x:646,y:247},{x:755,y:180}];
 
+/** Canal (tema água): o losango espelhado, para ter outro desenho. */
+const CANAL: Vec[] = LOSANGO.map((p) => ({ x: 1800 - p.x, y: p.y }));
+
+/** Órbita (tema espaço): o triângulo rodado 180°, para ter outro desenho. */
+const ORBITA: Vec[] = TRIANGLE.map((p) => ({ x: 1800 - p.x, y: WORLD_H - p.y }));
+
+/** Caramelo (tema doces): o clássico espelhado na vertical, para ter outro desenho. */
+const CARAMELO: Vec[] = CLASSIC.map((p) => ({ x: p.x, y: WORLD_H - p.y }));
+
 /** Técnica: dois grampos e esses, curvas até ~50 de raio. */
 const TECNICO: Vec[] = [{x:724,y:170},{x:769,y:170},{x:814,y:170},{x:859,y:171},{x:904,y:172},{x:949,y:173},{x:994,y:175},{x:1039,y:177},{x:1084,y:179},{x:1129,y:182},{x:1174,y:185},{x:1219,y:189},{x:1264,y:193},{x:1309,y:198},{x:1354,y:203},{x:1399,y:208},{x:1443,y:215},{x:1487,y:226},{x:1529,y:242},{x:1569,y:264},{x:1603,y:292},{x:1629,y:329},{x:1641,y:372},{x:1633,y:416},{x:1607,y:453},{x:1570,y:478},{x:1527,y:493},{x:1483,y:500},{x:1438,y:502},{x:1393,y:500},{x:1348,y:496},{x:1303,y:491},{x:1258,y:487},{x:1213,y:484},{x:1168,y:481},{x:1123,y:479},{x:1078,y:477},{x:1033,y:477},{x:988,y:477},{x:942,y:478},{x:897,y:479},{x:852,y:479},{x:807,y:480},{x:762,y:480},{x:717,y:482},{x:672,y:488},{x:631,y:506},{x:600,y:538},{x:582,y:579},{x:581,y:624},{x:596,y:666},{x:625,y:700},{x:665,y:720},{x:709,y:728},{x:754,y:730},{x:799,y:730},{x:845,y:731},{x:890,y:734},{x:935,y:736},{x:980,y:739},{x:1025,y:741},{x:1070,y:742},{x:1115,y:742},{x:1160,y:741},{x:1205,y:741},{x:1250,y:739},{x:1295,y:739},{x:1340,y:739},{x:1386,y:740},{x:1430,y:743},{x:1475,y:751},{x:1518,y:765},{x:1557,y:788},{x:1590,y:818},{x:1611,y:858},{x:1607,y:902},{x:1581,y:938},{x:1545,y:965},{x:1503,y:982},{x:1459,y:989},{x:1414,y:993},{x:1369,y:997},{x:1324,y:999},{x:1279,y:1001},{x:1234,y:1003},{x:1189,y:1003},{x:1144,y:1003},{x:1098,y:1001},{x:1053,y:998},{x:1009,y:993},{x:964,y:987},{x:920,y:979},{x:876,y:969},{x:832,y:957},{x:789,y:945},{x:745,y:935},{x:700,y:929},{x:655,y:928},{x:610,y:933},{x:567,y:947},{x:527,y:966},{x:484,y:979},{x:439,y:982},{x:394,y:976},{x:351,y:962},{x:311,y:942},{x:276,y:914},{x:253,y:875},{x:251,y:831},{x:265,y:788},{x:275,y:744},{x:275,y:699},{x:264,y:655},{x:243,y:615},{x:220,y:576},{x:202,y:535},{x:191,y:492},{x:189,y:447},{x:197,y:402},{x:210,y:359},{x:230,y:319},{x:255,y:281},{x:288,y:250},{x:325,y:225},{x:366,y:206},{x:409,y:193},{x:454,y:185},{x:498,y:180},{x:543,y:176},{x:588,y:173},{x:634,y:171},{x:679,y:170}];
 
@@ -118,7 +127,19 @@ export const TRACKS: { id: string; name: string; points: Vec[]; samples?: number
   { id: 'triangulo', name: 'Triângulo', points: TRIANGLE },
   { id: 'losango', name: 'Losango', points: LOSANGO },
   { id: 'tecnico', name: 'Técnico', points: TECNICO, samples: 6 },
+  { id: 'canal', name: 'Canal', points: CANAL },
+  { id: 'caramelo', name: 'Caramelo', points: CARAMELO },
+  { id: 'orbita', name: 'Órbita', points: ORBITA },
 ];
+
+/** Temas novos (água `canal`, doces `caramelo`, espaço `orbita`) escondidos por enquanto: não saem no sorteio nem na escolha da professora. Para os mostrar, esvazia esta lista. As sessões já criadas com estas pistas continuam a abrir. */
+export const HIDDEN_TRACK_IDS: readonly string[] = ['canal', 'caramelo', 'orbita'];
+
+/** Pistas que se podem escolher e sortear. */
+export const SELECTABLE_TRACKS = TRACKS.filter((t) => !HIDDEN_TRACK_IDS.includes(t.id));
+
+/** Pistas sorteadas por defeito. */
+const RANDOM_TRACKS = SELECTABLE_TRACKS;
 
 export const DEFAULT_TRACK_POINTS: Vec[] = CLASSIC;
 
@@ -126,7 +147,7 @@ export const DEFAULT_TRACK_POINTS: Vec[] = CLASSIC;
 export function trackFor(sessionId: string): (typeof TRACKS)[number] {
   let h = 0;
   for (let i = 0; i < sessionId.length; i++) h = (h * 31 + sessionId.charCodeAt(i)) >>> 0;
-  return TRACKS[h % TRACKS.length];
+  return RANDOM_TRACKS[h % RANDOM_TRACKS.length];
 }
 
 /** Pista aberta, gerada a partir de uma semente: avança sempre para a frente (sem voltas nem cruzamentos). */
