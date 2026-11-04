@@ -560,6 +560,13 @@ details.ghosts .sum { margin-left: auto; color: var(--muted); font-weight: 600; 
 .step.me .sname { color: var(--gold); }
 .step .medal { height: 1.2em; }
 .fcar { display: block; flex: none; object-fit: contain; width: clamp(80px, 15vmin, 190px); aspect-ratio: 2 / 1; }
+.fstand.solo .podium3 { flex: 1; width: 100%; max-width: 640px; margin: 0 auto; gap: 2.4vmin; }
+.fstand.solo .fcar { width: clamp(110px, 24vmin, 280px); }
+.fstand.solo .step .sname { font-size: clamp(22px, 4vmin, 46px); }
+.fstand.solo .step.s1 .block { height: 20vmin; }
+.fstand.solo .step.s2 .block { height: 14vmin; }
+.fstand.solo .step.s3 .block { height: 10vmin; }
+.fstand.solo .step .block { font-size: clamp(30px, 6vmin, 68px); }
 .fcar.ghostmark { display: grid; place-items: center; font-size: clamp(32px, 7vmin, 80px); line-height: 1; }
 .frest li .fcar.ghostmark { font-size: 1.4em; width: 2.6em; height: 1.3em; aspect-ratio: auto; }
 
@@ -604,8 +611,10 @@ details.ghosts .sum { margin-left: auto; color: var(--muted); font-weight: 600; 
 
 @media (max-aspect-ratio: 1/1) {
   .final-grid { grid-template-columns: minmax(0, 1fr); grid-template-rows: none; }
-  .fcard { overflow: visible; }
-  .frest { overflow: visible; }
+  .fcard, .fhelp { overflow: visible; flex: none; }
+  .final-grid { align-content: start; grid-auto-rows: max-content; }
+  .frest { overflow: visible; flex: none; min-height: auto; }
+  .helpers { flex: none; }
 }
 
 @media (prefers-reduced-motion: no-preference) {

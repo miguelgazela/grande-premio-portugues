@@ -46,7 +46,7 @@ export function FinalScreen({ f, onNext, onExit, children }: { f: FinalInfo; onN
         </header>
 
         <main className="final-grid">
-          <section className="fcard fstand" aria-labelledby="h-stand">
+          <section className={`fcard fstand ${rest.length ? '' : 'solo'}`} aria-labelledby="h-stand">
             <h2 id="h-stand">Classificação</h2>
             <div className="podium3" data-n={podium.length}>
               {podium.map(({ index, car }) => (
