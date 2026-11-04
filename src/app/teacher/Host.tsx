@@ -2,9 +2,10 @@ import QRCode from 'qrcode';
 import { VersionTag } from '../ui/VersionTag';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { inFinalStretch } from '../../engine/config';
 import { HostGame, type HostSnapshot } from '../../game/hostGame';
 import { raceConfigFor } from '../../game/raceSettings';
-import { improved, repeatSettings, reviewLaps, stillFailing } from '../../lib/review';
+import { improved, repeatSettings, stillFailing } from '../../lib/review';
 import type { ReviewResult } from '../../lib/types';
 import { fmtSeconds, fmtTime, ghostMessage, trackRecord, usableRecords } from '../../lib/ghosts';
 import { errorMessage } from '../../lib/api';
@@ -180,8 +181,6 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   const [muted, setMutedState] = useState(isMuted());
   const [exiting, setExiting] = useState(false);
   const [stageError, setStageError] = useState<string | null>(null);
-  const qpl = game.config.questionsPerLap;
-  const lap = Math.min(game.config.laps, Math.floor(s.qIndex / qpl) + 1);
   const inQuestion = s.phase === 'question';
   const showReveal = s.phase === 'reveal' && s.reveal;
 
@@ -226,7 +225,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
     };
   }, [game]);
 
-  const finalLap = lap === game.config.laps && s.phase !== 'resume';
+  const finalLap = inFinalStretch(game.config, s.qIndex) && s.phase !== 'resume';
   const low = s.timeLeft <= 5;
 
   return (
@@ -390,7 +389,7 @@ function ReviewSummary({ game }: { game: HostGame }) {
     setBusy(true);
     try {
       const anchor = { id: game.session.quiz_id, title: next.title, year: null, topic: null, version: game.session.quiz_version, questionCount: next.questionIds.length, lastPlayed: null };
-      const settings = { botField: game.session.settings.botField, laps: reviewLaps(next.questionIds.length), review: next };
+      const settings = { botField: game.session.settings.botField, review: next };
       const s = await api.createSession(anchor, game.session.class_id, settings);
       nav(`/prof/jogo/${s.id}`);
     } catch (e) {

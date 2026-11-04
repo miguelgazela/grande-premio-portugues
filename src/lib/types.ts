@@ -71,10 +71,6 @@ export type SessionStatus = 'lobby' | 'running' | 'finished' | 'aborted';
 
 export interface SessionSettings {
   botField: BotField;
-  /** Voltas (1–5). Omitido: 3 (ou 1 com menos de 3 perguntas). */
-  laps?: number;
-  /** Perguntas por volta. Omitido/null: "todas" (as perguntas repartem-se pelas voltas). */
-  questionsPerLap?: number | null;
   /** Tempo por pergunta em segundos, a substituir o do quiz. */
   questionTime?: number | null;
   /** Pista escolhida (a dos fantasmas). Omitido: `trackFor(session.id)`. */

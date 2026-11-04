@@ -20,8 +20,8 @@ const DEFS: Def[] = [
   { group: 'Turma', target: 'sim', key: 'classSize', label: 'Alunos', min: 5, max: 32, step: 1 },
   { group: 'Turma', target: 'sim', key: 'participation', label: 'Participação', min: 0.5, max: 1, step: 0.01, pct: true },
   { group: 'Turma', target: 'sim', key: 'difficultySpread', label: 'Variação de dificuldade', min: 0, max: 0.4, step: 0.01, pct: true },
-  { group: 'Corrida', target: 'config', key: 'laps', label: 'Voltas', min: 1, max: 5, step: 1 },
-  { group: 'Corrida', target: 'config', key: 'questionsPerLap', label: 'Perguntas por volta', min: 3, max: 10, step: 1 },
+  { group: 'Corrida', target: 'config', key: 'questions', label: 'Perguntas', min: 6, max: 30, step: 1 },
+  { group: 'Corrida', target: 'config', key: 'finalCount', label: 'Perguntas na reta final', min: 1, max: 10, step: 1 },
   { group: 'Corrida', target: 'config', key: 'questionTime', label: 'Tempo de resposta (s)', min: 5, max: 40, step: 1 },
   { group: 'Velocidade', target: 'config', key: 'minFactor', label: 'Fator a 0%', min: 0.2, max: 1, step: 0.05 },
   { group: 'Velocidade', target: 'config', key: 'maxFactor', label: 'Fator a 100%', min: 1, max: 2, step: 0.05 },
@@ -31,7 +31,7 @@ const DEFS: Def[] = [
   { group: 'Velocidade', target: 'config', key: 'spinDuration', label: 'Duração despiste (s)', min: 0, max: 5, step: 0.5 },
   { group: 'Velocidade', target: 'config', key: 'speedBonusMax', label: 'Bónus rapidez máx.', min: 0, max: 0.3, step: 0.01, pct: true },
   { group: 'Velocidade', target: 'config', key: 'nitroMult', label: 'Multiplicador nitro', min: 1, max: 2, step: 0.05 },
-  { group: 'Velocidade', target: 'config', key: 'finalLapMult', label: 'Amplificação volta final', min: 1, max: 3, step: 0.1 },
+  { group: 'Velocidade', target: 'config', key: 'finalLapMult', label: 'Amplificação reta final', min: 1, max: 3, step: 0.1 },
   { group: 'Bots', target: 'config', key: 'rubberBand', label: 'Rubber-band', min: 0, max: 4, step: 0.1 },
   { group: 'Bots', target: 'config', key: 'rubberBandCap', label: 'Rubber-band máx.', min: 0, max: 0.5, step: 0.01, pct: true },
 ];
@@ -135,7 +135,7 @@ function updateHud() {
     const r = e.results[0];
     const li = document.createElement('li');
     li.className = r.effect;
-    li.textContent = `${Math.round(r.accuracy * 100)}% certas → ${EFFECT_LABEL[r.effect]}${r.nitro ? ' + NITRO' : ''}${e.finalLap ? ' (volta final)' : ''}`;
+    li.textContent = `${Math.round(r.accuracy * 100)}% certas → ${EFFECT_LABEL[r.effect]}${r.nitro ? ' + NITRO' : ''}${e.finalLap ? ' (reta final)' : ''}`;
     $('#log').appendChild(li);
     li.scrollIntoView({ block: 'nearest' });
     $('#banner').textContent = r.nitro ? '⚡ NITRO!' : EFFECT_LABEL[r.effect];
