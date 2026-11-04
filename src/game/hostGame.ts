@@ -611,15 +611,16 @@ export class HostGame {
         }
       }
     } else if (phase === 'sprint') {
-      // Uma turma fraca pode ficar muito longe da meta: acelera o sprint (taxa fixa) para durar ~20s.
-      const t = race.team!;
+      // O sprint acaba quando o líder cruza a meta (o resultado já está decidido); a turma, mesmo atrás, é classificada
+      // pelos tempos já calculados. Se o líder ainda estiver longe, acelera (taxa fixa) para durar ~8s.
       if (this.sprintRate === 0) {
-        const est = Math.max(0, (race.raceLength - t.distance) / race.baseSpeed);
-        this.sprintRate = Math.min(40, Math.max(1, est / 20));
+        const lead = Math.max(...race.cars.map((c) => c.distance));
+        const est = Math.max(0, (race.raceLength - lead) / race.baseSpeed);
+        this.sprintRate = Math.min(40, Math.max(1, est / 8));
       }
       const rate = this.sprintRate;
       for (let left = dt * rate; left > 0; left -= 0.25) race.step(Math.min(0.25, left));
-      if (race.team!.crossed || race.finished) {
+      if (race.cars.some((c) => c.crossed)) {
         this.holdT = 0;
         play('finish');
         music.stop();
