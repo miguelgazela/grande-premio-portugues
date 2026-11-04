@@ -25,7 +25,7 @@ O espelhamento mostra **tudo** o que está no ecrã do iPad, por isso o ecrã de
 - **Formato**: o iPad é 4:3 e o projetor normalmente 16:9, por isso o AirPlay põe barras pretas dos lados. O layout adapta-se a qualquer proporção, a pensar no iPad em horizontal.
 - **Ecrã ligado**: Screen Wake Lock API (Safari 16.4+), e como plano B uma dica para desligar o bloqueio automático.
 - **Sair da app pausa tudo**: o Safari suspende JS e websockets em segundo plano.
-  - O estado é guardado em `session.state` a cada pergunta.
+  - O estado é guardado em `game.state` a cada pergunta (a sala `session` tem vários jogos `game`; ver README).
   - Ao voltar: reconectar, recuperar o estado e continuar. O temporizador da pergunta congela enquanto a página está escondida.
 - **Som**: o iOS só toca áudio depois de um toque, por isso o botão "Começar corrida" desbloqueia o som. O áudio sai pelo AirPlay.
 - **Ecrã inteiro**: usar a app instalada no ecrã principal, que abre sem barra do Safari.
@@ -73,7 +73,7 @@ V/F, toca na palavra, ordenar, completar, excerto + pergunta, correspondência.
 ### Fase 5: Arte final e game feel
 Sprites do Higgsfield, várias pistas, câmara, partículas, música, personalização do carro da turma, avatares.
 
-Feito (branch `fase5-arte-game-feel`): fundos de menu, modelos `cartype-*` tingidos (bots e turma), temas por pista (relva/deserto/neve/cidade, função de `trackId` em `src/engine/theme.ts`, por isso fantasmas e refresh coincidem sem gravar nada), carro da turma (cor/modelo/nome por votação dos alunos ou fixado pela professora, gravado em `session.state.team`), partículas (pool de 140), "+1 POSIÇÃO!", público a festejar, efeitos e música sintetizados (WebAudio) com botão de som. Falta: mascote (Higgsfield), número no carro, música em ficheiro.
+Feito (branch `fase5-arte-game-feel`): fundos de menu, modelos `cartype-*` tingidos (bots e turma), temas por pista (relva/deserto/neve/cidade, função de `trackId` em `src/engine/theme.ts`, por isso fantasmas e refresh coincidem sem gravar nada), carro da turma (cor/modelo/nome por votação dos alunos ou fixado pela professora, gravado em `game.state.team`), partículas (pool de 140), "+1 POSIÇÃO!", público a festejar, efeitos e música sintetizados (WebAudio) com botão de som. Falta: mascote (Higgsfield), número no carro, música em ficheiro.
 
 Assets já gerados (ver `assets/README.md` e `public/assets/manifest.json`), por integrar:
 - Carros: 8 com cor (`car-*`, número "1") e 5 modelos tintáveis sem número (`cartype-*`, usar `sprite.tint`), 256×128, virados para +x.
