@@ -252,9 +252,11 @@ function QuestionView({ q, at, full, paused, mine, onPick }: { q: PublicQuestion
       <div className="sprompt">{q.prompt}</div>
       <div className="timer" style={{ minHeight: 8 }}><i style={{ width: `${Math.min(100, (left / full) * 100)}%` }} /></div>
       {/* `key` repõe o estado local (palavras tocadas, ordem…) a cada pergunta. */}
-      {paused && <div className="who">⏸ Jogo em pausa</div>}
       <StudentInput key={q.question_id} body={q.body} mine={mine} onSubmit={paused ? () => undefined : onPick} />
-      {mine !== undefined && <div className="who">Resposta enviada ✓</div>}
+      {/* Espaço sempre reservado: o aviso aparece sem mexer nas opções. */}
+      <div className="qstatus">
+        {paused ? <div className="who">⏸ Jogo em pausa</div> : mine !== undefined ? <div className="who">Resposta enviada ✓</div> : null}
+      </div>
     </>
   );
 }

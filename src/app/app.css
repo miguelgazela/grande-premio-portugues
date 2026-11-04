@@ -404,3 +404,4 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
 }
 
 .version-tag { position: fixed; left: 10px; bottom: calc(6px + env(safe-area-inset-bottom)); font-size: 11px; color: var(--muted); opacity: .45; pointer-events: none; user-select: none; font-variant-numeric: tabular-nums; z-index: 1; }
+.student .qstatus { flex: none; min-height: 56px; display: grid; place-items: center; }
