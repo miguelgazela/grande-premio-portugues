@@ -132,8 +132,14 @@ export const TRACKS: { id: string; name: string; points: Vec[]; samples?: number
   { id: 'orbita', name: 'Órbita', points: ORBITA },
 ];
 
-/** Pistas sorteadas por defeito. As de água (`canal`), doces (`caramelo`) e espaço (`orbita`) só saem por escolha da professora, para as sessões antigas manterem a pista. */
-const RANDOM_TRACKS = TRACKS.filter((t) => t.id !== 'canal' && t.id !== 'caramelo' && t.id !== 'orbita');
+/** Temas novos (água `canal`, doces `caramelo`, espaço `orbita`) escondidos por enquanto: não saem no sorteio nem na escolha da professora. Para os mostrar, esvazia esta lista. As sessões já criadas com estas pistas continuam a abrir. */
+export const HIDDEN_TRACK_IDS: readonly string[] = ['canal', 'caramelo', 'orbita'];
+
+/** Pistas que se podem escolher e sortear. */
+export const SELECTABLE_TRACKS = TRACKS.filter((t) => !HIDDEN_TRACK_IDS.includes(t.id));
+
+/** Pistas sorteadas por defeito. */
+const RANDOM_TRACKS = SELECTABLE_TRACKS;
 
 export const DEFAULT_TRACK_POINTS: Vec[] = CLASSIC;
 

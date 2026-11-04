@@ -3,7 +3,7 @@ import { VersionTag } from '../ui/VersionTag';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { BotField } from '../../engine/drivers';
 import { themeForTrack } from '../../engine/theme';
-import { TRACKS } from '../../engine/track';
+import { SELECTABLE_TRACKS } from '../../engine/track';
 import { raceConfigFor } from '../../game/raceSettings';
 import { errorMessage } from '../../lib/api';
 import { endSessions } from '../../lib/endSessions';
@@ -25,7 +25,7 @@ const TIMES: { value: number; label: string }[] = [
 /** Tema visual da pista (o traçado é sempre gerado de novo); '' = sorteado pela sessão. Cada tema usa o id de pista antigo (`trackId`). */
 const TRACK_CHOICES: { id: string; label: string }[] = [
   { id: '', label: 'Aleatória' },
-  ...TRACKS.map((t) => ({ id: t.id, label: themeForTrack(t.id).name })),
+  ...SELECTABLE_TRACKS.map((t) => ({ id: t.id, label: themeForTrack(t.id).name })),
 ];
 const RECENT = 3;
 const LAST_KEY = 'gpp.lastGame';
@@ -42,7 +42,7 @@ function readLast(): LastGame | null {
       classId: typeof v.classId === 'string' ? v.classId : '',
       field: FIELDS.some((f) => f.key === v.field) ? (v.field as BotField) : 'medio',
       time: typeof v.time === 'number' ? v.time : 0,
-      track: typeof v.track === 'string' && TRACKS.some((t) => t.id === v.track) ? v.track : '',
+      track: typeof v.track === 'string' && SELECTABLE_TRACKS.some((t) => t.id === v.track) ? v.track : '',
     };
   } catch {
     return null;
