@@ -392,7 +392,7 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
 @media (orientation: landscape) and (min-width: 900px) {
   .jogar { padding: 14px 20px; }
   .jogar .wide { width: 100%; height: 100%; padding: 20px 24px; gap: 14px; grid-template-rows: auto minmax(0, 1fr); }
-  .jogar-cols { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "hero pick" "adv pick" "act pick"; gap: 14px 24px; min-height: 0; }
+  .jogar-cols { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); grid-template-rows: auto minmax(0, 1fr) auto; grid-template-areas: "hero adv" "pick adv" "pick act"; gap: 14px 24px; min-height: 0; }
   .jogar-cols > .hero { grid-area: hero; padding: 16px 18px; gap: 10px; }
   .jogar-cols > .pick { grid-area: pick; overflow-y: auto; align-content: start; min-height: 0; padding-right: 4px; }
   .jogar-cols > .adv-area { grid-area: adv; overflow-y: auto; min-height: 0; align-content: start; }
@@ -506,3 +506,10 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
 /* Contagem inicial: o painel já tem a cor e o espaço finais; o conteúdo da 1.ª pergunta aparece desfocado. */
 .host .qpanel.preview > * { filter: blur(14px); opacity: .55; pointer-events: none; user-select: none; }
 .host .qpanel { transition: none; }
+
+details.ghosts { display: grid; gap: 8px; }
+details.ghosts > summary { list-style: none; min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; background: var(--panel); border-radius: 14px; cursor: pointer; }
+details.ghosts > summary::-webkit-details-marker { display: none; }
+details.ghosts > summary::after { content: '›'; font-size: 1.6rem; color: var(--muted); transition: transform .2s; }
+details.ghosts[open] > summary::after { transform: rotate(90deg); }
+details.ghosts .sum { margin-left: auto; color: var(--muted); font-weight: 600; }

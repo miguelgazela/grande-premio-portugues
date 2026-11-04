@@ -57,6 +57,19 @@ function writeLast(v: LastGame) {
   }
 }
 
+/** iPad na horizontal: duas colunas (jogo à esquerda, ajustes à direita, já abertos). */
+const LANDSCAPE_Q = '(orientation: landscape) and (min-width: 900px)';
+function useLandscape() {
+  const [v, setV] = useState(() => window.matchMedia(LANDSCAPE_Q).matches);
+  useEffect(() => {
+    const m = window.matchMedia(LANDSCAPE_Q);
+    const on = () => setV(m.matches);
+    m.addEventListener('change', on);
+    return () => m.removeEventListener('change', on);
+  }, []);
+  return v;
+}
+
 /** Área "Jogar" (iPad): repetir o último jogo, ou escolher quiz e turma, e abrir a sala. */
 export function Jogar() {
   const { api, teacher, signOut } = useTeacher();
@@ -76,6 +89,7 @@ export function Jogar() {
   const [picked, setPicked] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const landscape = useLandscape();
 
   useEffect(() => {
     void (async () => {
@@ -235,7 +249,7 @@ export function Jogar() {
         </section>
 
         <div className="adv-area">
-          <details className="more">
+          <details className="more" open={landscape || undefined} key={landscape ? 'l' : 'p'}>
             <summary>
               <span>Ajustar corrida</span>
               <span className="sum">Bots {botLabel(field).toLowerCase()}{time ? ` · ${timeLabel(time)}` : ''}{track && !validPicked.length ? ` · ${TRACK_CHOICES.find((t) => t.id === track)?.label}` : ''}{validPicked.length ? ` · ${validPicked.length} 👻` : ''}</span>
@@ -267,8 +281,8 @@ export function Jogar() {
                 {validPicked.length > 0 && <span className="muted">Com fantasmas, o tema é o deles.</span>}
               </div>
               {compat.length > 0 && (
-                <div className="field">
-                  <b>Fantasmas de outras turmas</b>
+                <details className="ghosts">
+                  <summary><b>Fantasmas de outras turmas</b>{validPicked.length > 0 && <span className="sum">{validPicked.length} 👻</span>}</summary>
                   {record && <span className="muted">🏆 Recorde: <b>{fmtTime(record.finish_time_ms)}</b> ({ghostLabel(record)})</span>}
                   {shown.map((g) => {
                     const on = validPicked.includes(g.session_id);
@@ -283,7 +297,7 @@ export function Jogar() {
                     );
                   })}
                   {validPicked.length > 0 && <span className="muted">Os fantasmas ocupam o lugar dos bots; a pista é a deles.</span>}
-                </div>
+                </details>
               )}
             </div>
           </details>
