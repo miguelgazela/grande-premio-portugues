@@ -1578,5 +1578,35 @@
       0.5
     ],
     "notes": "Logo original sem escritores"
+  },
+  "menu-title-desert": {
+    "file": "menu-title-desert.jpg",
+    "w": 1920,
+    "h": 1086,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Fundo do lobby, tema deserto; mesma composição do menu-title (centro livre). Original 1344x752 ampliado"
+  },
+  "menu-title-snow": {
+    "file": "menu-title-snow.jpg",
+    "w": 1920,
+    "h": 1086,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Fundo do lobby, tema neve; mesma composição do menu-title (centro livre). Original 1344x752 ampliado"
+  },
+  "menu-title-city": {
+    "file": "menu-title-city.jpg",
+    "w": 1920,
+    "h": 1086,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Fundo do lobby, tema cidade; mesma composição do menu-title (centro livre). Original 1344x752 ampliado"
   }
 }

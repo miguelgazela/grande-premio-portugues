@@ -14,6 +14,7 @@ import { keepAwake, wakeLockSupported } from '../../lib/wakeLock';
 import { RaceView } from '../../render/raceView';
 import { isMuted, play, setMuted } from '../../lib/audio';
 import { assetUrl } from '../../render/assets';
+import { themeForTrack } from '../../engine/theme';
 import { Asset, Countdown, Flames, Place } from '../ui/Asset';
 import { carDef } from '../../game/teamStyle';
 import { CarPreview } from '../ui/TeamPicker';
@@ -111,8 +112,11 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
     void QRCode.toDataURL(url, { margin: 0, width: 512, errorCorrectionLevel: 'M' }).then(setQr);
   }, [url]);
 
+  const suffix = themeForTrack(game.trackId).suffix;
+  const bg = suffix ? `menu-title-${suffix}.jpg` : 'menu-title.jpg';
+
   return (
-    <div className="host menubg" style={{ backgroundImage: `url(${assetUrl('menu-title.jpg')})` }}>
+    <div className="host menubg" style={{ backgroundImage: `url(${assetUrl(bg)})` }}>
       <VersionTag />
       <div className="lobby">
         <div className="join">
