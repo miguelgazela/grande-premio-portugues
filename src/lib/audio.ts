@@ -41,10 +41,21 @@ export function unlockAudio(): void {
       musicBus.gain.value = 0.5;
       musicBus.connect(master);
     }
+    // iOS: sem isto o interruptor de silêncio do iPad cala o WebAudio (só o computador tocava).
+    const session = (navigator as unknown as { audioSession?: { type: string } }).audioSession;
+    if (session) session.type = 'playback';
     void ctx.resume();
     beep(1, 0.02, 0.0001); // desbloqueia
+    if (!resumeHooked) {
+      resumeHooked = true;
+      // O iOS põe o contexto em 'suspended'/'interrupted' ao ir para segundo plano: retoma no regresso e no próximo toque.
+      const wake = () => { if (ctx && ctx.state !== 'running') void ctx.resume(); };
+      document.addEventListener('visibilitychange', wake);
+      document.addEventListener('pointerdown', wake, true);
+    }
   } catch { /* sem som, tudo bem */ }
 }
+let resumeHooked = false;
 
 function ready(): boolean {
   return !!ctx && ctx.state === 'running' && !!sfxBus;
