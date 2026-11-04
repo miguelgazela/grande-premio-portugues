@@ -91,7 +91,7 @@ export class HostGame {
   private roster: PlayerRow[] = [];
   private lastMsg: HostEvent | null = null;
   private lastResync = 0;
-  private resyncT: ReturnType<typeof setTimeout> | undefined;
+  private resyncT: number | undefined;
   private pollTimer = 0;
   private timeBucket = -1;
   private votes = new Map<string, StyleVote>();
