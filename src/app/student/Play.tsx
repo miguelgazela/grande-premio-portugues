@@ -8,7 +8,7 @@ import { useApi } from '../useApi';
 import { Asset } from '../ui/Asset';
 import { CarPicker } from '../ui/TeamPicker';
 import { carDef } from '../../game/teamStyle';
-import { StudentInput, describeSolution } from '../ui/Question';
+import { StudentInput, solutionView } from '../ui/Question';
 import { clearPlayer, deviceToken, loadAvatar, loadPlayer, savePlayer } from './session';
 
 
@@ -201,7 +201,7 @@ export function Play() {
 
   return (
     <div className="student">
-      <header className="me-bar">
+      <header className={`me-bar ${view.k === 'question' || view.k === 'reveal' ? 'compact' : ''}`}>
         <span />
         <div className="me-id">
           {loadAvatar() && <Asset name={loadAvatar()!} className="me-avatar" />}
@@ -223,20 +223,27 @@ export function Play() {
         </div>
       )}
       {view.k === 'wait' && (
-        <div className="msg">
-          <div style={{ width: '100%', maxWidth: 640 }}>
-            Estás dentro! 🏁<small>{view.count ? `${view.count} na corrida · ` : ''}À espera que a professora comece…</small>
-            <small>Vota no carro da turma: escolhe o modelo e a cor. O mais votado ganha.</small>
+        <main className="wait">
+          <section className="wait-status" aria-live="polite">
+            <h1>Estás dentro! 🏁</h1>
+            <div className="wait-count">
+              {view.count ? <span className="pill">👥 {view.count} na corrida</span> : null}
+              <span className="wait-dots">À espera da professora<i>.</i><i>.</i><i>.</i></span>
+            </div>
+          </section>
+          <section className="wait-vote">
+            <h2>Vota no carro da turma</h2>
+            <p className="lead">O mais votado ganha.</p>
             <CarPicker value={car} onPick={vote} />
-          </div>
-        </div>
+          </section>
+        </main>
       )}
       {view.k === 'question' && <QuestionView q={view.q} at={view.at} full={view.full} paused={view.paused} mine={chosen[view.q.question_id]} onPick={answer} />}
       {view.k === 'reveal' && <RevealView r={view.r} mine={chosen[view.r.question_id]} body={view.body} me={player.player_id} />}
       {view.k === 'aborted' && (
         <div className="msg">
-          <div style={{ display: 'grid', gap: 16 }}>
-            <div>A professora terminou a sessão</div>
+          <div className="end-box">
+            <h1>A professora terminou a sessão</h1>
             <button className="primary big" onClick={() => { clearPlayer(); nav('/'); }}>Voltar ao início</button>
           </div>
         </div>
@@ -246,7 +253,7 @@ export function Play() {
   );
 }
 
-function QuestionView({ q, at, full, paused, mine, onPick }: { q: PublicQuestion; at: number; full: number; paused?: boolean; mine: AnswerValue | undefined; onPick(v: AnswerValue): void }) {
+export function QuestionView({ q, at, full, paused, mine, onPick }: { q: PublicQuestion; at: number; full: number; paused?: boolean; mine: AnswerValue | undefined; onPick(v: AnswerValue): void }) {
   const [left, setLeft] = useState(q.time);
   useEffect(() => {
     if (paused) {
@@ -261,49 +268,73 @@ function QuestionView({ q, at, full, paused, mine, onPick }: { q: PublicQuestion
       <div className="sprompt">{q.prompt}</div>
       <div className="timer" style={{ minHeight: 8 }}><i style={{ width: `${Math.min(100, (left / full) * 100)}%` }} /></div>
       {/* `key` repõe o estado local (palavras tocadas, ordem…) a cada pergunta. */}
-      {paused && <div className="who">⏸ Jogo em pausa</div>}
+      {paused && <div className="status-pill paused">⏸ Jogo em pausa</div>}
       <StudentInput key={q.question_id} body={q.body} mine={mine} onSubmit={paused ? () => undefined : onPick} />
-      {mine !== undefined && <div className="who">Resposta enviada ✓</div>}
+      {mine !== undefined && <div className="status-pill sent">✓ Resposta enviada</div>}
     </>
   );
 }
 
-function RevealView({ r, mine, body, me }: { r: RevealMsg; mine: AnswerValue | undefined; body: PublicBody | null; me: string }) {
+export function RevealView({ r, mine, body, me }: { r: RevealMsg; mine: AnswerValue | undefined; body: PublicBody | null; me: string }) {
   const ok = r.results[me] === true;
   const part = r.partial?.[me];
   const answered = mine !== undefined;
+  const tone = ok ? 'r-good' : part ? 'r-half' : 'r-bad';
+  const sol = solutionView(r.solution, body);
+  const pct = Math.round(r.accuracy * 100);
   return (
-    <div className="msg">
-      <div>
+    <main className={`reveal ${tone}`}>
+      <section className="reveal-result" aria-live="polite">
         <div className="big-result">
           {ok ? <Asset name="ui-check" fallback="✅" /> : part ? '🟡' : answered ? <Asset name="ui-cross" fallback="❌" /> : '⏱️'}
         </div>
-        {ok ? 'Certo!' : part ? `Quase! ${Math.round(part * 100)}% certo` : answered ? 'Errado' : 'Sem resposta'}
-        <small>{describeSolution(r.solution, body)} {Math.round(r.accuracy * 100)}% da turma acertou.</small>
-        {r.explanation && <small>{r.explanation}</small>}
-      </div>
-    </div>
+        <h1>{ok ? 'Certo!' : part ? `Quase! ${Math.round(part * 100)}% certo` : answered ? 'Errado' : 'Sem resposta'}</h1>
+      </section>
+      <section className="answer-card" aria-label="Resposta certa">
+        <span className="label">{ok ? 'A resposta' : 'A resposta certa'}</span>
+        <div className={`answer-main ${sol.tone ?? ''}`}>
+          {sol.badge && <b className="answer-badge">{sol.badge}</b>}
+          <div className="answer-lines">{sol.lines.map((l, i) => <div key={i}>{l}</div>)}</div>
+        </div>
+      </section>
+      <div className="class-stat"><span className="pill">{pct}% da turma acertou</span></div>
+      {r.explanation && <Explanation text={r.explanation} />}
+    </main>
   );
 }
 
-function EndView({ e, me, onExit }: { e: EndMsg; me: string; onExit(): void }) {
-  const p = e.players[me];
+/** Explicação em cartão próprio; se for longa, mostra o início com "Ler tudo" (nada se perde). */
+function Explanation({ text }: { text: string }) {
+  const long = text.length > 180;
+  const [open, setOpen] = useState(!long);
   return (
-    <div className="msg">
-      <div style={{ display: 'grid', gap: 12, width: '100%', maxWidth: 480 }}>
-        <div>{e.final.teamPosition === 1 ? '🏆 A turma venceu!' : `🏁 A turma acabou em ${e.final.teamPosition}º`}</div>
-        {p ? (
-          <>
-            <div className="stat"><span>Acertaste</span><b>{p.correct} / {e.final.totalQuestions}</b></div>
-            <div className="stat"><span>Maior série</span><b>{p.bestStreak} <Asset name="ui-flame" className="medal" fallback="🔥" /></b></div>
-            <div className="stat"><span>Pontos para a equipa</span><b>{p.points}</b></div>
-            {p.top && <div>⭐ Estás no top 5 de quem mais ajudou!</div>}
-          </>
-        ) : (
-          <small>Obrigado por jogares!</small>
-        )}
-        <button onClick={onExit}>Sair</button>
-      </div>
-    </div>
+    <section className="explain">
+      <span className="label">Explicação</span>
+      <p className={open ? '' : 'clamped'}>{text}</p>
+      {long && <button type="button" className="more-text" onClick={() => setOpen(!open)} aria-expanded={open}>{open ? 'Ler menos' : 'Ler tudo'}</button>}
+    </section>
+  );
+}
+
+export function EndView({ e, me, onExit }: { e: EndMsg; me: string; onExit(): void }) {
+  const p = e.players[me];
+  const won = e.final.teamPosition === 1;
+  return (
+    <main className="end-box">
+      <h1>{won ? '🏆 A turma venceu!' : `🏁 A turma acabou em ${e.final.teamPosition}º`}</h1>
+      {p ? (
+        <>
+          <div className="stats">
+            <div className="stat"><b>{p.correct} / {e.final.totalQuestions}</b><span>Acertaste</span></div>
+            <div className="stat"><b>{p.bestStreak} <Asset name="ui-flame" className="medal" fallback="🔥" /></b><span>Maior série</span></div>
+            <div className="stat"><b>{p.points}</b><span>Pontos para a equipa</span></div>
+          </div>
+          {p.top && <div className="status-pill sent">⭐ Estás no top 5 de quem mais ajudou!</div>}
+        </>
+      ) : (
+        <p className="lead">Obrigado por jogares!</p>
+      )}
+      <button className="big" onClick={onExit}>Sair</button>
+    </main>
   );
 }

@@ -33,6 +33,38 @@ export function describeSolution(s: Solution, body: PublicBody | null): string {
   }
 }
 
+/** A resposta certa em partes, para destacar no ecrã do aluno (letra + cor da opção, texto grande). */
+export interface SolutionView {
+  /** Classe de cor da opção (A–D, T, F), quando faz sentido. */
+  tone?: string;
+  /** Letra ou símbolo no distintivo. */
+  badge?: string;
+  /** A resposta propriamente dita (uma linha cada). */
+  lines: string[];
+}
+
+export function solutionView(s: Solution, body: PublicBody | null): SolutionView {
+  switch (s.type) {
+    case 'multiple_choice':
+    case 'excerpt': {
+      const text = body && 'options' in body && body.options ? body.options[s.index] : '';
+      return { tone: LETTERS[s.index], badge: LETTERS[s.index], lines: text ? [text] : [] };
+    }
+    case 'true_false':
+      return { tone: s.value ? 'T' : 'F', badge: s.value ? '✔' : '✘', lines: [s.value ? 'Verdadeiro' : 'Falso'] };
+    case 'tap_word': {
+      const words = body?.type === 'tap_word' ? body.words : [];
+      return { lines: [s.indices.map((i) => words[i]).join(' ')] };
+    }
+    case 'order':
+      return { lines: s.items.map((x, i) => `${i + 1}. ${x}`) };
+    case 'complete':
+      return { lines: s.answers };
+    case 'match':
+      return { lines: s.pairs.map(([l, r]) => `${l} ↔ ${r}`) };
+  }
+}
+
 // ---------------------------------------------------------------- aluno
 
 interface InputProps {
