@@ -7,7 +7,7 @@ import { HostGame, type HostSnapshot } from '../../game/hostGame';
 import { raceConfigFor } from '../../game/raceSettings';
 import { improved, repeatSettings, stillFailing } from '../../lib/review';
 import type { ReviewResult } from '../../lib/types';
-import { fmtSeconds, fmtTime, ghostMessage, trackRecord, usableRecords } from '../../lib/ghosts';
+import { fmtTime, trackRecord, usableRecords } from '../../lib/ghosts';
 import { errorMessage } from '../../lib/api';
 import { endSessions } from '../../lib/endSessions';
 import { keepAwake, wakeLockSupported } from '../../lib/wakeLock';
@@ -15,11 +15,12 @@ import { RaceView } from '../../render/raceView';
 import { isMuted, play, setMuted } from '../../lib/audio';
 import { assetUrl } from '../../render/assets';
 import { themeForTrack } from '../../engine/theme';
-import { Asset, Countdown, Flames, Place } from '../ui/Asset';
+import { Asset, Countdown, Flames } from '../ui/Asset';
 import { fitAvatars } from '../../lib/avatarRow';
 import { VEHICLE_WORDS, carDef } from '../../game/teamStyle';
 import { CarPreview } from '../ui/TeamPicker';
 import { HostBody } from '../ui/Question';
+import { FinalScreen } from './FinalScreen';
 import { useTeacher } from './TeacherGate';
 
 const EFFECT_TEXT = { turbo: 'TURBO!', normal: 'Bom ritmo', slow: '🐢 A abrandar', spin: '💫 DESPISTE!' } as const;
@@ -340,61 +341,10 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
 }
 
 function Podium({ game, s, onExit, onNext }: { game: HostGame; s: HostSnapshot; onExit(): void; onNext(): void }) {
-  const f = s.final!.final;
   return (
-    <div className="host menubg" style={{ backgroundImage: `url(${assetUrl('menu-results.jpg')})` }}>
-      <div className="podium">
-        <h1>
-          {f.teamPosition === 1 && <Asset name="ui-trophy" className="title-icon" fallback="🏆 " />}
-          {f.teamPosition === 1 ? 'Vitória da turma!' : `🏁 A turma acabou em ${f.teamPosition}º lugar`}
-        </h1>
-        {(f.ghost || f.record) && (
-          <div className="box ghostbox" style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
-            {f.ghost && <h2>{ghostMessage(f.ghost)}</h2>}
-            {f.record && (
-              <p style={{ fontSize: 'clamp(16px,3vmin,30px)', margin: '6px 0 0' }}>
-                {f.record.bestMs === null
-                  ? `Primeiro tempo desta corrida: ${fmtTime(f.standings.find((c) => c.kind === 'team')?.timeMs ?? 0)}`
-                  : f.record.newRecord
-                    ? `🏆 Novo recorde! Antes: ${fmtTime(f.record.bestMs)} (${f.record.holder ?? 'sem turma'})`
-                    : `Recorde da pista: ${fmtTime(f.record.bestMs)} (${f.record.holder ?? 'sem turma'}) · faltaram ${fmtSeconds(f.record.gapMs)}`}
-              </p>
-            )}
-          </div>
-        )}
-        <div className="box">
-          <h2>Classificação</h2>
-          <ol>
-            {f.standings.map((c, i) => (
-              <li key={i} className={c.kind === 'team' ? 'me' : ''}>
-                <span className="who"><Place index={i} />{c.kind === 'team' ? <CarPreview car={f.teamCar ?? 'car-team'} size={44} /> : c.car ? <CarPreview car={c.car} size={44} /> : null} {c.name}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-        <div className="box">
-          <h2>Quem mais ajudou</h2>
-          <ol>
-            {f.ranking.map((r, i) => (
-              <li key={i}>
-                <span className="who"><Place index={i} />{r.avatar && <Asset name={r.avatar} className="chip-avatar" />} {r.nickname}</span>
-                <small>{r.points} pts · {r.correct} certas</small>
-              </li>
-            ))}
-          </ol>
-          <div className="awards">
-            {f.awards.map((a, i) => (
-              <div className="award" key={i}><span className="award-emoji">{a.emoji}</span> <b>{a.title}</b>{a.nickname}, {a.detail}</div>
-            ))}
-          </div>
-        </div>
-        {s.review && <ReviewSummary game={game} />}
-        <div style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
-          <button className="primary big" onClick={onNext}>Outro quiz, mesma sala</button>{' '}
-          <button className="big" onClick={onExit}>Voltar aos quizzes</button>
-        </div>
-      </div>
-    </div>
+    <FinalScreen f={s.final!.final} onNext={onNext} onExit={onExit}>
+      {s.review && <ReviewSummary game={game} />}
+    </FinalScreen>
   );
 }
 
