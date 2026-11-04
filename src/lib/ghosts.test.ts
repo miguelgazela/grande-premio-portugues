@@ -52,7 +52,7 @@ describe('timeline', () => {
 });
 
 const rec = (id: string, over: Partial<GhostRecord> = {}): GhostRecord => ({
-  session_id: id, class_id: 'A', class_name: '9ºA', created_at: `2026-11-0${id}`, final_position: 2, finish_time_ms: 200_000,
+  game_id: id, class_id: 'A', class_name: '9ºA', created_at: `2026-11-0${id}`, final_position: 2, finish_time_ms: 200_000,
   trackId: TRACKS[0].id, config: { questions: 8, questionTime: 20 }, outcomes: outcomes(1, 8), ...over,
 });
 
@@ -67,18 +67,18 @@ describe('seleção de compatíveis', () => {
     rec('6', { trackId: 'inexistente' }),
   ];
   it('só mesma configuração, perguntas a bater certo e pista conhecida', () => {
-    expect(compatibleRecords(all, shape).map((g) => g.session_id)).toEqual(['3', '2', '1']);
+    expect(compatibleRecords(all, shape).map((g) => g.game_id)).toEqual(['3', '2', '1']);
   });
   it('melhor de cada turma', () => {
     expect([...bestPerClass(compatibleRecords(all, shape))].sort()).toEqual(['2', '3']);
   });
   it('mesma pista que o primeiro escolhido', () => {
     const c = compatibleRecords(all, shape);
-    expect(sameTrackAs(c, [c.find((g) => g.session_id === '2')!]).map((g) => g.session_id)).toEqual(['2']);
+    expect(sameTrackAs(c, [c.find((g) => g.game_id === '2')!]).map((g) => g.game_id)).toEqual(['2']);
     expect(sameTrackAs(c, []).length).toBe(3);
   });
   it('recorde = menor tempo compatível', () => {
-    expect(trackRecord(all, shape)?.session_id).toBe('2');
+    expect(trackRecord(all, shape)?.game_id).toBe('2');
     expect(trackRecord([], shape)).toBeNull();
   });
 });

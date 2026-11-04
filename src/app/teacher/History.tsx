@@ -51,13 +51,13 @@ export function History() {
           <thead><tr><th>Data</th><th>Quiz</th><th>Turma</th><th>Posição final</th><th>% média certas</th><th /></tr></thead>
           <tbody>
             {races.map((r) => (
-              <tr key={r.session_id}>
+              <tr key={r.game_id}>
                 <td>{fmtDate(r.created_at)}</td>
                 <td>{r.quiz_title}</td>
                 <td>{r.class_name ?? '—'}</td>
                 <td>{r.final_position}º</td>
                 <td>{pct(r.avg_accuracy)}</td>
-                <td className="actions"><button onClick={() => nav(`/prof/preparar/relatorio/${r.session_id}`)}>Relatório</button></td>
+                <td className="actions"><button onClick={() => nav(`/prof/preparar/relatorio/${r.game_id}`)}>Relatório</button></td>
               </tr>
             ))}
           </tbody>

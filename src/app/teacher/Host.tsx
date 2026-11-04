@@ -1,7 +1,7 @@
 import QRCode from 'qrcode';
 import { VersionTag } from '../ui/VersionTag';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { inFinalStretch } from '../../engine/config';
 import { HostGame, type HostSnapshot } from '../../game/hostGame';
 import { raceConfigFor } from '../../game/raceSettings';
@@ -26,6 +26,8 @@ const EFFECT_TEXT = { turbo: 'TURBO!', normal: 'Bom ritmo', slow: '🐢 A abrand
 
 export function Host() {
   const { id } = useParams();
+  // `key` muda a cada navegação: abrir o jogo seguinte da mesma sala (mesmo `id`) volta a montar o anfitrião.
+  const { key: navKey } = useLocation();
   const { api } = useTeacher();
   const [game, setGame] = useState<HostGame | null>(null);
   const [error, setError] = useState('');
@@ -43,7 +45,7 @@ export function Host() {
         // Uma revisão não tem fantasmas nem recorde.
         const all = review ? [] : await api.listGhostRecords(session.quiz_id, session.quiz_version).catch(() => []);
         const usable = usableRecords(all);
-        const ghosts = (session.settings?.ghosts ?? []).flatMap((x) => usable.filter((r) => r.session_id === x.sessionId));
+        const ghosts = (session.settings?.ghosts ?? []).flatMap((x) => usable.filter((r) => r.game_id === x.gameId));
         g = new HostGame(api, session, questions, { ghosts, record: trackRecord(all, config) });
         await g.init();
         if (cancelled) g.destroy();
@@ -56,7 +58,7 @@ export function Host() {
       cancelled = true;
       g?.destroy();
     };
-  }, [api, id]);
+  }, [api, id, navKey]);
 
   useEffect(() => keepAwake(), []);
 
@@ -69,7 +71,7 @@ function HostScreen({ game }: { game: HostGame }) {
   const s = useSyncExternalStore(game.subscribe, game.getSnapshot);
   const nav = useNavigate();
 
-  if (s.phase === 'finished') return <Podium game={game} s={s} onExit={() => nav('/prof')} />;
+  if (s.phase === 'finished') return <Podium game={game} s={s} onExit={() => nav('/prof')} onNext={() => nav(`/prof?sala=${game.session.id}`)} />;
   if (s.phase === 'lobby') return <Lobby game={game} s={s} />;
   return <RaceScreen game={game} s={s} />;
 }
@@ -327,7 +329,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   );
 }
 
-function Podium({ game, s, onExit }: { game: HostGame; s: HostSnapshot; onExit(): void }) {
+function Podium({ game, s, onExit, onNext }: { game: HostGame; s: HostSnapshot; onExit(): void; onNext(): void }) {
   const f = s.final!.final;
   return (
     <div className="host menubg" style={{ backgroundImage: `url(${assetUrl('menu-results.jpg')})` }}>
@@ -378,7 +380,8 @@ function Podium({ game, s, onExit }: { game: HostGame; s: HostSnapshot; onExit()
         </div>
         {s.review && <ReviewSummary game={game} />}
         <div style={{ gridColumn: '1 / -1', textAlign: 'center' }}>
-          <button className="primary big" onClick={onExit}>Voltar aos quizzes</button>
+          <button className="primary big" onClick={onNext}>Outro quiz, mesma sala</button>{' '}
+          <button className="big" onClick={onExit}>Voltar aos quizzes</button>
         </div>
       </div>
     </div>
@@ -404,7 +407,7 @@ function ReviewSummary({ game }: { game: HostGame }) {
     try {
       const anchor = { id: game.session.quiz_id, title: next.title, year: null, topic: null, version: game.session.quiz_version, questionCount: next.questionIds.length, lastPlayed: null };
       const settings = { botField: game.session.settings.botField, review: next };
-      const s = await api.createSession(anchor, game.session.class_id, settings);
+      const s = await api.createGame(game.session.id, anchor, settings); // mesma sala: os alunos ficam
       nav(`/prof/jogo/${s.id}`);
     } catch (e) {
       setErr(errorMessage(e));

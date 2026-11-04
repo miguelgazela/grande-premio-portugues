@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { VersionTag } from '../ui/VersionTag';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { BotField } from '../../engine/drivers';
 import { themeForTrack } from '../../engine/theme';
 import { TRACKS } from '../../engine/track';
@@ -8,7 +8,7 @@ import { raceConfigFor } from '../../game/raceSettings';
 import { errorMessage } from '../../lib/api';
 import { endSessions } from '../../lib/endSessions';
 import { bestPerClass, compatibleRecords, fmtTime, ghostLabel, sameTrackAs, trackRecord, type GhostRecord } from '../../lib/ghosts';
-import type { ClassRow, QuestionRow, QuizRow, SessionSettings } from '../../lib/types';
+import type { ClassRow, QuestionRow, QuizRow, SessionRow, SessionSettings } from '../../lib/types';
 import { useTeacher } from './TeacherGate';
 
 const FIELDS: { key: BotField; label: string }[] = [
@@ -57,10 +57,15 @@ function writeLast(v: LastGame) {
   }
 }
 
-/** Área "Jogar" (iPad): repetir o último jogo, ou escolher quiz e turma, e abrir a sala. */
+/**
+ * Área "Jogar" (iPad): repetir o último jogo, ou escolher quiz e turma, e abrir a sala.
+ * Com `?sala=<id>` (vindo do ecrã final) escolhe-se só o próximo jogo da MESMA sala: mesmo PIN, turma e alunos.
+ */
 export function Jogar() {
   const { api, teacher, signOut } = useTeacher();
   const nav = useNavigate();
+  const salaId = useSearchParams()[0].get('sala');
+  const [room, setRoom] = useState<SessionRow | null>(null);
   const [quizzes, setQuizzes] = useState<QuizRow[] | null>(null);
   const [classes, setClasses] = useState<ClassRow[]>([]);
   const [last, setLast] = useState<LastGame | null>(null);
@@ -82,6 +87,15 @@ export function Jogar() {
       try {
         // Sair da sessão termina o jogo; o que sobrar aberto (iPad fechado a meio) limpa-se aqui.
         const [q, c, o] = await Promise.all([api.listQuizzes(), api.listClasses(), api.listOpenSessions()]);
+        if (salaId) {
+          const r = await api.getSession(salaId);
+          if (r.status === 'lobby' || r.status === 'running') {
+            nav(`/prof/jogo/${r.id}`, { replace: true }); // o jogo seguinte já foi aberto: segue para lá
+            return;
+          }
+          if (r.status === 'aborted') throw new Error('Esta sala já foi terminada. Abre uma sala nova.');
+          setRoom(r);
+        }
         if (o.length) void endSessions(api, o.map((x) => x.id)).catch(() => undefined);
         const sorted = [...q].sort((a, b) => (b.lastPlayed ?? '').localeCompare(a.lastPlayed ?? '') || a.title.localeCompare(b.title, 'pt'));
         const l = readLast();
@@ -102,7 +116,7 @@ export function Jogar() {
         setQuizzes([]);
       }
     })();
-  }, [api]);
+  }, [api, salaId, nav]);
 
   const quiz = quizzes?.find((q) => q.id === quizId);
   const n = quiz?.questionCount ?? 0;
@@ -129,7 +143,7 @@ export function Jogar() {
 
   const shape = raceConfigFor(questions, { botField: field, questionTime: time || null }).config;
   const compat = compatibleRecords(records, shape);
-  const chosen = picked.flatMap((id) => compat.filter((g) => g.session_id === id));
+  const chosen = picked.flatMap((id) => compat.filter((g) => g.game_id === id));
   const shown = sameTrackAs(compat, chosen);
   const stars = bestPerClass(compat);
   const record = trackRecord(records, shape);
@@ -138,7 +152,7 @@ export function Jogar() {
     setPicked((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length < 3 ? [...cur, id] : cur));
   };
   // Se mudar a configuração, descarta os fantasmas que deixaram de ser compatíveis.
-  const validPicked = chosen.map((g) => g.session_id);
+  const validPicked = chosen.map((g) => g.game_id);
   const change = (fn: () => void) => {
     setDirty(true);
     fn();
@@ -152,10 +166,10 @@ export function Jogar() {
       if (game.track && !ghosts.length) settings.trackId = game.track;
       if (ghosts.length) {
         settings.trackId = ghosts[0].trackId;
-        settings.ghosts = ghosts.map((g) => ({ sessionId: g.session_id, name: ghostLabel(g) }));
+        settings.ghosts = ghosts.map((g) => ({ gameId: g.game_id, name: ghostLabel(g) }));
       }
-      const s = await api.createSession(target, game.classId || null, settings);
-      writeLast(game);
+      const s = room ? await api.createGame(room.id, target, settings) : await api.createSession(target, game.classId || null, settings);
+      writeLast(room ? { ...game, classId: room.class_id ?? '' } : game);
       nav(`/prof/jogo/${s.id}`);
     } catch (e) {
       setError(errorMessage(e));
@@ -170,22 +184,26 @@ export function Jogar() {
   const recent = quizzes ? quizzes.filter((q) => q.questionCount > 0) : [];
   const visible = showAll ? quizzes ?? [] : recent.slice(0, RECENT).concat(recent.slice(RECENT).filter((q) => q.id === quizId));
   const hasMore = (quizzes?.length ?? 0) > visible.length;
-  const showBar = !lastQuiz || dirty;
+  const showBar = !lastQuiz || dirty || !!room;
 
   return (
     <div className="center jogar">
       <div className="card wide">
         <div className="row spread">
-          <h1>🏎️ Olá, {teacher.name}</h1>
-          <div className="row">
-            <button className="nav-btn" onClick={() => nav('/prof/revisao')}>Revisão</button>
-            <button className="nav-btn" onClick={() => nav('/prof/preparar')}>Preparar</button>
-            <button className="nav-btn ghost" onClick={signOut}>Sair</button>
-          </div>
+          <h1>{room ? `🏎️ Outro quiz · sala ${room.pin}` : `🏎️ Olá, ${teacher.name}`}</h1>
+          {room ? (
+            <div className="row"><button className="nav-btn" onClick={() => nav(`/prof/jogo/${room.id}`)}>← Voltar ao resultado</button></div>
+          ) : (
+            <div className="row">
+              <button className="nav-btn" onClick={() => nav('/prof/revisao')}>Revisão</button>
+              <button className="nav-btn" onClick={() => nav('/prof/preparar')}>Preparar</button>
+              <button className="nav-btn ghost" onClick={signOut}>Sair</button>
+            </div>
+          )}
         </div>
 
         <div className="jogar-cols">
-        {last && lastQuiz && (
+        {!room && last && lastQuiz && (
           <section className="hero" aria-labelledby="again-h">
             <div className="muted" id="again-h">Repetir o último jogo</div>
             <div className="hero-what">{lastQuiz.title}{lastClass ? ` · ${lastClass.name}` : ''}</div>
@@ -198,7 +216,7 @@ export function Jogar() {
         )}
 
         <section className="group pick">
-          <h2 className="sec">{last && lastQuiz ? 'Ou escolher outro jogo' : 'Novo jogo'}</h2>
+          <h2 className="sec">{room ? 'Próximo jogo (os alunos ficam na sala)' : last && lastQuiz ? 'Ou escolher outro jogo' : 'Novo jogo'}</h2>
           <div className="group" role="radiogroup" aria-label="Quiz">
             <b>Quiz</b>
             {quizzes === null && <p className="muted">A carregar…</p>}
@@ -222,7 +240,7 @@ export function Jogar() {
             {hasMore && <button className="ghost more-btn" onClick={() => setShowAll(true)}>Ver todos os quizzes</button>}
           </div>
 
-          <div className="group" role="radiogroup" aria-label="Turma">
+          {!room && <div className="group" role="radiogroup" aria-label="Turma">
             <b>Turma</b>
             <div className="chips-choice">
               {[...classes.map((c) => ({ id: c.id, name: c.name })), { id: '', name: 'Sem turma' }].map((c) => (
@@ -230,7 +248,7 @@ export function Jogar() {
               ))}
             </div>
             {classes.length === 0 && <span className="muted">As turmas criam-se em “Preparar → Turmas”.</span>}
-          </div>
+          </div>}
 
         </section>
 
@@ -271,11 +289,11 @@ export function Jogar() {
                   <b>Fantasmas de outras turmas</b>
                   {record && <span className="muted">🏆 Recorde: <b>{fmtTime(record.finish_time_ms)}</b> ({ghostLabel(record)})</span>}
                   {shown.map((g) => {
-                    const on = validPicked.includes(g.session_id);
+                    const on = validPicked.includes(g.game_id);
                     return (
-                      <button key={g.session_id} aria-pressed={on} className={`ghost-row ${on ? 'sel' : ''}`} disabled={!on && validPicked.length >= 3} onClick={() => togglePick(g.session_id)}>
+                      <button key={g.game_id} aria-pressed={on} className={`ghost-row ${on ? 'sel' : ''}`} disabled={!on && validPicked.length >= 3} onClick={() => togglePick(g.game_id)}>
                         <span>
-                          <b>{ghostLabel(g)}</b> {stars.has(g.session_id) && <span>⭐</span>}{' '}
+                          <b>{ghostLabel(g)}</b> {stars.has(g.game_id) && <span>⭐</span>}{' '}
                           <span className="muted">{g.final_position}º lugar · {fmtTime(g.finish_time_ms)}</span>
                         </span>
                         {on && <span className="tick" aria-hidden="true">✓</span>}
@@ -293,7 +311,7 @@ export function Jogar() {
       {showBar && (
         <div className="actionbar">
           <button className="primary big" disabled={!quiz || busy || n < 1} onClick={() => quiz && void open(quiz, { quizId: quiz.id, classId, field, time, track }, chosen)}>
-            {busy ? 'A abrir…' : '🏁 Abrir sala'}
+            {busy ? 'A abrir…' : room ? '🏁 Abrir o jogo' : '🏁 Abrir sala'}
           </button>
         </div>
       )}

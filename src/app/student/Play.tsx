@@ -48,6 +48,8 @@ export function Play() {
   const viewRef = useRef(view);
   viewRef.current = view;
   const lastBody = useRef<{ id: string; body: PublicBody } | null>(null);
+  /** Nº do jogo da sala que estamos a seguir (a professora pode abrir outro na mesma sala). */
+  const gameRef = useRef<number | null>(null);
   const [problem, setProblem] = useState('');
   const [epoch, setEpoch] = useState(0);
   const channel = useRef<Channel | null>(null);
@@ -90,9 +92,27 @@ export function Play() {
       (m) => {
         // Terminada pela professora: nada a reabre (um reenvio atrasado da pergunta não pode voltar a pôr o aluno a jogar).
         if (viewRef.current.k === 'aborted' && m.event !== 'aborted') return;
+        // Outro jogo na mesma sala? Mensagens de um jogo anterior (atrasadas) ignoram-se; um jogo novo limpa o que
+        // respondemos (o mesmo quiz volta a ter as mesmas perguntas) e volta a dizer ao anfitrião quem somos.
+        const g = m.event === 'lobby' || m.event === 'question' || m.event === 'end' ? (m.payload as { game?: number }).game : undefined;
+        let fresh = false;
+        if (g !== undefined) {
+          if (gameRef.current !== null && g < gameRef.current) return;
+          const cur = viewRef.current;
+          const ended = cur.k === 'end' ? cur.e.game : undefined;
+          fresh = m.event !== 'end' && ((gameRef.current !== null && g > gameRef.current) || (ended !== undefined && g > ended));
+          gameRef.current = g;
+          if (fresh) {
+            chosenRef.current = {};
+            setChosen({});
+            lastBody.current = null;
+            try { localStorage.removeItem(`gpp.end.${player.session_id}`); } catch { /* sem armazenamento */ }
+            ch?.send({ event: 'hello', payload: { player_id: player.player_id, avatar: loadAvatar() ?? undefined, car: carRef.current ?? undefined } });
+          }
+        }
         switch (m.event) {
           case 'lobby':
-            if (viewRef.current.k === 'wait') setView({ k: 'wait', count: m.payload.count });
+            if (fresh || viewRef.current.k === 'wait') setView({ k: 'wait', count: m.payload.count });
             break;
           case 'question': {
             const cur = viewRef.current;

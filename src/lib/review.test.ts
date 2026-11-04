@@ -9,7 +9,7 @@ const mc = (id: string, quiz = 'q1', over: Record<string, unknown> = {}): Review
   id, position: 1, prompt: `Pergunta ${id}`, time_limit: 20, explanation: null, type: 'multiple_choice', payload: { options: ['a', 'b'] }, correct: { index: 0 },
   quiz_id: quiz, quiz_version: 1, quiz_title: `Quiz ${quiz}`, archived: false, ...over,
 } as ReviewQuestion);
-const ans = (question_id: string, player: string, value: number, session_id = 's1'): AnswerRow => ({ session_id, question_id, player_id: player, value, correct: value === 0, ms_taken: 1000 });
+const ans = (question_id: string, player: string, value: number, game_id = 's1'): AnswerRow => ({ game_id, question_id, player_id: player, value, correct: value === 0, ms_taken: 1000 });
 const sess = (id: string, created_at: string, answers: AnswerRow[], status: ReviewSession['status'] = 'finished'): ReviewSession => ({
   id, created_at, status, quiz_id: 'q1', quiz_title: 'Quiz q1', review: false, answers,
 });
@@ -58,8 +58,8 @@ describe('questionStats', () => {
 
   it('respostas parciais contam por fração e sem valor vale o correct', () => {
     const order: ReviewQuestion = { ...mc('o'), type: 'order', payload: { items: ['x', 'y', 'z', 'w'] }, correct: {} } as ReviewQuestion;
-    const half: AnswerRow = { session_id: 's1', question_id: 'o', player_id: 'p1', value: [0, 1, 3, 2], correct: false, ms_taken: 1 };
-    const none: AnswerRow = { session_id: 's1', question_id: 'o', player_id: 'p2', value: null, correct: true, ms_taken: 1 };
+    const half: AnswerRow = { game_id: 's1', question_id: 'o', player_id: 'p1', value: [0, 1, 3, 2], correct: false, ms_taken: 1 };
+    const none: AnswerRow = { game_id: 's1', question_id: 'o', player_id: 'p2', value: null, correct: true, ms_taken: 1 };
     const o = questionStats([sess('s1', '2026-11-01', [half, none])], [order]).stats[0];
     expect(o.pct).toBeCloseTo((0.5 + 1) / 2);
   });
