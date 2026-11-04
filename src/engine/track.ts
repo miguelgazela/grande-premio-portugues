@@ -112,6 +112,9 @@ const LOSANGO: Vec[] = [{x:900,y:150},{x:1048,y:172},{x:1170,y:226},{x:1273,y:28
 /** Canal (tema água): o losango espelhado, para ter outro desenho. */
 const CANAL: Vec[] = LOSANGO.map((p) => ({ x: 1800 - p.x, y: p.y }));
 
+/** Órbita (tema espaço): o triângulo rodado 180°, para ter outro desenho. */
+const ORBITA: Vec[] = TRIANGLE.map((p) => ({ x: 1800 - p.x, y: WORLD_H - p.y }));
+
 /** Caramelo (tema doces): o clássico espelhado na vertical, para ter outro desenho. */
 const CARAMELO: Vec[] = CLASSIC.map((p) => ({ x: p.x, y: WORLD_H - p.y }));
 
@@ -126,10 +129,11 @@ export const TRACKS: { id: string; name: string; points: Vec[]; samples?: number
   { id: 'tecnico', name: 'Técnico', points: TECNICO, samples: 6 },
   { id: 'canal', name: 'Canal', points: CANAL },
   { id: 'caramelo', name: 'Caramelo', points: CARAMELO },
+  { id: 'orbita', name: 'Órbita', points: ORBITA },
 ];
 
-/** Pistas sorteadas por defeito. As de água (`canal`) e doces (`caramelo`) só saem por escolha da professora, para as sessões antigas manterem a pista. */
-const RANDOM_TRACKS = TRACKS.filter((t) => t.id !== 'canal' && t.id !== 'caramelo');
+/** Pistas sorteadas por defeito. As de água (`canal`), doces (`caramelo`) e espaço (`orbita`) só saem por escolha da professora, para as sessões antigas manterem a pista. */
+const RANDOM_TRACKS = TRACKS.filter((t) => t.id !== 'canal' && t.id !== 'caramelo' && t.id !== 'orbita');
 
 export const DEFAULT_TRACK_POINTS: Vec[] = CLASSIC;
 

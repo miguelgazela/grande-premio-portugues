@@ -84,10 +84,32 @@ describe('barcos (tema água)', () => {
     expect(botCars('car-team', 6).every((b) => b.cat === 'carro')).toBe(true);
   });
   it('a pista sorteada por sessão nunca é a de água (sessões antigas mantêm a pista)', () => {
-    for (let i = 0; i < 200; i++) expect(['canal', 'caramelo']).not.toContain(trackFor(`s${i}`).id);
+    for (let i = 0; i < 200; i++) expect(['canal', 'caramelo', 'orbita']).not.toContain(trackFor(`s${i}`).id);
   });
   it('as chaves de textura do tema água incluem barcos e efeitos', () => {
     expect(themeKeys(themeForTrack('canal'))).toEqual(expect.arrayContaining(['bg-water', 'track-asphalt-water', 'track-curb-water', 'prop-w-whale', 'boat-lancha', 'fx-wake', 'fx-splash']));
+  });
+});
+
+describe('naves (tema espaço)', () => {
+  it('a pista órbita usa o tema espaço com naves e fundo de lobby próprio', () => {
+    const t = themeForTrack('orbita');
+    expect(t.id).toBe('espaco');
+    expect(t.suffix).toBe('space');
+    expect(vehicleForTrack('orbita')).toBe('nave');
+    expect(carsOfCat('nave').map((c) => c.key).sort()).toEqual(['ship-bolha', 'ship-cacador', 'ship-crescente', 'ship-delta', 'ship-disco', 'ship-foguetao', 'ship-vaivem']);
+    expect(themeKeys(t)).toEqual(expect.arrayContaining(['bg-space', 'track-asphalt-space', 'track-curb-space', 'prop-sp-planet', 'prop-sp-moon', 'ship-cacador', 'fx-trail-space']));
+  });
+  it('voto, estilo gravado e bots respeitam a categoria nave', () => {
+    expect(cleanVote({ car: 'ship-delta' }, 'nave')).toEqual({ car: 'ship-delta' });
+    expect(cleanVote({ car: 'boat-mota' }, 'nave')).toEqual({});
+    expect(cleanVote({ car: 'ship-delta' })).toEqual({});
+    expect(tally([], 's', 'nave').style.car).toBe('ship-cacador');
+    expect(parseStyle({ car: 'car-red' }, 'nave')).toEqual({ car: 'ship-cacador' });
+    expect(parseStyle({ car: 'ship-vaivem' }, 'nave')).toEqual({ car: 'ship-vaivem' });
+    const bots = botCars('ship-cacador', 10, 'nave');
+    expect(bots).toHaveLength(10);
+    expect(bots.every((b) => b.cat === 'nave' && b.key !== 'ship-cacador')).toBe(true);
   });
 });
 
@@ -104,7 +126,7 @@ describe('tema doces', () => {
 describe('temas', () => {
   it('cada pista tem um tema fixo e pistas desconhecidas ficam com relva', () => {
     expect(new Set(TRACKS.map((t) => themeForTrack(t.id).id)).size).toBe(THEMES.length);
-    expect(THEMES).toHaveLength(6);
+    expect(THEMES).toHaveLength(7);
     expect(themeForTrack('antiga').id).toBe('relva');
   });
   it('as chaves de textura seguem o manifest', () => {

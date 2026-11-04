@@ -1,7 +1,7 @@
 import { mulberry32 } from '../engine/rng';
 
 /** Carros disponíveis para a turma (cada um é um asset do manifest, com as cores originais). */
-export type Category = 'carro' | 'barco';
+export type Category = 'carro' | 'barco' | 'nave';
 
 export interface CarDef {
   key: string;
@@ -14,7 +14,14 @@ export interface CarDef {
 }
 
 const C = { blue: 0x2f6bff, red: 0xe74c3c, orange: 0xf39c12, green: 0x2ecc71, purple: 0x9b59b6, pink: 0xe84393, teal: 0x1abc9c, grey: 0x95a5a6, yellow: 0xf7d21e, white: 0xf2f2f2 };
-export const CATEGORIES: Category[] = ['carro', 'barco'];
+export const CATEGORIES: Category[] = ['carro', 'barco', 'nave'];
+
+/** Palavras da UI por categoria (o género muda: o carro/barco, a nave). */
+export const VEHICLE_WORDS: Record<Category, { emoji: string; label: string; noun: string; vote: string; model: string; drawn: string }> = {
+  carro: { emoji: '🏎️', label: 'Carro', noun: 'carro', vote: 'Vota no carro da turma', model: 'Modelo do carro', drawn: 'sorteado' },
+  barco: { emoji: '🚤', label: 'Barco', noun: 'barco', vote: 'Vota no barco da turma', model: 'Modelo do barco', drawn: 'sorteado' },
+  nave: { emoji: '🚀', label: 'Nave', noun: 'nave', vote: 'Vota na nave da turma', model: 'Modelo da nave', drawn: 'sorteada' },
+};
 const NAMES: Record<string, string> = { blue: 'Azul', red: 'Vermelho', orange: 'Laranja', green: 'Verde', purple: 'Roxo', pink: 'Rosa', teal: 'Turquesa', grey: 'Cinzento', yellow: 'Amarelo', white: 'Branco' };
 
 export const MODELS: { id: string; label: string; cat: Category; colors: (keyof typeof C)[] }[] = [
@@ -29,23 +36,31 @@ export const MODELS: { id: string; label: string; cat: Category; colors: (keyof 
   { id: 'mota', cat: 'barco', label: 'Mota de água', colors: ['yellow'] },
   { id: 'veleiro', cat: 'barco', label: 'Veleiro', colors: ['teal'] },
   { id: 'dragao', cat: 'barco', label: 'Barco-dragão', colors: ['green'] },
+  // Naves (tema espaço): uma cor por modelo, asset `ship-<id>`.
+  { id: 'cacador', cat: 'nave', label: 'Caça', colors: ['red'] },
+  { id: 'disco', cat: 'nave', label: 'Disco voador', colors: ['yellow'] },
+  { id: 'foguetao', cat: 'nave', label: 'Foguetão', colors: ['teal'] },
+  { id: 'bolha', cat: 'nave', label: 'Nave-bolha', colors: ['purple'] },
+  { id: 'delta', cat: 'nave', label: 'Nave delta', colors: ['green'] },
+  { id: 'vaivem', cat: 'nave', label: 'Vaivém', colors: ['pink'] },
+  { id: 'crescente', cat: 'nave', label: 'Crescente', colors: ['blue'] },
 ];
 
 const classicKey = (c: string) => (c === 'blue' ? 'car-team' : `car-${c}`);
 
-const keyOf = (m: (typeof MODELS)[number], c: string) => (m.cat === 'barco' ? `boat-${m.id}` : m.id === 'classico' ? classicKey(c) : `car-${m.id}-${c}`);
+const keyOf = (m: (typeof MODELS)[number], c: string) => (m.cat === 'barco' ? `boat-${m.id}` : m.cat === 'nave' ? `ship-${m.id}` : m.id === 'classico' ? classicKey(c) : `car-${m.id}-${c}`);
 
 export const CARS: CarDef[] = MODELS.flatMap((m) =>
-  m.colors.map((c) => ({ key: keyOf(m, c), model: m.id, cat: m.cat, color: C[c], label: m.cat === 'barco' ? m.label : `${m.label} ${NAMES[c].toLowerCase()}` })),
+  m.colors.map((c) => ({ key: keyOf(m, c), model: m.id, cat: m.cat, color: C[c], label: m.cat !== 'carro' ? m.label : `${m.label} ${NAMES[c].toLowerCase()}` })),
 );
 
 /** Modelos e veículos de uma categoria. */
 export const modelsOf = (cat: Category) => MODELS.filter((m) => m.cat === cat);
 export const carsOfCat = (cat: Category) => CARS.filter((c) => c.cat === cat);
 /** Veículo por defeito da categoria (o da turma sem votos). */
-export const defaultCar = (cat: Category): string => (cat === 'barco' ? 'boat-lancha' : DEFAULT_STYLE.car);
+export const defaultCar = (cat: Category): string => (cat === 'barco' ? 'boat-lancha' : cat === 'nave' ? 'ship-cacador' : DEFAULT_STYLE.car);
 /** Sprite de recurso (bots/fantasmas sem veículo atribuído). */
-export const fallbackCar = (cat: Category): string => (cat === 'barco' ? 'boat-lancha' : 'car-grey');
+export const fallbackCar = (cat: Category): string => (cat === 'barco' ? 'boat-lancha' : cat === 'nave' ? 'ship-disco' : 'car-grey');
 
 export const carDef = (key: string | undefined): CarDef | undefined => CARS.find((c) => c.key === key);
 export const carsOfModel = (model: string) => CARS.filter((c) => c.model === model);
@@ -100,7 +115,7 @@ export function tally(votes: Iterable<StyleVote>, seed = '', cat: Category = 'ca
 export function parseStyle(raw: unknown, cat: Category = 'carro'): TeamStyle {
   const v = cleanVote(raw, cat);
   if (v.car) return { car: v.car };
-  if (cat === 'barco') return { car: defaultCar(cat) }; // registo de carros numa pista de água
+  if (cat !== 'carro') return { car: defaultCar(cat) }; // registo de carros numa pista de água ou espaço
   const color = (raw as { color?: unknown } | null)?.color;
   return { car: CARS.find((c) => c.model === 'classico' && c.color === color)?.key ?? DEFAULT_STYLE.car };
 }
@@ -122,8 +137,8 @@ export function botCars(team: string, count: number, cat: Category = 'carro'): C
       out.push(c);
     }
   }
-  // Poucos barcos: repete modelos (menos o da turma) em vez de deixar bots sem veículo.
-  const rest = cat === 'barco' ? order.filter((c) => c.key !== team) : [];
+  // Poucos barcos/naves: repete modelos (menos o da turma) em vez de deixar bots sem veículo.
+  const rest = cat !== 'carro' ? order.filter((c) => c.key !== team) : [];
   for (let i = 0; out.length < count && rest.length; i++) out.push(rest[i % rest.length]);
   return out;
 }

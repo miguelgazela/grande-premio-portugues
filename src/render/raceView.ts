@@ -43,7 +43,7 @@ interface CarNode {
   sparkT?: number;
   nitro?: Sprite;
   smoke?: Sprite;
-  /** Tema água: esteira atrás do barco. */
+  /** Tema água/espaço: esteira ou rasto de brilho atrás do veículo. */
   wake?: Sprite;
 }
 
@@ -372,8 +372,8 @@ export class RaceView {
       body.anchor.set(0.5);
       body.scale.set((CAR_LEN * 1.12) / tex.width);
       // Água: a esteira e o jato (fx-wake/fx-splash) substituem o fumo e as chamas do turbo/nitro.
-      const smokeTex = water ? undefined : this.t('fx-smoke');
-      const wakeTex = water ? this.t('fx-wake') : undefined;
+      const smokeTex = this.theme.vehicle === 'carro' ? this.t('fx-smoke') : undefined;
+      const wakeTex = water ? this.t('fx-wake') : this.theme.vehicle === 'nave' ? this.t('fx-trail-space') : undefined;
       if (wakeTex) {
         node.wake = new Sprite(wakeTex);
         node.wake.anchor.set(1, 0.5);
@@ -504,7 +504,7 @@ export class RaceView {
   private emit(node: CarNode, car: CarState, sprite: Container, heading: number, st: { spinning: boolean; nitroOn: boolean; turboOn: boolean }, dt: number): void {
     const isTeam = car.driver.kind === 'team';
     const P = this.particles;
-    if (this.theme.vehicle === 'barco') {
+    if (this.theme.vehicle !== 'carro') {
       if (isTeam && car.crossed && !node.finished) {
         node.finished = true;
         for (let k = 0; k < 70; k++) P.confetti(sprite.x, sprite.y);

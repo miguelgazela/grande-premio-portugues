@@ -17,7 +17,7 @@ import { assetUrl } from '../../render/assets';
 import { themeForTrack } from '../../engine/theme';
 import { Asset, Countdown, Flames, Place } from '../ui/Asset';
 import { fitAvatars } from '../../lib/avatarRow';
-import { carDef } from '../../game/teamStyle';
+import { VEHICLE_WORDS, carDef } from '../../game/teamStyle';
 import { CarPreview } from '../ui/TeamPicker';
 import { HostBody } from '../ui/Question';
 import { useTeacher } from './TeacherGate';
@@ -147,9 +147,9 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
           <div className="carbox carshow" aria-live="polite">
             <CarPreview car={s.team.car} size={110} />
             <div>
-              <b>{carDef(s.team.car)?.cat === 'barco' ? '🚤 Barco' : '🏎️ Carro'} da turma: {carDef(s.team.car)?.label ?? ''}</b>
+              <b>{VEHICLE_WORDS[carDef(s.team.car)?.cat ?? 'carro'].emoji} {VEHICLE_WORDS[carDef(s.team.car)?.cat ?? 'carro'].label} da turma: {carDef(s.team.car)?.label ?? ''}</b>
               <div className="muted" style={{ fontSize: 'clamp(13px,2.2vmin,22px)' }}>
-                {s.tie ? `Empate nos votos: ${carDef(s.team.car)?.cat === 'barco' ? 'barco' : 'carro'} sorteado · ${s.voters} votos` : s.voters ? `Mais votado · ${s.voters} voto${s.voters > 1 ? 's' : ''}` : 'Por defeito: os alunos podem votar no telemóvel'}
+                {s.tie ? `Empate nos votos: ${VEHICLE_WORDS[carDef(s.team.car)?.cat ?? 'carro'].noun} ${VEHICLE_WORDS[carDef(s.team.car)?.cat ?? 'carro'].drawn} · ${s.voters} votos` : s.voters ? `Mais votado · ${s.voters} voto${s.voters > 1 ? 's' : ''}` : 'Por defeito: os alunos podem votar no telemóvel'}
               </div>
             </div>
           </div>

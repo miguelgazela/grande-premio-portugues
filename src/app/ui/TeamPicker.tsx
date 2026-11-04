@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { carDef, carsOfModel, modelDef, modelShowcase, modelsOf, type Category } from '../../game/teamStyle';
+import { VEHICLE_WORDS, carDef, carsOfModel, modelDef, modelShowcase, modelsOf, type Category } from '../../game/teamStyle';
 import { assetUrl } from '../../render/assets';
 
 export const hex = (n: number) => `#${n.toString(16).padStart(6, '0')}`;
@@ -16,7 +16,6 @@ export function CarPicker({ value, onPick, cat = 'carro' }: { value: string | nu
   const [step, setStep] = useState<Step>(() => (value ? { k: 'done' } : { k: 'models' }));
   const found = carDef(value ?? undefined);
   const voted = found?.cat === cat ? found : undefined; // um voto de outra categoria (sessão antiga) não conta
-  const boats = cat === 'barco';
 
   if (step.k === 'done' && voted) {
     return (
@@ -60,7 +59,7 @@ export function CarPicker({ value, onPick, cat = 'carro' }: { value: string | nu
           <b>Escolhe o modelo</b>
         </div>
       )}
-      <div className="modelgrid" role="radiogroup" aria-label={boats ? 'Modelo do barco' : 'Modelo do carro'}>
+      <div className="modelgrid" role="radiogroup" aria-label={VEHICLE_WORDS[cat].model}>
         {modelsOf(cat).map((m) => {
           const show = modelShowcase(m.id)!;
           const cur = voted?.model === m.id;

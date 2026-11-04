@@ -204,7 +204,7 @@ export class HostGame {
     // Os fantasmas ocupam o lugar dos bots mais fracos: o número de carros não muda.
     const ghosts = this.extras.ghosts.slice(0, 3).map((g) => makeGhost(`ghost-${g.game_id}`, ghostLabel(g), g.outcomes));
     // Fantasmas na água são barcos (o sprite de recurso dos carros não faz sentido lá).
-    if (this.cat === 'barco') for (const g of ghosts) g.car = fallbackCar(this.cat);
+    if (this.cat !== 'carro') for (const g of ghosts) g.car = fallbackCar(this.cat);
     const bots = field.slice(ghosts.length).map((skill, i) => makeBot(rng, i, skill));
     // Cada bot tem um carro diferente (modelo e cor), nunca da cor da turma.
     const cars = botCars(this.style.car, bots.length, this.cat);
