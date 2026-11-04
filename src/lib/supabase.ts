@@ -7,6 +7,8 @@ export const SCHEMA = 'grandePremioPortugues';
 
 export const supabase = createClient(url ?? 'http://invalid.local', key ?? 'missing', {
   db: { schema: SCHEMA },
+  // Heartbeat mais curto (omissão 25 s): deteta mais cedo uma ligação morta no Safari/iOS e religa.
+  realtime: { heartbeatIntervalMs: 10_000 },
   auth: { persistSession: true, autoRefreshToken: true },
 });
 
