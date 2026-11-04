@@ -184,6 +184,8 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
   const lap = Math.min(game.config.laps, Math.floor(s.qIndex / qpl) + 1);
   const inQuestion = s.phase === 'question' || s.phase === 'ff';
   const showReveal = s.phase === 'reveal' && s.reveal;
+  // Na contagem já se reserva o espaço da primeira pergunta (invisível), para a pista não saltar quando ela aparece.
+  const panel = s.question ?? (s.phase === 'countdown' ? game.previewFirst() : null);
 
   useEffect(() => {
     const view = new RaceView(game.track, { sprites: true, follow: true, trackId: game.trackId, raceLength: game.race.raceLength });
@@ -269,13 +271,13 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
         {s.phase === 'finishing' && <div className="banner turbo">🏁 META!</div>}
       </div>
 
-      {s.question && (
-        <div className="qpanel">
-          <div className="prompt">{s.question.prompt}</div>
+      {panel && (
+        <div className="qpanel" style={s.question ? undefined : { visibility: 'hidden' }} aria-hidden={s.question ? undefined : true}>
+          <div className="prompt">{panel.prompt}</div>
           <div className={`timer ${low && inQuestion ? 'low' : ''}`}>
             <i style={{ width: `${inQuestion ? (s.timeLeft / s.questionTime) * 100 : showReveal ? 0 : 100}%` }} />
           </div>
-          <HostBody body={s.question.body} solution={showReveal ? s.reveal!.solution : undefined} />
+          <HostBody body={panel.body} solution={showReveal ? s.reveal!.solution : undefined} />
           <div className="meta">
             <span>{inQuestion ? `${s.answered}/${s.players.length} responderam · ${Math.ceil(s.timeLeft)}s` : ''}</span>
             <span>{showReveal ? s.reveal!.explanation ?? '' : ''}</span>
