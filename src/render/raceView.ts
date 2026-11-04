@@ -15,6 +15,10 @@ const LOOK_AHEAD = 70;
 /** A câmara afasta-se até aqui para manter os rivais mais próximos à vista; os que não cabem ficam com marcador no bordo. */
 const MIN_FOLLOW_ZOOM = 0.55;
 const FRAME_MARGIN = 80;
+/** Só visual: acima desta diferença (unidades) os rivais aproximam-se do carro da turma, para ficarem sempre perto do ecrã. Os pontos e a classificação usam a distância real. */
+const NEAR_GAP = 260;
+const NEAR_SOFT = 180;
+const NEAR_SLOPE = 0.03;
 const CURB_STRIPE = 18;
 /** A pista desenha-se aos bocados, só à volta da câmara: a estrada vai "nascendo" à frente do carro. */
 const CHUNK = 1000;
@@ -428,7 +432,7 @@ export class RaceView {
       const node = this.cars.get(car.driver.id) ?? this.carNode(car);
       const sprite = node.root;
       const lane = (i - (n - 1) / 2) * (ROAD_W / (n + 1));
-      const pose = this.track.poseAt(car.distance);
+      const pose = this.track.poseAt(this.shownDistance(race, car));
       sprite.position.set(pose.x + pose.nx * lane, pose.y + pose.ny * lane);
       const spinning = car.spinLeft > 0;
       sprite.rotation = pose.angle + (spinning ? clock * 14 : 0);
@@ -509,6 +513,19 @@ export class RaceView {
       for (let k = 0; k < 70; k++) P.confetti(sprite.x, sprite.y);
       this.cheer();
     }
+  }
+
+  /** Distância desenhada: o carro da turma é exato; os outros ficam comprimidos (sem trocar de ordem) para não fugirem do ecrã. */
+  private shownDistance(race: Race, car: CarState): number {
+    const team = race.team;
+    if (!team || car === team) return car.distance;
+    const gap = car.distance - team.distance;
+    const a = Math.abs(gap);
+    if (a <= NEAR_GAP) return car.distance;
+    const over = a - NEAR_GAP;
+    const shown = NEAR_GAP + NEAR_SOFT * Math.tanh(over / NEAR_SOFT) + NEAR_SLOPE * over;
+    const d = team.distance + Math.sign(gap) * shown;
+    return Math.max(0, Math.min(d, race.finishLine ?? Infinity));
   }
 
   /** Segue o carro da turma: lerp com look-ahead, zoom-out no turbo/nitro, tremor no despiste. Sem rodar. */
@@ -593,7 +610,7 @@ export class RaceView {
         this.edge.addChild(lab);
         this.edgeLabels.set(c.driver.id, lab);
       }
-      lab.text = `${gap >= 0 ? '+' : '−'}${Math.abs(gap).toFixed(0)}s`;
+      lab.text = `${gap >= 0 ? '−' : '+'}${Math.abs(gap).toFixed(0)}s`;
       lab.position.set(ex, ey + 11);
       lab.visible = true;
       used.add(c.driver.id);
