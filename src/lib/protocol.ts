@@ -65,6 +65,8 @@ export interface FinalStanding {
   name: string;
   kind: 'team' | 'bot' | 'ghost';
   color: number;
+  /** Chave do manifest do carro (`car-*`); os fantasmas não têm. */
+  car?: string;
   timeMs: number;
 }
 

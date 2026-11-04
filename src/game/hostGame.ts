@@ -635,7 +635,7 @@ export class HostGame {
     const topIds = new Set(top.map((s) => s.playerId));
     const teamPosition = standings.indexOf(race.team!) + 1;
     const final: FinalInfo = {
-      standings: standings.map((c) => ({ name: c.driver.name, kind: c.driver.kind, color: c.driver.color, timeMs: Math.round((c.finishTime ?? 0) * 1000) })),
+      standings: standings.map((c) => ({ name: c.driver.name, kind: c.driver.kind, color: c.driver.color, car: c.driver.car, timeMs: Math.round((c.finishTime ?? 0) * 1000) })),
       ranking: top.map((s) => ({ nickname: nick(s.playerId), points: s.points, correct: s.correct, avatar: this.snap.avatars[s.playerId] })),
       awards: pickAwards(scores).map((a) => ({ emoji: a.emoji, title: a.title, nickname: nick(a.playerId), detail: a.detail })),
       teamPosition,
