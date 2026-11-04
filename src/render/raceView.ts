@@ -12,6 +12,13 @@ const CAR_LEN = 34;
 /** Zoom da câmara em relação ao "caber 1000 de largura no ecrã". */
 const FOLLOW_ZOOM = 2.2;
 const LOOK_AHEAD = 70;
+/** A câmara afasta-se até aqui para manter os rivais mais próximos à vista; os que não cabem ficam com marcador no bordo. */
+const MIN_FOLLOW_ZOOM = 0.55;
+const FRAME_MARGIN = 80;
+/** Só visual: acima desta diferença (unidades) os rivais aproximam-se do carro da turma, para ficarem sempre perto do ecrã. Os pontos e a classificação usam a distância real. */
+const NEAR_GAP = 260;
+const NEAR_SOFT = 180;
+const NEAR_SLOPE = 0.03;
 const CURB_STRIPE = 18;
 /** A pista desenha-se aos bocados, só à volta da câmara: a estrada vai "nascendo" à frente do carro. */
 const CHUNK = 1000;
@@ -53,20 +60,24 @@ export class RaceView {
   private cam = { x: 0, y: 0, zoom: 1, snapped: false };
   private lastClock = 0;
   private lastTeamDist = 0;
+  /** Marcadores no bordo do ecrã para os carros que ficaram fora de vista. */
+  private edge = new Container();
+  private edgeDots = new Graphics();
+  private edgeLabels = new Map<string, Text>();
   private theme: Theme;
   private particles = new Particles();
   private lastRender = 0;
   private stands: Sprite[] = [];
   private cheerT = 0;
   private normals: { x: number; y: number }[];
-  private raceLength: number;
+  /** Onde fica a meta; só existe depois de a última pergunta fechar (a pista "gera" a meta quando é preciso). */
+  private finishAt: number | null = null;
 
   constructor(
     private track: Road,
-    private opts: { sprites?: boolean; follow?: boolean; trackId?: string; raceLength?: number } = {},
+    private opts: { sprites?: boolean; follow?: boolean; trackId?: string } = {},
   ) {
     this.theme = themeForTrack(opts.trackId ?? '');
-    this.raceLength = opts.raceLength ?? track.length;
     const pts = track.points;
     const n = pts.length;
     this.normals = pts.map((_p, i) => {
@@ -95,6 +106,8 @@ export class RaceView {
     const start = this.track.poseAt(0);
     this.cam.x = start.x + LOOK_AHEAD;
     this.cam.y = start.y;
+    this.edge.addChild(this.edgeDots);
+    this.app.stage.addChild(this.edge);
     const fit = () => {
       if (this.destroyed) return;
       // `resizeTo` só reage ao resize da janela; a pista muda de altura quando a pergunta aparece/desaparece.
@@ -140,7 +153,7 @@ export class RaceView {
 
   /** Cria os blocos à frente da câmara e deita fora os que ficaram para trás. */
   private ensureChunks(d: number): void {
-    const lastChunk = Math.floor(Math.min(this.track.length, this.raceLength + 600) / CHUNK);
+    const lastChunk = Math.floor(Math.min(this.track.length, (this.finishAt ?? this.track.length) + 600) / CHUNK);
     const cur = Math.floor(Math.max(0, d) / CHUNK);
     const lo = Math.max(0, cur - CHUNKS_BEHIND);
     const hi = Math.min(lastChunk, cur + CHUNKS_AHEAD);
@@ -225,7 +238,7 @@ export class RaceView {
     c.addChild(dashes);
 
     if (index === 0) this.addLine(c, 0);
-    if (this.raceLength >= d0 && this.raceLength < d0 + CHUNK) this.addLine(c, this.raceLength);
+    if (this.finishAt !== null && this.finishAt >= d0 && this.finishAt < d0 + CHUNK) this.addLine(c, this.finishAt);
     this.addProps(c, index, d0, d1);
     return c;
   }
@@ -302,9 +315,9 @@ export class RaceView {
         placed.push({ x, y, r: w / 2 });
       };
       if (index === 0) standAt(60, -1, 300);
-      if (this.raceLength >= d0 && this.raceLength < d0 + CHUNK) {
-        standAt(this.raceLength - 40, 1, 300);
-        standAt(this.raceLength + 260, -1, 230);
+      if (this.finishAt !== null && this.finishAt >= d0 && this.finishAt < d0 + CHUNK) {
+        standAt(this.finishAt - 40, 1, 300);
+        standAt(this.finishAt + 260, -1, 230);
       }
     }
 
@@ -405,6 +418,13 @@ export class RaceView {
   }
 
   render(race: Race, clock: number): void {
+    if (race.finishLine !== null && race.finishLine !== this.finishAt) {
+      // A meta acaba de ser gerada: refaz os blocos para a desenhar (e as bancadas).
+      this.finishAt = race.finishLine;
+      for (const c of this.chunks.values()) c.destroy({ children: true });
+      this.chunks.clear();
+      this.stands = [];
+    }
     const dt = Math.min(0.1, Math.max(0, clock - this.lastRender));
     this.lastRender = clock;
     const n = race.cars.length;
@@ -412,14 +432,14 @@ export class RaceView {
       const node = this.cars.get(car.driver.id) ?? this.carNode(car);
       const sprite = node.root;
       const lane = (i - (n - 1) / 2) * (ROAD_W / (n + 1));
-      const pose = this.track.poseAt(car.distance);
+      const pose = this.track.poseAt(this.shownDistance(race, car));
       sprite.position.set(pose.x + pose.nx * lane, pose.y + pose.ny * lane);
       const spinning = car.spinLeft > 0;
       sprite.rotation = pose.angle + (spinning ? clock * 14 : 0);
       const label = sprite.getChildByLabel('label');
       if (label) label.rotation = -sprite.rotation;
 
-      const running = car.finishTime === null && !spinning;
+      const running = !car.crossed && !spinning;
       const flicker = 0.75 + 0.25 * Math.sin(clock * 40 + i);
       const nitroOn = running && race.bursting && car.nitroActive;
       const turboOn = running && race.bursting && !car.nitroActive && car.lastEffect === 'turbo';
@@ -488,20 +508,33 @@ export class RaceView {
         P.spark(sprite.x - cos * CAR_LEN * 0.55, sprite.y - sin * CAR_LEN * 0.55, heading, st.nitroOn ? (Math.random() < 0.5 ? 0x7fe0ff : 0xffffff) : 0xffb21a);
       }
     }
-    if (isTeam && car.finishTime !== null && !node.finished) {
+    if (isTeam && car.crossed && !node.finished) {
       node.finished = true;
       for (let k = 0; k < 70; k++) P.confetti(sprite.x, sprite.y);
       this.cheer();
     }
   }
 
+  /** Distância desenhada: o carro da turma é exato; os outros ficam comprimidos (sem trocar de ordem) para não fugirem do ecrã. */
+  private shownDistance(race: Race, car: CarState): number {
+    const team = race.team;
+    if (!team || car === team) return car.distance;
+    const gap = car.distance - team.distance;
+    const a = Math.abs(gap);
+    if (a <= NEAR_GAP) return car.distance;
+    const over = a - NEAR_GAP;
+    const shown = NEAR_GAP + NEAR_SOFT * Math.tanh(over / NEAR_SOFT) + NEAR_SLOPE * over;
+    const d = team.distance + Math.sign(gap) * shown;
+    return Math.max(0, Math.min(d, race.finishLine ?? Infinity));
+  }
+
   /** Segue o carro da turma: lerp com look-ahead, zoom-out no turbo/nitro, tremor no despiste. Sem rodar. */
   private followCamera(race: Race, team: CarState, root: Container, clock: number): void {
     const dt = Math.min(0.1, Math.max(0, clock - this.lastClock));
     this.lastClock = clock;
-    const pose = this.track.poseAt(team.distance);
-    const tx = root.x + Math.cos(pose.angle) * LOOK_AHEAD;
-    const ty = root.y + Math.sin(pose.angle) * LOOK_AHEAD;
+    const lookX = root.x + Math.cos(this.track.poseAt(team.distance).angle) * LOOK_AHEAD;
+    const lookY = root.y + Math.sin(this.track.poseAt(team.distance).angle) * LOOK_AHEAD;
+    const { tx, ty, fit } = this.frame(race, team, root, lookX, lookY);
     const cam = this.cam;
     if (!cam.snapped) {
       cam.x = tx;
@@ -515,11 +548,74 @@ export class RaceView {
     cam.x += (tx - cam.x) * k;
     cam.y += (ty - cam.y) * k;
     const spinning = team.spinLeft > 0;
-    const boosted = team.finishTime === null && !spinning && race.bursting;
-    const targetZoom = boosted && team.nitroActive ? 0.84 : boosted && team.lastEffect === 'turbo' ? 0.92 : 1;
+    const boosted = !team.crossed && !spinning && race.bursting;
+    const targetZoom = Math.min(fit, boosted && team.nitroActive ? 0.84 : boosted && team.lastEffect === 'turbo' ? 0.92 : 1);
     cam.zoom += (targetZoom - cam.zoom) * (1 - Math.exp(-dt * 2.5));
     this.ensureChunks(team.distance);
     this.applyCamera(spinning ? 10 : 0);
+    this.edgeMarkers(race, team);
+  }
+
+  /**
+   * Enquadramento: o carro da turma mais os rivais por ordem de proximidade, enquanto couberem com o zoom mínimo.
+   * Devolve o centro e o zoom que os abrange (1 = sem afastar).
+   */
+  private frame(race: Race, team: CarState, root: Container, lookX: number, lookY: number): { tx: number; ty: number; fit: number } {
+    const s0 = this.baseScale() * FOLLOW_ZOOM;
+    if (!s0 || !this.view.w) return { tx: lookX, ty: lookY, fit: 1 };
+    let x0 = Math.min(root.x, lookX), x1 = Math.max(root.x, lookX);
+    let y0 = Math.min(root.y, lookY), y1 = Math.max(root.y, lookY);
+    const zoomFor = (a: number, b: number, c: number, d: number) => Math.min(this.view.w / (s0 * (b - a + FRAME_MARGIN * 2)), this.view.h / (s0 * (d - c + FRAME_MARGIN * 2)));
+    const others = race.cars.filter((c) => c !== team && !c.crossed).sort((a, b) => Math.abs(a.distance - team.distance) - Math.abs(b.distance - team.distance));
+    for (const c of others) {
+      const r = this.cars.get(c.driver.id)?.root;
+      if (!r) continue;
+      const nx0 = Math.min(x0, r.x), nx1 = Math.max(x1, r.x), ny0 = Math.min(y0, r.y), ny1 = Math.max(y1, r.y);
+      if (zoomFor(nx0, nx1, ny0, ny1) < MIN_FOLLOW_ZOOM) break;
+      x0 = nx0; x1 = nx1; y0 = ny0; y1 = ny1;
+    }
+    return { tx: (x0 + x1) / 2, ty: (y0 + y1) / 2, fit: Math.max(MIN_FOLLOW_ZOOM, Math.min(1, zoomFor(x0, x1, y0, y1))) };
+  }
+
+  /** Um ponto no bordo do ecrã, com a diferença em segundos, para cada carro que está fora de vista. */
+  private edgeMarkers(race: Race, team: CarState): void {
+    const g = this.edgeDots;
+    g.clear();
+    const used = new Set<string>();
+    const w = this.view.w;
+    const h = this.view.h;
+    const m = 26;
+    const k = this.world.scale.x;
+    for (const c of race.cars) {
+      if (c === team || c.crossed) continue;
+      const r = this.cars.get(c.driver.id)?.root;
+      if (!r) continue;
+      const sx = this.world.x + r.x * k;
+      const sy = this.world.y + r.y * k;
+      if (sx >= 0 && sx <= w && sy >= 0 && sy <= h) continue;
+      // Sobre o raio do centro do ecrã até ao carro, para a direção (e não só o canto) se perceber.
+      const cx = w / 2;
+      const cy = h / 2;
+      const dx = sx - cx;
+      const dy = sy - cy;
+      const t = Math.min((cx - m) / Math.abs(dx || 1e-6), (cy - 70) / Math.abs(dy || 1e-6));
+      const ex = cx + dx * t;
+      const ey = cy + dy * t;
+      g.circle(ex, ey, 9).fill(c.driver.kind === 'ghost' ? 0xbfc5cc : c.driver.color || 0x95a5a6).stroke({ width: 2, color: 0xffffff });
+      const gap = (c.distance - team.distance) / race.baseSpeed;
+      let lab = this.edgeLabels.get(c.driver.id);
+      if (!lab) {
+        lab = new Text({ text: '', style: { fontFamily: 'system-ui', fontSize: 12, fontWeight: '800', fill: 0xffffff, stroke: { color: 0x1b1b24, width: 3 } } });
+        lab.anchor.set(0.5, 0);
+        this.edge.addChild(lab);
+        this.edgeLabels.set(c.driver.id, lab);
+      }
+      lab.text = `${gap >= 0 ? '−' : '+'}${Math.abs(gap).toFixed(0)}s`;
+      lab.position.set(ex, ey + 11);
+      lab.visible = true;
+      used.add(c.driver.id);
+    }
+    for (const [id, t] of this.edgeLabels) if (!used.has(id)) t.visible = false;
   }
 
   destroy(): void {
@@ -532,8 +628,8 @@ export class RaceView {
   }
 
   /** Nova corrida na mesma estrada (simulador): limpa os blocos e muda onde fica a meta. */
-  reset(raceLength?: number): void {
-    if (raceLength) this.raceLength = raceLength;
+  reset(): void {
+    this.finishAt = null;
     for (const c of this.chunks.values()) c.destroy({ children: true });
     this.chunks.clear();
     this.stands = [];

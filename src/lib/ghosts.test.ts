@@ -7,7 +7,7 @@ import { mulberry32 } from '../engine/rng';
 import { TRACKS } from '../engine/track';
 import { bestPerClass, compatibleRecords, ghostMessage, makeTimeline, parseTimeline, sameTrackAs, trackRecord, type GhostRecord } from './ghosts';
 
-const config: RaceConfig = { ...DEFAULT_CONFIG, laps: 2, questionsPerLap: 4 };
+const config: RaceConfig = { ...DEFAULT_CONFIG, questions: 8, finalCount: 3 };
 const outcomes = (seed: number, n: number): QuestionOutcome[] => {
   const r = mulberry32(seed);
   return Array.from({ length: n }, () => ({ accuracy: r(), speedBonus: r() }));
@@ -42,22 +42,22 @@ describe('timeline', () => {
     const o = outcomes(3, 8);
     const t = parseTimeline(JSON.parse(JSON.stringify(makeTimeline('losango', config, o))));
     expect(t.trackId).toBe('losango');
-    expect(t.config).toEqual({ laps: 2, questionsPerLap: 4, questionTime: config.questionTime });
+    expect(t.config).toEqual({ questions: 8, questionTime: config.questionTime });
     expect(t.outcomes).toEqual(o);
   });
   it('lixo não rebenta', () => {
     expect(parseTimeline(null).outcomes).toEqual([]);
-    expect(parseTimeline({ v: 2, config: { laps: 0 } }).config).toBeNull();
+    expect(parseTimeline({ v: 2, config: { questions: 0 } }).config).toBeNull();
   });
 });
 
 const rec = (id: string, over: Partial<GhostRecord> = {}): GhostRecord => ({
   session_id: id, class_id: 'A', class_name: '9ºA', created_at: `2026-11-0${id}`, final_position: 2, finish_time_ms: 200_000,
-  trackId: TRACKS[0].id, config: { laps: 2, questionsPerLap: 4, questionTime: 20 }, outcomes: outcomes(1, 8), ...over,
+  trackId: TRACKS[0].id, config: { questions: 8, questionTime: 20 }, outcomes: outcomes(1, 8), ...over,
 });
 
 describe('seleção de compatíveis', () => {
-  const shape = { laps: 2, questionsPerLap: 4, questionTime: 20 };
+  const shape = { questions: 8, questionTime: 20 };
   const all = [
     rec('1'),
     rec('2', { class_id: 'B', class_name: '9ºB', finish_time_ms: 180_000, trackId: TRACKS[1].id }),

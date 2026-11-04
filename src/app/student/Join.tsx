@@ -53,21 +53,21 @@ export function Join() {
 
   return (
     <div className="center">
-      <form className="card" onSubmit={join}>
+      <form className="card join-card" onSubmit={join}>
         <Asset name="ui-logo" alt="Grande Prémio de Português" className="join-logo" fallback={<h1 style={{ textAlign: 'center' }}>🏎️ Grande Prémio</h1>} />
         {step === 'pin' ? (
           <>
-            <input inputMode="numeric" autoComplete="off" placeholder="PIN do jogo" value={pin} maxLength={6} autoFocus
-              style={{ fontSize: '2rem', textAlign: 'center', letterSpacing: '.2em' }}
+            <label className="field-label" htmlFor="pin">PIN do jogo</label>
+            <input id="pin" className="pin-input" inputMode="numeric" autoComplete="off" placeholder="000000" value={pin} maxLength={6} autoFocus
               onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))} />
             <button className="primary big" disabled={pin.length !== 6}>Entrar</button>
           </>
         ) : (
           <>
-            <div className="muted" style={{ textAlign: 'center' }}>PIN {pin} · <a href="#/" onClick={(e) => { e.preventDefault(); setStep('pin'); }} style={{ color: 'inherit' }}>mudar</a></div>
+            <div className="pin-line">PIN {pin} · <a href="#/" onClick={(e) => { e.preventDefault(); setStep('pin'); }}>mudar</a></div>
             <div className="nick-row">
               <AvatarPicker avatars={avatars} value={avatar} onChange={setAvatar} />
-              <input placeholder="A tua alcunha" value={nick} maxLength={20} autoFocus autoComplete="off" style={{ fontSize: '1.6rem', textAlign: 'center' }}
+              <input className="nick-input" aria-label="A tua alcunha" placeholder="A tua alcunha" value={nick} maxLength={20} autoFocus autoComplete="off"
                 onChange={(e) => setNick(e.target.value)} />
             </div>
             <button className="primary big" disabled={busy || !api || !nick.trim()}>{busy ? 'A entrar…' : 'Vamos!'}</button>

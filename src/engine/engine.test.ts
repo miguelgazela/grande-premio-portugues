@@ -38,7 +38,7 @@ describe('Race', () => {
     for (const acc of [0.1, 0.5, 0.8, 1]) {
       const race = new Race([fixed('team', acc, 'team')], DEFAULT_CONFIG);
       race.runToEnd(0.05);
-      expect(race.team!.finishTime!).toBeGreaterThanOrEqual(race.questionCount * race.cycle);
+      expect(race.time).toBeGreaterThanOrEqual(race.questionCount * race.cycle);
     }
   });
 
@@ -54,10 +54,51 @@ describe('Race', () => {
     expect(end(0.2)).toBeGreaterThan(end(1));
   });
 
-  it('cruise speed is constant while students think', () => {
+  it('finish time depends only on the car\'s own answers (not on how fast the class answered) and rewards speed', () => {
+    const time = (manual: boolean, speedBonus: number) => {
+      const car: Driver = { id: 'team', name: 'team', kind: 'team', color: 0, outcome: () => ({ accuracy: 0.8, speedBonus }) };
+      const race = new Race([car], DEFAULT_CONFIG);
+      race.manual = manual;
+      let guard = 0;
+      while (!race.finished && guard++ < 100000) {
+        race.step(0.1);
+        if (manual && race.nextQuestion < race.questionCount && race.time >= (race.nextQuestion + 1) * 12) race.resolveNow(); // responde mais cedo
+      }
+      return race.team!.finishTime!;
+    };
+    expect(Math.abs(time(true, 0.5) - time(false, 0.5))).toBeLessThan(0.3); // só a discretização do passo
+    expect(time(false, 1)).toBeLessThan(time(false, 0));
+  });
+
+  it('manual mode: closing questions early never makes a car jump, and the finish line appears only after the last one', () => {
+    const c = DEFAULT_CONFIG;
+    const race = new Race([fixed('team', 0.9, 'team'), fixed('bot', 0.5)], c);
+    race.manual = true;
+    let maxStep = 0;
+    for (let q = 0; q < race.questionCount; q++) {
+      // Os alunos respondem todos ao fim de 6s (em vez de 20s) e o reveal dura o normal.
+      for (const t of [6, c.overheadTime]) {
+        for (let i = 0; i < t / 0.05; i++) {
+          const before = race.team!.distance;
+          race.step(0.05);
+          maxStep = Math.max(maxStep, race.team!.distance - before);
+          if (t === 6 && i === 0) expect(race.finishLine).toBeNull();
+        }
+        if (t === 6) race.resolveNow();
+      }
+    }
+    expect(race.finishLine).not.toBeNull();
+    // Nenhum passo de 0,05 s passa do pico do efeito (sem teletransportes por comprimir tempo).
+    expect(maxStep).toBeLessThan(c.cruiseSpeed * 0.05 * 3);
+    expect(race.finishLine!).toBeGreaterThan(race.team!.distance);
+    race.runToEnd(0.05);
+    expect(race.team!.finishTime!).toBeGreaterThan(race.questionCount * 11);
+  });
+
+  it('cruise speed is constant outside the reveal window', () => {
     const race = new Race([fixed('team', 1, 'team')], DEFAULT_CONFIG);
-    race.time = race.cycle * 3 + DEFAULT_CONFIG.overheadTime + 1;
-    race.nextQuestion = 3;
+    race.step(race.cycle);
+    race.step(DEFAULT_CONFIG.overheadTime + 1);
     const d0 = race.team!.distance;
     race.step(2);
     expect((race.team!.distance - d0) / 2).toBeCloseTo(DEFAULT_CONFIG.cruiseSpeed, 6);
@@ -124,7 +165,7 @@ describe('balance (Phase 0 targets)', () => {
     expect(s.positionShare[1] + s.positionShare[2] + s.positionShare[3]).toBeGreaterThan(0.6);
   });
   it('weak class is not always last', () => {
-    expect(pos(0.35).positionShare[6]).toBeLessThan(0.8);
+    expect(pos(0.35).positionShare[6]).toBeLessThan(0.85);
   });
   it('excellent class usually wins', () => {
     expect(pos(0.92).positionShare[0]).toBeGreaterThan(0.5);

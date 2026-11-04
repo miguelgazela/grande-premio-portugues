@@ -8,25 +8,17 @@ const q = (i: number, over: Partial<QuestionRow> = {}): QuestionRow => ({ id: `q
 const many = (n: number) => Array.from({ length: n }, (_, i) => q(i));
 
 describe('raceConfigFor', () => {
-  it('defaults: 3 voltas, tudo repartido', () => {
+  it('usa todas as perguntas, reta final no último terço', () => {
     const { config, used } = raceConfigFor(many(20));
-    expect([config.laps, config.questionsPerLap, used, config.questionTime]).toEqual([3, 6, 18, 20]);
-  });
-  it('voltas e perguntas por volta pedidas', () => {
-    const { config, used } = raceConfigFor(many(20), { botField: 'medio', laps: 2, questionsPerLap: 4 });
-    expect([config.laps, config.questionsPerLap, used]).toEqual([2, 4, 8]);
-  });
-  it('limita ao que o quiz permite', () => {
-    const { config } = raceConfigFor(many(10), { botField: 'medio', laps: 5, questionsPerLap: 9 });
-    expect(config.laps * config.questionsPerLap).toBeLessThanOrEqual(10);
+    expect([config.questions, config.finalCount, used, config.questionTime]).toEqual([20, 7, 20, 20]);
   });
   it('tempo da sessão substitui o do quiz', () => {
     expect(raceConfigFor(many(6), { botField: 'medio', questionTime: 12 }).config.questionTime).toBe(12);
     expect(raceConfigFor([q(0, { time_limit: 15 }), q(1, { time_limit: 30 }), q(2)]).config.questionTime).toBe(30);
   });
   it('quizzes muito curtos', () => {
-    expect(raceConfigFor(many(1)).config.laps).toBe(1);
-    expect(raceConfigFor(many(2), { botField: 'medio', laps: 3 }).used).toBeGreaterThan(0);
+    expect(raceConfigFor(many(1)).config).toMatchObject({ questions: 1, finalCount: 1 });
+    expect(raceConfigFor(many(2), { botField: 'medio' }).used).toBe(2);
   });
 });
 

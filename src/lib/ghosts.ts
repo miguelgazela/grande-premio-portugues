@@ -3,7 +3,7 @@ import type { QuestionOutcome as Outcome } from '../engine/outcome';
 import type { RaceConfig } from '../engine/config';
 import { TRACKS } from '../engine/track';
 
-export type RaceShape = Pick<RaceConfig, 'laps' | 'questionsPerLap' | 'questionTime'>;
+export type RaceShape = Pick<RaceConfig, 'questions' | 'questionTime'>;
 
 /** Formato antigo: só os resultados por pergunta. Formato novo: acrescenta pista e configuração. */
 export type TimelineV1 = Outcome[];
@@ -32,7 +32,7 @@ export function parseTimeline(raw: unknown): ParsedTimeline {
   if (raw && typeof raw === 'object' && (raw as TimelineV2).v === 2) {
     const t = raw as TimelineV2;
     const c = t.config as Partial<RaceShape> | undefined;
-    const config = c && num(c.laps) > 0 && num(c.questionsPerLap) > 0 && num(c.questionTime) > 0 ? { laps: c.laps!, questionsPerLap: c.questionsPerLap!, questionTime: c.questionTime! } : null;
+    const config = c && num(c.questions) > 0 && num(c.questionTime) > 0 ? { questions: c.questions!, questionTime: c.questionTime! } : null;
     return { outcomes: cleanOutcomes(t.outcomes), trackId: typeof t.trackId === 'string' ? t.trackId : null, config };
   }
   return { outcomes: [], trackId: null, config: null };
@@ -42,12 +42,12 @@ export function makeTimeline(trackId: string, config: RaceConfig, outcomes: Outc
   return {
     v: 2,
     trackId,
-    config: { laps: config.laps, questionsPerLap: config.questionsPerLap, questionTime: config.questionTime },
+    config: { questions: config.questions, questionTime: config.questionTime },
     outcomes: outcomes.map((o) => ({ accuracy: o.accuracy, speedBonus: o.speedBonus })),
   };
 }
 
-export const configKey = (c: RaceShape) => `${c.laps}x${c.questionsPerLap}@${c.questionTime}`;
+export const configKey = (c: RaceShape) => `${c.questions}@${c.questionTime}`;
 
 /** Corrida anterior de um quiz, pronta a ser usada como fantasma ou recorde. */
 export interface GhostRecord {
@@ -66,7 +66,7 @@ export const ghostLabel = (g: Pick<GhostRecord, 'class_name'>) => g.class_name ?
 
 /** Só os registos com pista e configuração conhecidas, a pista existente e perguntas a bater certo. */
 export function usableRecords(all: GhostRecord[]): GhostRecord[] {
-  return all.filter((g) => TRACKS.some((t) => t.id === g.trackId) && g.outcomes.length === g.config.laps * g.config.questionsPerLap);
+  return all.filter((g) => TRACKS.some((t) => t.id === g.trackId) && g.outcomes.length === g.config.questions);
 }
 
 /** Corridas com a mesma configuração, mais recentes primeiro. */

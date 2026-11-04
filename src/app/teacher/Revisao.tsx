@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import type { BotField } from '../../engine/drivers';
 import { errorMessage } from '../../lib/api';
 import {
-  DEFAULT_COUNT, DEFAULT_SESSIONS, DEFAULT_THRESHOLD, MAX_COUNT, MIN_COUNT, buildReviewSettings, byFailure, lastSessions, questionStats, reviewLaps, selectFailed,
+  DEFAULT_COUNT, DEFAULT_SESSIONS, DEFAULT_THRESHOLD, MAX_COUNT, MIN_COUNT, buildReviewSettings, byFailure, lastSessions, questionStats, selectFailed,
 } from '../../lib/review';
 import type { ClassRow, QuizRow, ReviewQuestion, ReviewSession } from '../../lib/types';
 import { useTeacher } from './TeacherGate';
@@ -78,7 +78,7 @@ export function Revisao() {
       const review = buildReviewSettings(className, chosen.map((s) => s.id), threshold, before);
       // O quiz da sessão é só âncora (a base de dados exige um): as perguntas vêm de `review.questionIds`.
       const anchor: QuizRow = { id: first.quiz_id, title: review.title, year: null, topic: null, version: first.quiz_version, questionCount: chosen.length, lastPlayed: null };
-      const s = await api.createSession(anchor, classId, { botField: field, laps: reviewLaps(chosen.length), review });
+      const s = await api.createSession(anchor, classId, { botField: field, review });
       nav(`/prof/jogo/${s.id}`);
     } catch (e) {
       setError(errorMessage(e));

@@ -1,4 +1,4 @@
-import type { RaceConfig } from '../engine/config';
+import { inFinalStretch, type RaceConfig } from '../engine/config';
 import { BOT_FIELDS, makeBot, makeGhost } from '../engine/drivers';
 import { outcomeFromAnswers, type PlayerAnswer, type QuestionOutcome } from '../engine/outcome';
 import { Race, raceLengthFor, type Driver } from '../engine/race';
@@ -16,7 +16,7 @@ import { MAX_PLAYERS, RateLimiter, answerSizeOk, isId, senderOf } from './guards
 import { raceConfigFor } from './raceSettings';
 import { DEFAULT_STYLE, TEAM_NAME, botCars, carDef, cleanVote, parseStyle, tally, type StyleVote, type TeamStyle } from './teamStyle';
 
-export type Phase = 'lobby' | 'countdown' | 'resume' | 'question' | 'ff' | 'reveal' | 'sprint' | 'finishing' | 'finished';
+export type Phase = 'lobby' | 'countdown' | 'resume' | 'question' | 'reveal' | 'sprint' | 'finishing' | 'finished';
 
 export interface HostSnapshot {
   phase: Phase;
@@ -27,7 +27,6 @@ export interface HostSnapshot {
   players: PlayerRow[];
   qIndex: number;
   total: number;
-  laps: number;
   questionTime: number;
   timeLeft: number;
   /** 3, 2, 1, 0 (VAI!) durante a contagem inicial. */
@@ -51,9 +50,7 @@ export interface HostSnapshot {
 
 const REVEAL_SECONDS = 5;
 const FINISH_HOLD = 2.5;
-const FF_SECONDS = 1.2;
 const COUNT_STEP = 0.9;
-const EPS = 0.0005;
 
 export { raceConfigFor };
 
@@ -90,10 +87,10 @@ export class HostGame {
   private holdT = 0;
   private countT = 0;
   private sprintRate = 0;
-  private ffRate = 1;
   private roster: PlayerRow[] = [];
   private lastMsg: HostEvent | null = null;
   private lastResync = 0;
+  private resyncT: number | undefined;
   private pollTimer = 0;
   private timeBucket = -1;
   private votes = new Map<string, StyleVote>();
@@ -120,7 +117,7 @@ export class HostGame {
     this.race = this.buildRace();
     if (import.meta.env.DEV) (window as unknown as { __game?: HostGame }).__game = this; // só para depurar no browser
     this.snap = {
-      phase: 'lobby', paused: false, hidden: false, connected: false, players: [], qIndex: 0, total: this.questions.length, laps: config.laps,
+      phase: 'lobby', paused: false, hidden: false, connected: false, players: [], qIndex: 0, total: this.questions.length,
       questionTime: config.questionTime, timeLeft: config.questionTime, count: 3, avatars: session.state?.avatars ?? {}, answered: 0, question: null, reveal: null, final: null, review: null, notice: null,
       team: DEFAULT_STYLE, voters: 0, tie: false,
     };
@@ -153,6 +150,7 @@ export class HostGame {
     this.connect();
     this.pollTimer = window.setInterval(() => {
       if (this.snap.phase === 'lobby' || this.snap.phase === 'resume') void this.refreshPlayers();
+      this.beacon();
     }, 2500);
     document.addEventListener('visibilitychange', this.onVisibility);
     this.lastTs = performance.now();
@@ -173,6 +171,7 @@ export class HostGame {
 
   destroy(): void {
     this.stopped = true;
+    clearTimeout(this.resyncT);
     music.stop();
     cancelAnimationFrame(this.raf);
     clearInterval(this.pollTimer);
@@ -197,8 +196,7 @@ export class HostGame {
       b.color = cars[i]?.color ?? b.color;
     });
     const race = new Race([team, ...bots, ...ghosts], this.config);
-    // Pré-rolo: a resolução de cada pergunta coincide com o fim do tempo de resposta.
-    race.time = this.config.overheadTime;
+    race.manual = true; // a pergunta resolve-se quando fecha (todos responderam, tempo ou professora), não a horas fixas
     return race;
   }
 
@@ -207,10 +205,12 @@ export class HostGame {
     this.set({ team: this.style });
     this.outcomes = state.outcomes.slice(0, state.next);
     this.race = this.buildRace();
+    // Os tempos reais não foram gravados: refaz a corrida com o ritmo nominal (as posições relativas são as mesmas).
     for (let q = 0; q < state.next; q++) {
-      while (this.race.nextQuestion <= q) this.race.step(0.25);
+      this.race.step(this.config.questionTime);
+      this.race.resolveNow();
+      this.race.step(this.config.overheadTime);
     }
-    if (state.next > 0) this.race.step(this.config.overheadTime);
     this.race.finalizeEvents();
 
     const rows = await this.api.loadAnswers(this.session.id);
@@ -249,7 +249,16 @@ export class HostGame {
   /** Repete o último estado (alunos a reconectar). Limita a 1×/s para não inundar o canal. */
   private resync(force = false) {
     const now = performance.now();
-    if (!force && now - this.lastResync < 1000) return;
+    if (!force && now - this.lastResync < 1000) {
+      // Não perde o pedido: um `hello` apanhado pelo limite recebe o estado logo a seguir.
+      if (this.resyncT === undefined) {
+        this.resyncT = window.setTimeout(() => {
+          this.resyncT = undefined;
+          if (!this.stopped) this.resync(true);
+        }, 1000);
+      }
+      return;
+    }
     this.lastResync = now;
     const m = this.lastMsg;
     if (!m) {
@@ -262,6 +271,16 @@ export class HostGame {
     } else {
       this.channel?.send(m);
     }
+  }
+
+  /**
+   * Repete o estado atual a cada poucos segundos: o Realtime não guarda mensagens, por isso um telemóvel
+   * com a ligação morta (sem o saber) perdia a pergunta e ficava preso até o heartbeat o detetar.
+   * É uma só mensagem para toda a turma; quem já está nesse estado ignora-a.
+   */
+  private beacon(): void {
+    if (!['lobby', 'countdown', 'question', 'reveal'].includes(this.snap.phase)) return;
+    this.resync(true);
   }
 
   private onMessage(m: AnyEvent) {
@@ -410,7 +429,7 @@ export class HostGame {
   }
 
   private inRace(): boolean {
-    return ['question', 'ff', 'reveal', 'sprint'].includes(this.snap.phase);
+    return ['question', 'reveal', 'sprint'].includes(this.snap.phase);
   }
 
   // ---------- Fluxo ----------
@@ -440,7 +459,7 @@ export class HostGame {
 
   private startQuestion(index: number) {
     const q = this.questions[index];
-    music.setFinalLap(Math.floor(index / this.config.questionsPerLap) + 1 >= this.config.laps);
+    music.setFinalLap(inFinalStretch(this.config, index));
     const prep = prepare(q, this.seed);
     this.current = { index, q, prep };
     this.answers = new Map();
@@ -484,13 +503,9 @@ export class HostGame {
       session_id: this.session.id, question_id: cur.q.id, player_id, value: a.value, correct: a.credit === 1, ms_taken: a.ms,
     }));
     void this.api.saveAnswers(rows).catch((e) => this.notice(`Respostas por gravar: ${(e as Error).message}`));
-    const remaining = this.boundary(cur.index) - this.race.time;
-    this.ffRate = Math.max(1, remaining / FF_SECONDS);
-    this.set({ phase: 'ff' });
-  }
-
-  private boundary(q: number) {
-    return (q + 1) * this.race.cycle;
+    // O efeito aplica-se já: os carros continuam à mesma velocidade e recebem o bónus (ou o travão) no reveal.
+    this.race.resolveNow();
+    this.onResolved();
   }
 
   private onResolved() {
@@ -547,9 +562,7 @@ export class HostGame {
         this.set({ count });
       }
     } else if (phase === 'question') {
-      const cur = this.current!;
-      const bound = this.boundary(cur.index) - EPS;
-      race.step(Math.max(0, Math.min(dt, bound - race.time)));
+      race.step(dt);
       this.qElapsed += dt;
       const left = Math.max(0, this.config.questionTime - this.qElapsed);
       const bucket = Math.ceil(left * 4);
@@ -559,15 +572,6 @@ export class HostGame {
       }
       const active = this.roster.length;
       if (this.qElapsed >= this.config.questionTime || (active > 0 && this.answers.size >= active)) this.closeQuestion();
-    } else if (phase === 'ff') {
-      const q = this.current!.index;
-      const left = this.boundary(q) - EPS - race.time;
-      if (left > 1e-6) {
-        race.step(Math.min(left, dt * this.ffRate));
-      } else {
-        race.step(0.001); // atravessa a fronteira → o motor resolve a pergunta
-        this.onResolved();
-      }
     } else if (phase === 'reveal') {
       race.step(dt);
       this.revealT += dt;
@@ -583,12 +587,12 @@ export class HostGame {
       // Uma turma fraca pode ficar muito longe da meta: acelera o sprint (taxa fixa) para durar ~20s.
       const t = race.team!;
       if (this.sprintRate === 0) {
-        const est = (race.raceLength - t.distance) / (race.baseSpeed * Math.max(0.3, t.mult));
+        const est = Math.max(0, (race.raceLength - t.distance) / race.baseSpeed);
         this.sprintRate = Math.min(40, Math.max(1, est / 20));
       }
       const rate = this.sprintRate;
       for (let left = dt * rate; left > 0; left -= 0.25) race.step(Math.min(0.25, left));
-      if (race.team!.finishTime !== null || race.finished) {
+      if (race.team!.crossed || race.finished) {
         this.holdT = 0;
         play('finish');
         music.stop();

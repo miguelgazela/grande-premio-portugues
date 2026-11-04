@@ -1,6 +1,8 @@
 export interface RaceConfig {
-  laps: number;
-  questionsPerLap: number;
+  /** Número de perguntas da corrida (sem voltas: a pista é aberta). */
+  questions: number;
+  /** Quantas das últimas perguntas formam a reta final (efeitos amplificados). */
+  finalCount: number;
   /** Seconds students have to answer. */
   questionTime: number;
   /** Seconds per question spent showing the prompt and revealing the result. */
@@ -28,23 +30,23 @@ export interface RaceConfig {
   /** Consecutive turbos that trigger nitro. */
   nitroStreak: number;
   nitroMult: number;
-  /** Final-lap effects are amplified by this multiplier. */
+  /** Os efeitos da reta final são amplificados por este multiplicador. */
   finalLapMult: number;
 
-  /** Bot catch-up strength per lap of gap to the class car. */
+  /** Força do regresso dos bots por cada terço da corrida de diferença para o carro da turma. */
   rubberBand: number;
   rubberBandCap: number;
 }
 
 export const DEFAULT_CONFIG: RaceConfig = {
-  laps: 3,
-  questionsPerLap: 6,
+  questions: 18,
+  finalCount: 6,
   questionTime: 20,
   overheadTime: 5,
   minFactor: 0.6,
   maxFactor: 1.4,
   cruiseSpeed: 160,
-  effectScale: 0.07,
+  effectScale: 0.05,
   turboThreshold: 0.8,
   turboMult: 1.12,
   slowThreshold: 0.5,
@@ -59,5 +61,11 @@ export const DEFAULT_CONFIG: RaceConfig = {
   rubberBandCap: 0.25,
 };
 
-export const totalQuestions = (c: RaceConfig) => c.laps * c.questionsPerLap;
+export const totalQuestions = (c: RaceConfig) => c.questions;
+
+/** Reta final: o último terço das perguntas (pelo menos uma). */
+export const finalCountFor = (questions: number) => Math.max(1, Math.round(questions / 3));
+
+/** A pergunta `q` está na reta final? */
+export const inFinalStretch = (c: RaceConfig, q: number) => q >= c.questions - c.finalCount;
 export const cycleTime = (c: RaceConfig) => c.questionTime + c.overheadTime;

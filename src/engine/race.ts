@@ -1,5 +1,5 @@
 import { clamp } from './rng';
-import { cycleTime, totalQuestions, type RaceConfig } from './config';
+import { cycleTime, inFinalStretch, totalQuestions, type RaceConfig } from './config';
 import type { QuestionOutcome } from './outcome';
 
 const MAX_STEP = 0.25;
@@ -26,7 +26,10 @@ export interface CarState {
   turboStreak: number;
   nitroActive: boolean;
   lastEffect: Effect | null;
+  /** Tempo de corrida normalizado (ver `Race.setFinish`); conhecido logo que a última pergunta fecha. */
   finishTime: number | null;
+  /** Já passou a meta (só visual: o resultado está em `finishTime`). */
+  crossed: boolean;
 }
 
 export interface QuestionResult {
@@ -66,7 +69,7 @@ export function effectFor(c: RaceConfig, accuracy: number): Effect {
  * `streak` é o número de turbos seguidos *incluindo* esta pergunta; devolve também se o nitro disparou.
  */
 export function questionMult(c: RaceConfig, q: number, accuracy: number, speedBonus: number, streak: number): { mult: number; nitro: boolean } {
-  const finalLap = q >= (c.laps - 1) * c.questionsPerLap;
+  const finalLap = inFinalStretch(c, q);
   let f = baseFactor(c, accuracy);
   if (effectFor(c, accuracy) === 'spin') f *= c.spinPenaltyMult;
   f *= 1 + c.speedBonusMax * speedBonus;
@@ -76,13 +79,13 @@ export function questionMult(c: RaceConfig, q: number, accuracy: number, speedBo
   return { mult: Math.max(0.2, 1 + c.effectScale * (f - 1)), nitro };
 }
 
-/** Ganho máximo (em segundos de cruzeiro) que um carro pode acumular até ao fim do ciclo da penúltima pergunta. */
+/** Ganho máximo (em segundos de cruzeiro) que um carro pode acumular com os efeitos de todas as perguntas. */
 export function maxGain(c: RaceConfig): number {
   const n = totalQuestions(c);
   const cyc = cycleTime(c);
   let gain = 0;
   let streak = 0;
-  for (let q = 0; q < n - 1; q++) {
+  for (let q = 0; q < n; q++) {
     streak++;
     const { mult, nitro } = questionMult(c, q, 1, 1, streak);
     if (nitro) streak = 0;
@@ -91,21 +94,37 @@ export function maxGain(c: RaceConfig): number {
   return Math.max(0, gain);
 }
 
-/**
- * Comprimento da corrida: o que um carro faz em `totalQuestions × ciclo` à velocidade de cruzeiro, mais o ganho máximo possível.
- * Ninguém chega à meta antes de a última pergunta fechar, e o comprimento depende só da configuração (tempos comparáveis com fantasmas).
- */
-export const raceLengthFor = (c: RaceConfig) => c.cruiseSpeed * (totalQuestions(c) * cycleTime(c) + maxGain(c));
+/** Segundos de cruzeiro que o primeiro carro ainda faz, depois de o último efeito acabar, até à meta. */
+export const FINISH_TAIL = 3;
 
 /**
- * Deterministic race simulation. Time advances with `step(dt)`; at the end of
- * each question cycle every driver's outcome sets its speed for the next cycle.
+ * Comprimento máximo possível da corrida (para gerar a estrada): `cruiseSpeed × (perguntas × ciclo + ganho máximo + cauda)`.
+ * A meta real fica mais perto se as perguntas fecharem antes do tempo (ver `Race.finishLine`).
+ */
+export const raceLengthFor = (c: RaceConfig) => c.cruiseSpeed * (totalQuestions(c) * cycleTime(c) + c.overheadTime + maxGain(c) + FINISH_TAIL);
+
+/**
+ * Deterministic race simulation. Time advances with `step(dt)`. Cars cruise at constant speed; when a question is
+ * resolved every driver's outcome is applied at once as a smooth push (or drag) that lasts `overheadTime`.
+ * Por defeito as perguntas resolvem-se sozinhas ao fim de cada ciclo (simulador, testes, fantasmas); com `manual`
+ * é o anfitrião que chama `resolveNow()` quando a pergunta fecha, e o tempo é o real.
+ *
+ * A meta só existe depois de a última pergunta fechar: fica `FINISH_TAIL` segundos à frente do líder quando o último
+ * efeito acabar. A ordem e o tempo de meta (`finishTime`) saem logo daí: o tempo é o nominal menos o avanço de cada
+ * carro sobre o cruzeiro, por isso depende só das respostas dele (turmas e fantasmas comparáveis, velocidade de resposta incluída).
  */
 export class Race {
   readonly cars: CarState[];
   readonly events: QuestionEvent[] = [];
-  readonly raceLength: number;
-  /** Só para a rubber-band dos bots (diferença em "voltas"). */
+  /** Comprimento máximo da corrida (estrada); a meta real é `finishLine`. */
+  readonly maxLength: number;
+  /** Distância da meta; `null` até a última pergunta fechar. */
+  finishLine: number | null = null;
+  /** Se verdadeiro, as perguntas só se resolvem com `resolveNow()`. */
+  manual = false;
+  /** Instante (tempo da corrida) da última resolução; o efeito dura `overheadTime` a partir daí. */
+  private lastResolve = Number.NEGATIVE_INFINITY;
+  /** Só para a rubber-band dos bots (diferença em terços da corrida). */
   private readonly lapLength: number;
   readonly baseSpeed: number;
   readonly questionCount: number;
@@ -119,9 +138,9 @@ export class Race {
   ) {
     this.questionCount = totalQuestions(config);
     this.cycle = cycleTime(config);
-    this.raceLength = raceLengthFor(config);
+    this.maxLength = raceLengthFor(config);
     this.baseSpeed = config.cruiseSpeed;
-    this.lapLength = this.raceLength / config.laps;
+    this.lapLength = this.maxLength / 3;
     this.cars = drivers.map((driver) => ({
       driver,
       distance: 0,
@@ -131,6 +150,7 @@ export class Race {
       nitroActive: false,
       lastEffect: null,
       finishTime: null,
+      crossed: false,
     }));
   }
 
@@ -139,7 +159,7 @@ export class Race {
   }
 
   get finished(): boolean {
-    return this.cars.every((c) => c.finishTime !== null);
+    return this.cars.every((c) => c.crossed);
   }
 
   /** Question currently being answered (may equal questionCount once all are done). */
@@ -147,42 +167,37 @@ export class Race {
     return Math.min(this.nextQuestion, this.questionCount);
   }
 
-  /** Segundos desde o início do ciclo da pergunta em curso (os primeiros `overheadTime` são o reveal da anterior). */
-  private get cyclePhase(): number {
-    return this.time - this.nextQuestion * this.cycle;
+  /** Meta (ou, antes de existir, o comprimento máximo): para barras de progresso. */
+  get raceLength(): number {
+    return this.finishLine ?? this.maxLength;
   }
 
-  /**
-   * true durante o reveal (e no sprint final): o efeito da última resposta está a atuar.
-   * Enquanto os alunos pensam, todos os carros andam ao ritmo neutro.
-   */
+  /** Segundos desde a última resolução. */
+  private get sinceResolve(): number {
+    return this.time - this.lastResolve;
+  }
+
+  /** true enquanto o efeito da última resposta está a atuar (`overheadTime` depois de cada resolução). */
   get bursting(): boolean {
-    if (this.nextQuestion >= this.questionCount) return true;
-    return this.nextQuestion > 0 && this.cyclePhase < this.config.overheadTime;
+    return this.sinceResolve < this.config.overheadTime;
   }
 
   /**
-   * Multiplicador de velocidade instantâneo. `car.mult` é a média do ciclo; o efeito da resposta chega no reveal como uma
-   * subida e descida suaves (seno) com o mesmo integral, por isso a distância por ciclo é `mult × ciclo`. Fora do reveal, cruzeiro.
+   * Multiplicador de velocidade instantâneo. `car.mult` é a média de um ciclo; o efeito da resposta chega como uma
+   * subida e descida suaves (seno) com o mesmo integral, por isso o efeito vale `(mult − 1) × ciclo` segundos de cruzeiro. Fora disso, cruzeiro.
    */
   private speedMult(car: CarState): number {
-    if (this.nextQuestion >= this.questionCount) return car.mult;
     if (!this.bursting) return 1;
-    const x = clamp(this.cyclePhase / this.config.overheadTime, 0, 1);
+    const x = clamp(this.sinceResolve / this.config.overheadTime, 0, 1);
     return Math.max(0.05, 1 + (car.mult - 1) * (this.cycle / this.config.overheadTime) * (Math.PI / 2) * Math.sin(Math.PI * x));
-  }
-
-  /** 0..1 progress through the current question cycle. */
-  get cycleProgress(): number {
-    return clamp((this.time - this.nextQuestion * this.cycle) / this.cycle, 0, 1);
   }
 
   /** Cars ordered by race position. */
   standings(): CarState[] {
     return [...this.cars].sort((a, b) => {
-      if (a.finishTime !== null && b.finishTime !== null) return a.finishTime - b.finishTime;
-      if (a.finishTime !== null) return -1;
-      if (b.finishTime !== null) return 1;
+      if (a.crossed && b.crossed) return (a.finishTime ?? 0) - (b.finishTime ?? 0);
+      if (a.crossed) return -1;
+      if (b.crossed) return 1;
       return b.distance - a.distance;
     });
   }
@@ -202,37 +217,34 @@ export class Race {
     if (this.finished) return;
     this.time += dt;
 
-    while (this.nextQuestion < this.questionCount && this.time >= (this.nextQuestion + 1) * this.cycle) {
-      this.resolveQuestion(this.nextQuestion);
-      this.nextQuestion++;
-    }
+    while (!this.manual && this.nextQuestion < this.questionCount && this.time >= (this.nextQuestion + 1) * this.cycle) this.resolveNow();
 
     const team = this.team;
     for (const car of this.cars) {
-      if (car.finishTime !== null) continue;
+      if (car.crossed) continue;
       if (car.spinLeft > 0) {
         car.spinLeft = Math.max(0, car.spinLeft - dt);
         continue;
       }
       let m = this.speedMult(car);
-      if (car.driver.kind === 'bot' && team) {
+      if (car.driver.kind === 'bot' && team && this.finishLine === null) {
         const gapLaps = (car.distance - team.distance) / this.lapLength;
         m *= 1 + clamp(-gapLaps * this.config.rubberBand, -this.config.rubberBandCap, this.config.rubberBandCap);
       }
       const speed = this.baseSpeed * m;
       car.distance += speed * dt;
-      // Rede de segurança (a rubber-band dos bots): ninguém passa a meta antes de a última pergunta fechar.
-      if (this.nextQuestion < this.questionCount) car.distance = Math.min(car.distance, this.raceLength - 1);
-      if (car.distance >= this.raceLength) {
-        const overshoot = car.distance - this.raceLength;
-        car.finishTime = this.time - overshoot / speed;
-        car.distance = this.raceLength;
+      if (this.finishLine !== null && car.distance >= this.finishLine) {
+        car.crossed = true;
+        car.distance = this.finishLine;
       }
     }
 
     // Safety net: never let a race run forever.
     if (this.time > this.questionCount * this.cycle * 4) {
-      for (const car of this.cars) if (car.finishTime === null) car.finishTime = this.time + (this.raceLength - car.distance);
+      for (const car of this.cars) {
+        car.crossed = true;
+        car.finishTime ??= this.time + ((this.finishLine ?? this.maxLength) - car.distance) / this.baseSpeed;
+      }
     }
   }
 
@@ -241,9 +253,52 @@ export class Race {
     while (!this.finished) this.step(dt);
   }
 
+  /** Resolve a pergunta em curso agora: aplica o efeito das respostas e, na última, põe a meta. */
+  resolveNow(): void {
+    if (this.nextQuestion >= this.questionCount) return;
+    const q = this.nextQuestion;
+    this.resolveQuestion(q);
+    this.nextQuestion++;
+    this.lastResolve = this.time;
+    if (this.nextQuestion >= this.questionCount) this.setFinish();
+  }
+
+  /** Onde o carro estará quando o efeito da última resposta acabar (mesma integração do `speedMult`, com o despiste). */
+  private projectEnd(car: CarState): number {
+    const h = this.config.overheadTime;
+    const dt = 0.02;
+    let d = car.distance;
+    let spin = car.spinLeft;
+    for (let t = 0; t < h - 1e-9; t += dt) {
+      const step = Math.min(dt, h - t);
+      if (spin > 0) {
+        spin = Math.max(0, spin - step);
+        continue;
+      }
+      const x = (t + step) / h;
+      d += this.baseSpeed * Math.max(0.05, 1 + (car.mult - 1) * (this.cycle / h) * (Math.PI / 2) * Math.sin(Math.PI * x)) * step;
+    }
+    return d;
+  }
+
+  /**
+   * Chamado quando a última pergunta fecha: a meta fica `FINISH_TAIL` segundos à frente do líder no fim do efeito, e o
+   * resultado de cada carro fica logo decidido. `finishTime` = tempo nominal − avanço sobre o cruzeiro (em segundos),
+   * independente do ritmo a que a turma respondeu.
+   */
+  private setFinish(): void {
+    const h = this.config.overheadTime;
+    const ends = this.cars.map((c) => this.projectEnd(c));
+    this.finishLine = Math.max(...ends) + this.baseSpeed * FINISH_TAIL;
+    const nominal = this.questionCount * this.cycle + h + FINISH_TAIL;
+    this.cars.forEach((c, i) => {
+      c.finishTime = nominal - (ends[i] / this.baseSpeed - (this.time + h));
+    });
+  }
+
   private resolveQuestion(q: number): void {
     const c = this.config;
-    const finalLap = q >= (c.laps - 1) * c.questionsPerLap;
+    const finalLap = inFinalStretch(c, q);
     const team = this.team;
     const teamRankBefore = team ? this.rankOf(team) : 0;
     const results: QuestionResult[] = [];
