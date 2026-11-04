@@ -55,7 +55,8 @@ export function Play() {
   const channel = useRef<Channel | null>(null);
   const [car, setCar] = useState<string | null>(() => readVote(player?.player_id));
   const carRef = useRef(car);
-  const [cat, setCat] = useState<Category>('carro');
+  // Só se conhece com a primeira mensagem do lobby; até lá não se mostra o seletor (senão piscavam os carros antes dos barcos).
+  const [cat, setCat] = useState<Category | null>(null);
   const [leaving, setLeaving] = useState(false);
   const vote = (next: string) => {
     carRef.current = next;
@@ -256,9 +257,13 @@ export function Play() {
             </div>
           </section>
           <section className="wait-vote">
-            <h2>{VEHICLE_WORDS[cat].vote}</h2>
-            <p className="lead">O mais votado ganha.</p>
-            <CarPicker value={car} onPick={vote} cat={cat} />
+            {cat ? (
+              <>
+                <h2>{VEHICLE_WORDS[cat].vote}</h2>
+                <p className="lead">O mais votado ganha.</p>
+                <CarPicker value={car} onPick={vote} cat={cat} />
+              </>
+            ) : null}
           </section>
         </main>
       )}
