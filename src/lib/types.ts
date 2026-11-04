@@ -73,10 +73,10 @@ export interface SessionSettings {
   botField: BotField;
   /** Tempo por pergunta em segundos, a substituir o do quiz. */
   questionTime?: number | null;
-  /** Pista escolhida (a dos fantasmas). Omitido: `trackFor(session.id)`. */
+  /** Pista escolhida (a dos fantasmas). Omitido: `trackFor(game_id)`. */
   trackId?: string;
   /** Corridas anteriores que correm como fantasmas (0–3). */
-  ghosts?: { sessionId: string; name: string }[];
+  ghosts?: { gameId: string; name: string }[];
   /** Sessão de revisão: as perguntas vêm de `review.questionIds` (de vários quizzes), não do quiz da sessão. */
   review?: ReviewSettings;
 }
@@ -109,7 +109,7 @@ export interface ReviewSession {
   answers: AnswerRow[];
 }
 
-/** Resultado da revisão, guardado em `session.state` para o ecrã final sobreviver a um refresh. */
+/** Resultado da revisão, guardado em `game.state` para o ecrã final sobreviver a um refresh. */
 export interface ReviewResult {
   threshold: number;
   items: { id: string; prompt: string; before: number | null; after: number; sessions: number }[];
@@ -126,20 +126,31 @@ export interface SavedState {
   avatars?: Record<string, string>;
   /** Aspeto do carro da turma, fixado ao começar. */
   team?: import('../game/teamStyle').TeamStyle;
+  /** Alunos que alinharam à partida (para o relatório). */
+  players?: number;
   /** Presente quando a corrida acabou. */
   final?: import('./protocol').EndMsg;
   /** Só nas sessões de revisão, quando acabaram. */
   review?: ReviewResult;
 }
 
+/**
+ * A sala (sessão: PIN, turma, alunos, canal) com o seu jogo atual. Uma sala tem vários jogos seguidos:
+ * `id` é da sala, `game_id` do jogo (é com ele que se gravam respostas, recorde e relatório).
+ */
 export interface SessionRow {
   id: string;
+  /** Jogo atual da sala (o último). */
+  game_id: string;
+  /** 1, 2, 3… dentro da sala. */
+  game_number: number;
   teacher_id: string;
   quiz_id: string;
   quiz_version: number;
   quiz_title: string;
   class_id: string | null;
   pin: string;
+  /** Estado do jogo atual (a sala espelha-o: com o jogo acabado o PIN fica livre). */
   status: SessionStatus;
   settings: SessionSettings;
   state: SavedState | null;
@@ -150,11 +161,14 @@ export interface SessionRow {
 export interface PlayerRow {
   id: string;
   nickname: string;
+  /** Expulso pela professora: vale para a sala toda. */
   kicked: boolean;
+  /** Saiu a meio de um jogo (pelo botão «Sair»): fica de fora desse jogo, pode voltar no lobby do seguinte. */
+  left: boolean;
 }
 
 export interface AnswerRow {
-  session_id: string;
+  game_id: string;
   question_id: string;
   player_id: string;
   value: AnswerValue | null;
@@ -171,7 +185,7 @@ export interface JoinResult {
 }
 
 export interface RaceRecordRow {
-  session_id: string;
+  game_id: string;
   class_id: string | null;
   quiz_id: string;
   quiz_version: number;
@@ -197,7 +211,7 @@ export interface SaveQuizResult {
 }
 
 export interface RaceSummary {
-  session_id: string;
+  game_id: string;
   created_at: string;
   quiz_id: string;
   quiz_title: string;

@@ -127,7 +127,7 @@ describe('validação do editor por tipo', () => {
 });
 
 describe('relatório por tipo', () => {
-  const row = (qid: string, pid: string, value: AnswerRow['value'], correct: boolean): AnswerRow => ({ session_id: 's', question_id: qid, player_id: pid, value, correct, ms_taken: 1 });
+  const row = (qid: string, pid: string, value: AnswerRow['value'], correct: boolean): AnswerRow => ({ game_id: 's', question_id: qid, player_id: pid, value, correct, ms_taken: 1 });
   it('parcial entra como fração e há erro mais comum', () => {
     const qs = [order, match, tap, cloze, tf].map((x, i) => ({ ...x, id: `t${i}` }) as QuestionRow);
     const r = buildReport(qs, [

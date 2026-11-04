@@ -23,14 +23,14 @@ npm run seed:sql     # regenera a migration de quizzes de exemplo
 - **Jogar** (iPad, espelhado por AirPlay): `/#/prof` → login → escolher quiz, turma, bots e definições da corrida (voltas, perguntas por volta, tempo) → **Criar sessão** → lobby com PIN + QR → **Começar corrida**.
 - **Preparar** (portátil): `/#/prof/preparar` → biblioteca (filtros, duplicar, apagar), editor de quizzes com gravação automática, turmas, histórico e relatório por corrida (% por pergunta, mais falhadas, opção errada mais escolhida, participação, CSV). Editar um quiz já jogado cria uma nova versão (função SQL `save_quiz`), por isso as corridas antigas não mudam.
 - **Alunos**: abrem o endereço da app (ou leem o QR), põem o PIN e uma alcunha.
-- Se o Safari do anfitrião sair do ecrã, a corrida pausa sozinha e retoma ao voltar. Se a página recarregar, aparece **Retomar** (o estado está em `session.state`). Controlos discretos no canto: ⏸ pausa, ⏭ fecha a pergunta / salta a revelação.
+- Se o Safari do anfitrião sair do ecrã, a corrida pausa sozinha e retoma ao voltar. Se a página recarregar, aparece **Retomar** (o estado está em `game.state`). Controlos discretos no canto: ⏸ pausa, ⏭ fecha a pergunta / salta a revelação.
 - Os alunos reconectam sozinhos (o `device_token` fica em `localStorage`).
 
 ### Fase 7 (mínimo): proteção para alunos menores
 
 - **Alcunhas**: filtradas no servidor em `join_session` (lista em `src/data/nicknameBlocklist.ts`; `npm run gen:blocklist` gera o SQL para atualizar a tabela `nickname_blocklist`). A professora muda a alcunha no lobby (✎).
 - **Privacidade**: página `/#/privacidade`. **Preencher o responsável e o email em `src/app/privacyConfig.ts`** antes de usar.
-- **RGPD**: `select "grandePremioPortugues".anonymize_old_players();` (30 dias; `anonymize_old_players(14)` para outro prazo) anonimiza alcunhas e `device_token` de sessões acabadas. Não está agendada: correr à mão no SQL Editor ou ligar a um agendamento.
+- **RGPD**: `select "grandePremioPortugues".anonymize_old_players();` (30 dias; `anonymize_old_players(14)` para outro prazo) anonimiza alcunhas e `device_token` de salas acabadas. Não está agendada: correr à mão no SQL Editor ou ligar a um agendamento.
 - **Anti-batota**: máx. 60 alunos por sessão, 8 PINs errados/5 min por dispositivo, e o anfitrião ignora respostas inválidas, repetidas, fora de tempo ou em rajada.
 
 ### Testar sem Supabase (modo mock, só em dev)
@@ -71,9 +71,11 @@ Nunca usar `supabase db push` (projeto partilhado). Os alunos só chamam `join_s
 
 Os alunos não têm conta: entram via `join_session(pin, alcunha, device_token)` e falam com o projetor por Realtime (broadcast), no canal `corrida:<session_id>`.
 
+**Sala e jogos**: uma `session` é a sala (PIN, turma, alunos, canal); cada corrida é um `game` dessa sala (quiz, definições, estado, `answer`, `race_record`). No ecrã final, «Outro quiz, mesma sala» (`/prof?sala=<id>`) abre o jogo seguinte com o mesmo PIN, alunos, alcunhas, avatares e voto do carro; `session.status` espelha o último jogo (trigger), por isso o PIN fica livre quando o jogo acaba. Histórico, relatório e fantasmas são por jogo (`game_id`). O aluno vê o nº do jogo em `lobby`/`question`/`end` e limpa o que respondeu quando muda.
+
 - Anfitrião → alunos: `lobby {count}` (nunca leva o carro), `question` (sem a resposta certa), `reveal`, `end`, `kicked`.
 - Aluno → anfitrião: `hello {player_id, avatar?, car?}`, `vote {player_id, car}` (voto no carro da turma; o aluno só envia, nunca recebe o carro), `answer {player_id, question_id, value}`.
-- O anfitrião mede o tempo pela hora de chegada, calcula com o motor, grava `answer` + `session.state` a cada pergunta e `race_record` no fim.
+- O anfitrião mede o tempo pela hora de chegada, calcula com o motor, grava `answer` + `game.state` a cada pergunta e `race_record` no fim.
 
 ## Publicar (Vercel)
 
