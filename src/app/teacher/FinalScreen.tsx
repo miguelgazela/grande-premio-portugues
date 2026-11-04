@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import type { FinalInfo, FinalStanding } from '../../lib/protocol';
 import { listDensity, recordNotes, resultHeadline, splitStandings } from '../../lib/finalView';
 import { assetUrl } from '../../render/assets';
@@ -19,6 +19,11 @@ export function FinalScreen({ f, onNext, onExit, children }: { f: FinalInfo; onN
   const { podium, rest } = splitStandings(f.standings);
   const [first, second, third] = [f.ranking[0], f.ranking[1], f.ranking[2]];
   const more = f.ranking.slice(3);
+  const listRef = useRef<HTMLOListElement>(null);
+  // Lista longa com scroll interno: deixa a linha da turma à vista.
+  useEffect(() => {
+    listRef.current?.querySelector('li.me')?.scrollIntoView({ block: 'nearest' });
+  }, [f]);
 
   return (
     <div className="host menubg final" data-tone={head.tone} style={{ backgroundImage: `url(${assetUrl('menu-results.jpg')})` }}>
@@ -53,7 +58,7 @@ export function FinalScreen({ f, onNext, onExit, children }: { f: FinalInfo; onN
               ))}
             </div>
             {rest.length > 0 && (
-              <ol className="frest" data-density={listDensity(rest.length)} start={4}>
+              <ol ref={listRef} className="frest" data-density={listDensity(rest.length)} start={4}>
                 {rest.map(({ index, car }) => (
                   <li key={index} className={car.kind === 'team' ? 'me' : ''}>
                     <Place index={index} />

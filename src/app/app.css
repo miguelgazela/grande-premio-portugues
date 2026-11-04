@@ -565,7 +565,7 @@ details.ghosts .sum { margin-left: auto; color: var(--muted); font-weight: 600; 
 
 .frest { flex: 1; min-height: 0; margin: 0; padding: 0 .4vmin 0 0; list-style: none; overflow: auto; display: grid; gap: .8vmin; align-content: start; grid-template-columns: minmax(0, 1fr); font-size: clamp(18px, 3vmin, 32px); scrollbar-width: thin; }
 .frest[data-density='compact'] { grid-template-columns: repeat(2, minmax(0, 1fr)); font-size: clamp(16px, 2.5vmin, 28px); }
-.frest[data-density='tight'] { grid-template-columns: repeat(3, minmax(0, 1fr)); font-size: clamp(14px, 2.1vmin, 22px); gap: .6vmin; }
+.frest[data-density='tight'] { grid-template-columns: repeat(2, minmax(0, 1fr)); font-size: clamp(15px, 2.2vmin, 24px); gap: .6vmin; }
 .frest li { display: flex; align-items: center; gap: .5em; min-width: 0; padding: .3em .6em; border-radius: 12px; background: #ffffff17; font-weight: 800; }
 .frest li .fcar { width: 2.6em; }
 .frest li .sname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -574,7 +574,7 @@ details.ghosts .sum { margin-left: auto; color: var(--muted); font-weight: 600; 
 .frest .medal { height: 1.3em; }
 
 /* quem mais ajudou: top 3 grande, 4.º-5.º compactos, prémios como medalhas */
-.helpers { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 1.4vmin; }
+.helpers { flex: 1 1 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 1.4vmin; align-content: space-evenly; }
 .fhelp { overflow: auto; scrollbar-width: thin; }
 .helper { display: grid; grid-template-columns: auto auto minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: 1.2vmin; padding: 1vmin 1.4vmin; border-radius: 20px; background: #ffffff17; min-width: 0; }
 .helper > .medal, .helper > .place { grid-row: 1 / 3; height: clamp(26px, 4.2vmin, 46px); }
