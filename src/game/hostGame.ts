@@ -550,7 +550,7 @@ export class HostGame {
       }
       const rate = this.sprintRate;
       for (let left = dt * rate; left > 0; left -= 0.25) race.step(Math.min(0.25, left));
-      if (race.team!.finishTime !== null || race.finished) {
+      if (race.team!.crossed || race.finished) {
         this.holdT = 0;
         play('finish');
         music.stop();

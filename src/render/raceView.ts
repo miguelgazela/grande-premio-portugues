@@ -450,7 +450,7 @@ export class RaceView {
       const label = sprite.getChildByLabel('label');
       if (label) label.rotation = -sprite.rotation;
 
-      const running = car.finishTime === null && !spinning;
+      const running = !car.crossed && !spinning;
       const flicker = 0.75 + 0.25 * Math.sin(clock * 40 + i);
       const nitroOn = running && race.bursting && car.nitroActive;
       const turboOn = running && race.bursting && !car.nitroActive && car.lastEffect === 'turbo';
@@ -519,7 +519,7 @@ export class RaceView {
         P.spark(sprite.x - cos * CAR_LEN * 0.55, sprite.y - sin * CAR_LEN * 0.55, heading, st.nitroOn ? (Math.random() < 0.5 ? 0x7fe0ff : 0xffffff) : 0xffb21a);
       }
     }
-    if (isTeam && car.finishTime !== null && !node.finished) {
+    if (isTeam && car.crossed && !node.finished) {
       node.finished = true;
       for (let k = 0; k < 70; k++) P.confetti(sprite.x, sprite.y);
       this.cheer();
@@ -546,7 +546,7 @@ export class RaceView {
     cam.x += (tx - cam.x) * k;
     cam.y += (ty - cam.y) * k;
     const spinning = team.spinLeft > 0;
-    const boosted = team.finishTime === null && !spinning && race.bursting;
+    const boosted = !team.crossed && !spinning && race.bursting;
     const targetZoom = boosted && team.nitroActive ? 0.84 : boosted && team.lastEffect === 'turbo' ? 0.92 : 1;
     cam.zoom += (targetZoom - cam.zoom) * (1 - Math.exp(-dt * 2.5));
     this.ensureChunks(team.distance);

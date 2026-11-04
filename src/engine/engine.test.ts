@@ -38,7 +38,7 @@ describe('Race', () => {
     for (const acc of [0.1, 0.5, 0.8, 1]) {
       const race = new Race([fixed('team', acc, 'team')], DEFAULT_CONFIG);
       race.runToEnd(0.05);
-      expect(race.team!.finishTime!).toBeGreaterThanOrEqual(race.questionCount * race.cycle);
+      expect(race.time).toBeGreaterThanOrEqual(race.questionCount * race.cycle);
     }
   });
 
@@ -52,6 +52,22 @@ describe('Race', () => {
     expect(end(0.65)).toBeLessThan(40);
     expect(end(0.2)).toBeLessThan(100);
     expect(end(0.2)).toBeGreaterThan(end(1));
+  });
+
+  it('finish time depends only on the car\'s own answers (not on how fast the class answered) and rewards speed', () => {
+    const time = (manual: boolean, speedBonus: number) => {
+      const car: Driver = { id: 'team', name: 'team', kind: 'team', color: 0, outcome: () => ({ accuracy: 0.8, speedBonus }) };
+      const race = new Race([car], DEFAULT_CONFIG);
+      race.manual = manual;
+      let guard = 0;
+      while (!race.finished && guard++ < 100000) {
+        race.step(0.1);
+        if (manual && race.nextQuestion < race.questionCount && race.time >= (race.nextQuestion + 1) * 12) race.resolveNow(); // responde mais cedo
+      }
+      return race.team!.finishTime!;
+    };
+    expect(Math.abs(time(true, 0.5) - time(false, 0.5))).toBeLessThan(0.3); // só a discretização do passo
+    expect(time(false, 1)).toBeLessThan(time(false, 0));
   });
 
   it('manual mode: closing questions early never makes a car jump, and the finish line appears only after the last one', () => {
