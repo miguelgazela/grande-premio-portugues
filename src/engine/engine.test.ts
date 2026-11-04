@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { mulberry32 } from './rng';
 import { DEFAULT_CONFIG } from './config';
 import { Track, Road, roadSeed, DEFAULT_TRACK_POINTS, TRACKS, ROAD_W, CURB_W, type Vec } from './track';
 import { Race, raceLengthFor, type Driver } from './race';
@@ -250,6 +251,26 @@ describe('Road (pista aberta gerada)', () => {
         worst = Math.min(worst, radius);
       }
       expect(worst).toBeGreaterThan(half + 30);
+    }
+  });
+});
+
+describe('finish order', () => {
+  it('finish order on screen matches the result order (ties within a frame aside)', () => {
+    for (let seed = 1; seed < 100; seed++) {
+      const rnd = mulberry32(seed);
+      const mk = (id: string, kind: Driver['kind'], m: number) => ({ id, name: id, kind, color: 0, outcome: () => ({ accuracy: Math.min(1, Math.max(0, m + (rnd() - 0.5) * 0.5)), speedBonus: rnd() }) });
+      const r = new Race([mk('t', 'team', 0.3 + rnd() * 0.6), mk('b1', 'bot', 0.8), mk('b2', 'bot', 0.6), mk('b3', 'bot', 0.4), mk('g', 'ghost', 0.5 + rnd() * 0.3)], DEFAULT_CONFIG);
+      r.manual = true;
+      const order: string[] = [];
+      let guard = 0;
+      while (!r.finished && guard++ < 1e6) {
+        r.step(1 / 30);
+        if (r.nextQuestion < r.questionCount && r.time >= r.nextQuestion * 14 + 14) r.resolveNow();
+        for (const c of r.cars) if (c.crossed && !order.includes(c.driver.id)) order.push(c.driver.id);
+      }
+      const ft = new Map(r.cars.map((c) => [c.driver.id, c.finishTime!]));
+      for (let i = 0; i < order.length; i++) for (let j = i + 1; j < order.length; j++) expect(ft.get(order[i])! - ft.get(order[j])!).toBeLessThan(0.05);
     }
   });
 });

@@ -459,7 +459,7 @@ export class RaceView {
       const node = this.cars.get(car.driver.id) ?? this.carNode(car);
       const sprite = node.root;
       const lane = (i - (n - 1) / 2) * (ROAD_W / (n + 1));
-      const jit = this.jitter(car.driver.id, race.time, Math.min(1, race.time / 3)); // tempo da corrida: parado na contagem e na pausa
+      const jit = this.jitter(car.driver.id, race.time, Math.min(1, race.time / 3) * Math.min(1, ((race.finishLine ?? Infinity) - car.distance) / 600)); // tempo da corrida: parado na contagem e na pausa
       const pose = this.track.poseAt(Math.max(0, Math.min(this.shownDistance(race, car) + jit.along, race.finishLine ?? Infinity)));
       sprite.position.set(pose.x + pose.nx * (lane + jit.lane), pose.y + pose.ny * (lane + jit.lane));
       const spinning = car.spinLeft > 0;
