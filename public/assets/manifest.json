@@ -1788,5 +1788,125 @@
       0
     ],
     "notes": "Fundo do lobby, tema água (porto); mesma composição do menu-title. Original 1344x752 ampliado"
+  },
+  "bg-candy": {
+    "file": "bg-candy.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile opaco, tema doces (bolachas/glacê rosa e creme com confetis); costura ligeira em 2x2"
+  },
+  "track-asphalt-candy": {
+    "file": "track-asphalt-candy.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile opaco, chocolate liso com glacê (tema doces)"
+  },
+  "track-curb-candy": {
+    "file": "track-curb-candy.png",
+    "w": 512,
+    "h": 78,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Lomba horizontal de bengalas de açúcar vermelhas e brancas, 512 de largura"
+  },
+  "prop-ca-cupcake": {
+    "file": "prop-ca-cupcake.png",
+    "w": 242,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: cupcake"
+  },
+  "prop-ca-lollipop": {
+    "file": "prop-ca-lollipop.png",
+    "w": 155,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: pirulito grande"
+  },
+  "prop-ca-donut": {
+    "file": "prop-ca-donut.png",
+    "w": 247,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: donut gigante"
+  },
+  "prop-ca-icecream": {
+    "file": "prop-ca-icecream.png",
+    "w": 168,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: gelado de 3 bolas"
+  },
+  "prop-ca-cake": {
+    "file": "prop-ca-cake.png",
+    "w": 227,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: bolo de camadas"
+  },
+  "prop-ca-gummies": {
+    "file": "prop-ca-gummies.png",
+    "w": 248,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: pilha de gomas"
+  },
+  "prop-ca-gingerbread": {
+    "file": "prop-ca-gingerbread.png",
+    "w": 222,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: casa de gengibre"
+  },
+  "prop-ca-cottoncandy": {
+    "file": "prop-ca-cottoncandy.png",
+    "w": 193,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Prop tema doces: árvore de algodão doce"
+  },
+  "menu-title-candy": {
+    "file": "menu-title-candy.jpg",
+    "w": 1920,
+    "h": 1086,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Fundo do lobby, tema doces; mesma composição do menu-title. Original 1344x752 ampliado"
   }
 }
