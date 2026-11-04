@@ -1908,5 +1908,205 @@
       0
     ],
     "notes": "Fundo do lobby, tema doces; mesma composição do menu-title. Original 1344x752 ampliado"
+  },
+  "ship-cacador": {
+    "file": "ship-cacador.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Caça vermelho, proa para +x"
+  },
+  "ship-disco": {
+    "file": "ship-disco.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Disco voador amarelo, proa (motor) para +x"
+  },
+  "ship-foguetao": {
+    "file": "ship-foguetao.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Foguetão retro azul-petróleo, proa para +x"
+  },
+  "ship-bolha": {
+    "file": "ship-bolha.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Nave-bolha roxa, proa para +x"
+  },
+  "ship-delta": {
+    "file": "ship-delta.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Nave delta verde (furtiva), proa para +x"
+  },
+  "ship-vaivem": {
+    "file": "ship-vaivem.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Vaivém rosa e branco, proa para +x"
+  },
+  "ship-crescente": {
+    "file": "ship-crescente.png",
+    "w": 256,
+    "h": 128,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Nave crescente azul, proa para +x"
+  },
+  "bg-space": {
+    "file": "bg-space.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile 512 opaco, estrelas e nebulosas, sem costura"
+  },
+  "track-asphalt-space": {
+    "file": "track-asphalt-space.png",
+    "w": 512,
+    "h": 512,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "Tile 512 opaco, painel de luz azul com hexágonos (a primeira versão era uma estrada sinuosa, rejeitada)"
+  },
+  "track-curb-space": {
+    "file": "track-curb-space.png",
+    "w": 512,
+    "h": 65,
+    "anchor": [
+      0,
+      0.5
+    ],
+    "notes": "Fila horizontal de balizas de néon ciano/magenta, 512 de largura"
+  },
+  "prop-sp-planet": {
+    "file": "prop-sp-planet.png",
+    "w": 256,
+    "h": 184,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Planeta laranja com anéis roxos"
+  },
+  "prop-sp-asteroid": {
+    "file": "prop-sp-asteroid.png",
+    "w": 250,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Asteroide com crateras"
+  },
+  "prop-sp-satellite": {
+    "file": "prop-sp-satellite.png",
+    "w": 256,
+    "h": 189,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Satélite com painéis solares"
+  },
+  "prop-sp-station": {
+    "file": "prop-sp-station.png",
+    "w": 256,
+    "h": 251,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Estação espacial modular"
+  },
+  "prop-sp-ufo": {
+    "file": "prop-sp-ufo.png",
+    "w": 251,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "OVNI verde com alienígena (circular)"
+  },
+  "prop-sp-astronaut": {
+    "file": "prop-sp-astronaut.png",
+    "w": 256,
+    "h": 242,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Astronauta à deriva, cabeça para +x"
+  },
+  "prop-sp-comet": {
+    "file": "prop-sp-comet.png",
+    "w": 256,
+    "h": 108,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Cometa, cabeça para +x, cauda para -x"
+  },
+  "prop-sp-moon": {
+    "file": "prop-sp-moon.png",
+    "w": 252,
+    "h": 256,
+    "anchor": [
+      0.5,
+      0.5
+    ],
+    "notes": "Lua cinzenta com crateras"
+  },
+  "fx-trail-space": {
+    "file": "fx-trail-space.png",
+    "w": 256,
+    "h": 91,
+    "anchor": [
+      1,
+      0.5
+    ],
+    "notes": "Rasto de brilho ciano; aponta para -x, anchor na popa"
+  },
+  "menu-title-space": {
+    "file": "menu-title-space.jpg",
+    "w": 1920,
+    "h": 1086,
+    "anchor": [
+      0,
+      0
+    ],
+    "notes": "JPEG 1920×1086 (ampliado de 1344×752): plataforma de lançamento, pórtico, bancadas com alienígenas"
   }
 }
