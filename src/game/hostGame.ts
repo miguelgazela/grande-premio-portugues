@@ -157,6 +157,12 @@ export class HostGame {
     this.raf = requestAnimationFrame(this.loop);
   }
 
+  /** A primeira pergunta, para reservar já o espaço do painel durante a contagem (não se envia nada). */
+  previewFirst(): { prompt: string; body: PublicBody } | null {
+    const q = this.questions[this.snap.qIndex] ?? this.questions[0];
+    return q ? { prompt: q.prompt, body: prepare(q, this.seed).body } : null;
+  }
+
   /** Avisa já os alunos, pelo canal que o anfitrião tem aberto, de que a sessão terminou. */
   announceAborted(): void {
     this.channel?.send({ event: 'aborted', payload: {} });

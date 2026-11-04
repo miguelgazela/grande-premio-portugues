@@ -53,7 +53,7 @@ export function Join() {
 
   return (
     <div className="center">
-      <form className="card" onSubmit={join}>
+      <form className="card join-card" onSubmit={join}>
         <Asset name="ui-logo" alt="Grande Prémio de Português" className="join-logo" fallback={<h1 style={{ textAlign: 'center' }}>🏎️ Grande Prémio</h1>} />
         {step === 'pin' ? (
           <>
