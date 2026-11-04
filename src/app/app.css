@@ -521,13 +521,13 @@ details.ghosts .sum { margin-left: auto; color: var(--muted); font-weight: 600; 
 .jogar .seg button { min-width: 0; padding-left: 12px; padding-right: 12px; flex: 1 1 auto; }
 
 /* ---- Ecrã final do anfitrião: resultado como herói, pódio, quem mais ajudou, ações sempre à vista ---- */
-.final-wrap { height: 100%; min-height: 0; display: flex; flex-direction: column; gap: 2vmin; padding: 2.4vmin 4vmin calc(2.6vmin + env(safe-area-inset-bottom)); color: #fff; }
+.final-wrap { height: 100%; min-height: 0; display: flex; flex-direction: column; gap: 1.6vmin; padding: 2vmin 4vmin calc(2.6vmin + env(safe-area-inset-bottom)); color: #fff; }
 .final h1, .final h2 { margin: 0; text-shadow: 0 2px 0 #0005; }
 .final-hero { flex: none; display: flex; flex-direction: column; align-items: center; gap: 1.2vmin; }
 .hero-card { display: inline-flex; align-items: center; gap: 2vmin; max-width: 100%; padding: .9vmin 3.2vmin .9vmin 2vmin; border-radius: 28px; background: #14161fe0; border: 3px solid #ffffff2e; box-shadow: 0 8px 0 #0004; }
-.hero-card h1 { font-size: clamp(30px, 7vmin, 84px); line-height: 1.05; }
+.hero-card h1 { font-size: clamp(30px, 6.4vmin, 76px); line-height: 1.05; }
 .hero-sub { margin: .1em 0 0; font-size: clamp(16px, 2.6vmin, 30px); font-weight: 700; color: var(--muted2); }
-.hero-card .title-icon { height: clamp(52px, 11vmin, 120px); margin: 0; flex: none; }
+.hero-card .title-icon { height: clamp(48px, 9.5vmin, 110px); margin: 0; flex: none; }
 .hero-card .flag { font-size: clamp(44px, 9vmin, 96px); line-height: 1; height: auto; }
 .final[data-tone='win'] .hero-card { background: linear-gradient(180deg, #ffd45c, var(--gold)); color: #1b1b24; border-color: #fff9; }
 .final[data-tone='win'] .hero-card h1 { text-shadow: 0 2px 0 #fff6; }
@@ -539,7 +539,7 @@ details.ghosts .sum { margin-left: auto; color: var(--muted); font-weight: 600; 
 .note.ghost-win { background: #1b7a43; border-color: #7be3a5; }
 
 .final-grid { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: 1.15fr 1fr; grid-template-rows: minmax(0, 1fr); gap: 2.4vmin; scrollbar-width: thin; }
-.fcard, .final .box { min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column; gap: 1.6vmin; padding: 2vmin 2.4vmin; border-radius: 28px; background: #14161fcc; border: 2px solid #ffffff1f; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.fcard, .final .box { min-height: 0; min-width: 0; overflow: hidden; display: flex; flex-direction: column; gap: 1.2vmin; padding: 1.6vmin 2.2vmin; border-radius: 28px; background: #14161fcc; border: 2px solid #ffffff1f; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .fcard h2, .final .box h2 { flex: none; font-size: clamp(20px, 3.2vmin, 36px); }
 .final .box ol { margin: 0; padding: 0; list-style: none; display: grid; gap: .8vmin; overflow: auto; }
 .final .box li { display: flex; justify-content: space-between; gap: 12px; padding: .8vmin 1.4vmin; border-radius: 12px; background: #ffffff17; font-size: clamp(16px, 2.6vmin, 28px); font-weight: 700; }
@@ -560,7 +560,8 @@ details.ghosts .sum { margin-left: auto; color: var(--muted); font-weight: 600; 
 .step.me .sname { color: var(--gold); }
 .step .medal { height: 1.2em; }
 .fcar { display: block; flex: none; object-fit: contain; width: clamp(80px, 15vmin, 190px); aspect-ratio: 2 / 1; }
-.fcar.ghostmark { display: grid; place-items: center; font-size: clamp(32px, 7vmin, 80px); }
+.fcar.ghostmark { display: grid; place-items: center; font-size: clamp(32px, 7vmin, 80px); line-height: 1; }
+.frest li .fcar.ghostmark { font-size: 1.4em; width: 2.6em; height: 1.3em; aspect-ratio: auto; }
 
 .frest { flex: 1; min-height: 0; margin: 0; padding: 0 .4vmin 0 0; list-style: none; overflow: auto; display: grid; gap: .8vmin; align-content: start; grid-template-columns: minmax(0, 1fr); font-size: clamp(18px, 3vmin, 32px); scrollbar-width: thin; }
 .frest[data-density='compact'] { grid-template-columns: repeat(2, minmax(0, 1fr)); font-size: clamp(16px, 2.5vmin, 28px); }
@@ -574,25 +575,27 @@ details.ghosts .sum { margin-left: auto; color: var(--muted); font-weight: 600; 
 
 /* quem mais ajudou: top 3 grande, 4.º-5.º compactos, prémios como medalhas */
 .helpers { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 1.4vmin; }
-.helper { display: flex; flex-direction: column; align-items: center; gap: .5vmin; min-width: 0; padding: 1.2vmin; border-radius: 20px; background: #ffffff17; text-align: center; }
-.helper .sname { font-size: clamp(18px, 3vmin, 34px); max-width: 100%; overflow-wrap: anywhere; }
-.helper small { font-size: clamp(15px, 2.3vmin, 26px); font-weight: 700; color: var(--muted2); }
-.helper .h-avatar { width: clamp(52px, 10vmin, 110px); height: clamp(52px, 10vmin, 110px); border-radius: 50%; object-fit: cover; background: #ffffff22; display: grid; place-items: center; font-style: normal; font-weight: 900; font-size: 5vmin; }
-.helper .medal { height: clamp(26px, 4.4vmin, 48px); }
-.helper.h1 { grid-column: 1 / -1; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 0 2vmin; background: linear-gradient(180deg, #ffd45c33, #ffb21a22); border: 2px solid #ffb21a99; }
-.helper.h1 .h-avatar { width: clamp(72px, 15vmin, 160px); height: clamp(72px, 15vmin, 160px); border: 4px solid var(--gold); }
-.helper.h1 .sname { font-size: clamp(24px, 4.6vmin, 52px); }
-.helper.h1 small { flex-basis: 100%; font-size: clamp(16px, 2.8vmin, 30px); color: #fff; }
+.fhelp { overflow: auto; scrollbar-width: thin; }
+.helper { display: grid; grid-template-columns: auto auto minmax(0, 1fr); grid-template-rows: auto auto; align-items: center; column-gap: 1.2vmin; padding: 1vmin 1.4vmin; border-radius: 20px; background: #ffffff17; min-width: 0; }
+.helper > .medal, .helper > .place { grid-row: 1 / 3; height: clamp(26px, 4.2vmin, 46px); }
+.helper > .h-avatar { grid-row: 1 / 3; }
+.helper .sname { font-size: clamp(18px, 3vmin, 34px); line-height: 1.1; align-self: end; min-width: 0; overflow-wrap: anywhere; }
+.helper small { grid-column: 3; font-size: clamp(15px, 2.3vmin, 26px); font-weight: 700; color: var(--muted2); align-self: start; }
+.helper .h-avatar { width: clamp(44px, 7.4vmin, 90px); height: clamp(44px, 7.4vmin, 90px); border-radius: 50%; object-fit: cover; background: #ffffff22; display: grid; place-items: center; font-style: normal; font-weight: 900; font-size: 4vmin; }
+.helper.h1 { grid-column: 1 / -1; background: linear-gradient(180deg, #ffd45c33, #ffb21a22); border: 2px solid #ffb21a99; }
+.helper.h1 .h-avatar { width: clamp(60px, 10vmin, 120px); height: clamp(60px, 10vmin, 120px); border: 4px solid var(--gold); }
+.helper.h1 .sname { font-size: clamp(24px, 4.4vmin, 50px); }
+.helper.h1 small { font-size: clamp(16px, 2.8vmin, 30px); color: #fff; }
 .helper.h2:last-child { grid-column: 1 / -1; }
-.hmore { flex: none; margin: 0; padding: 0; list-style: none; display: grid; gap: .8vmin; }
-.hmore li { display: flex; align-items: center; gap: .6em; padding: .35em .8em; border-radius: 12px; background: #ffffff17; font-size: clamp(16px, 2.6vmin, 28px); }
+.hmore { flex: none; margin: 0; padding: 0; list-style: none; display: grid; gap: .6vmin; }
+.hmore li { display: flex; align-items: center; gap: .6em; padding: .2em .8em; border-radius: 12px; background: #ffffff17; font-size: clamp(16px, 2.4vmin, 26px); }
 .hmore .sname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hmore small { font-weight: 700; color: var(--muted2); white-space: nowrap; }
 .hmore .medal { height: 1.3em; }
 .awards3 { margin-top: auto; flex: none; display: flex; gap: 1.2vmin; }
-.prize { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: .4vmin; padding: 1.2vmin 1vmin; border-radius: 18px; background: #ffffff14; border: 2px solid #ffb21a80; text-align: center; font-size: clamp(14px, 2.2vmin, 25px); line-height: 1.2; overflow-wrap: anywhere; }
+.prize { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: .3vmin; padding: .8vmin .8vmin; border-radius: 18px; background: #ffffff14; border: 2px solid #ffb21a80; text-align: center; font-size: clamp(14px, 2vmin, 23px); line-height: 1.15; overflow-wrap: anywhere; }
 .prize b { font-size: 1.12em; color: var(--gold); }
-.prize-emoji { display: grid; place-items: center; width: 1.9em; height: 1.9em; border-radius: 50%; font-size: clamp(26px, 4.6vmin, 52px); background: radial-gradient(circle at 35% 30%, #ffe28a, var(--gold)); box-shadow: 0 3px 0 #0005; }
+.prize-emoji { display: grid; place-items: center; width: 1.9em; height: 1.9em; border-radius: 50%; font-size: clamp(22px, 3.8vmin, 44px); background: radial-gradient(circle at 35% 30%, #ffe28a, var(--gold)); box-shadow: 0 3px 0 #0005; }
 
 .final-actions { flex: none; display: flex; flex-wrap: wrap; justify-content: center; gap: 2vmin; padding-top: .4vmin; }
 .final-actions button.big { min-height: 64px; font-size: clamp(20px, 3.2vmin, 34px); padding: .5em 1.5em; box-shadow: 0 6px 0 #0006; }
