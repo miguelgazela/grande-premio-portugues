@@ -459,8 +459,9 @@ export class RaceView {
       const node = this.cars.get(car.driver.id) ?? this.carNode(car);
       const sprite = node.root;
       const lane = (i - (n - 1) / 2) * (ROAD_W / (n + 1));
-      const pose = this.track.poseAt(this.shownDistance(race, car));
-      sprite.position.set(pose.x + pose.nx * lane, pose.y + pose.ny * lane);
+      const jit = this.jitter(car.driver.id, clock);
+      const pose = this.track.poseAt(Math.max(0, Math.min(this.shownDistance(race, car) + jit.along, race.finishLine ?? Infinity)));
+      sprite.position.set(pose.x + pose.nx * (lane + jit.lane), pose.y + pose.ny * (lane + jit.lane));
       const spinning = car.spinLeft > 0;
       sprite.rotation = pose.angle + (spinning ? clock * 14 : 0);
       const label = sprite.getChildByLabel('label');
@@ -540,6 +541,18 @@ export class RaceView {
       for (let k = 0; k < 70; k++) P.confetti(sprite.x, sprite.y);
       this.cheer();
     }
+  }
+
+  /** Só visual: cada carro tem um pequeno avanço fixo e uma oscilação lenta, para não andarem todos exatamente lado a lado. */
+  private jitter(id: string, clock: number): { along: number; lane: number } {
+    let h = 2166136261;
+    for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 16777619);
+    const u = ((h >>> 0) % 1000) / 1000;
+    const v = (((h >>> 10) >>> 0) % 1000) / 1000;
+    return {
+      along: u * 55 + Math.sin(clock * (0.5 + v * 0.5) + v * 6.28) * 7,
+      lane: Math.sin(clock * (0.35 + u * 0.4) + u * 6.28) * 4,
+    };
   }
 
   /** Distância desenhada: o carro da turma é exato; os outros ficam comprimidos (sem trocar de ordem) para não fugirem do ecrã. */
