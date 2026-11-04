@@ -22,7 +22,7 @@ const TIMES: { value: number; label: string }[] = [
   { value: 30, label: '30 s' },
   { value: 45, label: '45 s' },
 ];
-/** Pista por tema (relva, deserto, neve, cidade); '' = sorteada pela sessão. */
+/** Tema visual da pista (o traçado é sempre gerado de novo); '' = sorteado pela sessão. Cada tema usa o id de pista antigo (`trackId`). */
 const TRACK_CHOICES: { id: string; label: string }[] = [
   { id: '', label: 'Aleatória' },
   ...TRACKS.map((t) => ({ id: t.id, label: themeForTrack(t.id).name })),
@@ -274,13 +274,13 @@ export function Jogar() {
                 </div>
               </div>
               <div className="field">
-                <b>Pista</b>
+                <b>Tema da pista</b>
                 <div className="seg" role="radiogroup" aria-label="Tema da pista">
                   {TRACK_CHOICES.map((t) => (
                     <button key={t.id || 'rnd'} role="radio" aria-checked={track === t.id} disabled={validPicked.length > 0} className={track === t.id ? 'on' : ''} onClick={() => change(() => setTrack(t.id))}>{t.label}</button>
                   ))}
                 </div>
-                {validPicked.length > 0 && <span className="muted">Com fantasmas, a pista é a deles.</span>}
+                {validPicked.length > 0 && <span className="muted">Com fantasmas, o tema é o deles.</span>}
               </div>
               {compat.length > 0 && (
                 <div className="field">
