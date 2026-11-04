@@ -2,7 +2,7 @@ import { carsOfCat, type Category } from '../game/teamStyle';
 
 /** Temas visuais. O tema é uma função da pista (como a pista é da sessão), por isso fantasmas e refreshes coincidem sem gravar nada. */
 export interface Theme {
-  id: 'relva' | 'deserto' | 'neve' | 'cidade' | 'agua';
+  id: 'relva' | 'deserto' | 'neve' | 'cidade' | 'agua' | 'doces';
   name: string;
   /** Sufixo das chaves do manifest (`bg-<suffix>`); vazio = relva. */
   suffix: string;
@@ -42,9 +42,13 @@ export const THEMES: Theme[] = [
     id: 'agua', vehicle: 'barco', name: 'Água', suffix: 'water', background: 0x1f78b4, curbA: 0xff6a2b, curbB: 0xffffff,
     props: [{ key: 'prop-w-island', size: 100, count: 3, margin: 8, nearRoad: false }, { key: 'prop-w-lighthouse', size: 90, count: 2, margin: 8, nearRoad: false }, { key: 'prop-w-dolphin', size: 50, count: 6, margin: 8, nearRoad: false, spin: true }, { key: 'prop-w-whale', size: 100, count: 2, margin: 8, nearRoad: false, spin: true }, { key: 'prop-w-turtle', size: 44, count: 6, margin: 8, nearRoad: false, spin: true }, { key: 'prop-w-dock', size: 72, count: 4, margin: 8, nearRoad: false }, { key: 'prop-w-rocks', size: 54, count: 12, margin: 8, nearRoad: false }, { key: 'prop-w-cargo', size: 110, count: 2, margin: 8, nearRoad: false, spin: true }],
   },
+  {
+    id: 'doces', vehicle: 'carro', name: 'Doces', suffix: 'candy', background: 0xf6b6cf, curbA: 0xe8262b, curbB: 0xffffff,
+    props: [{ key: 'prop-ca-cupcake', size: 60, count: 10, margin: 8, nearRoad: false, spin: true }, { key: 'prop-ca-lollipop', size: 70, count: 10, margin: 8, nearRoad: false, spin: true }, { key: 'prop-ca-donut', size: 70, count: 6, margin: 8, nearRoad: false, spin: true }, { key: 'prop-ca-icecream', size: 64, count: 6, margin: 8, nearRoad: false, spin: true }, { key: 'prop-ca-cake', size: 80, count: 3, margin: 8, nearRoad: false }, { key: 'prop-ca-gummies', size: 50, count: 8, margin: 8, nearRoad: false }, { key: 'prop-ca-gingerbread', size: 90, count: 2, margin: 8, nearRoad: false }, { key: 'prop-ca-cottoncandy', size: 80, count: 8, margin: 8, nearRoad: false }, ...ROAD_PROPS],
+  },
 ];
 
-const BY_TRACK: Record<string, Theme['id']> = { classico: 'relva', triangulo: 'deserto', losango: 'neve', tecnico: 'cidade', canal: 'agua' };
+const BY_TRACK: Record<string, Theme['id']> = { classico: 'relva', triangulo: 'deserto', losango: 'neve', tecnico: 'cidade', canal: 'agua', caramelo: 'doces' };
 
 /** Tema de uma pista. Pistas desconhecidas (registos antigos) ficam com relva. */
 export function themeForTrack(trackId: string): Theme {

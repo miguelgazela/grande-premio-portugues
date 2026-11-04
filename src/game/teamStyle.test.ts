@@ -84,17 +84,27 @@ describe('barcos (tema água)', () => {
     expect(botCars('car-team', 6).every((b) => b.cat === 'carro')).toBe(true);
   });
   it('a pista sorteada por sessão nunca é a de água (sessões antigas mantêm a pista)', () => {
-    for (let i = 0; i < 200; i++) expect(trackFor(`s${i}`).id).not.toBe('canal');
+    for (let i = 0; i < 200; i++) expect(['canal', 'caramelo']).not.toContain(trackFor(`s${i}`).id);
   });
   it('as chaves de textura do tema água incluem barcos e efeitos', () => {
     expect(themeKeys(themeForTrack('canal'))).toEqual(expect.arrayContaining(['bg-water', 'track-asphalt-water', 'track-curb-water', 'prop-w-whale', 'boat-lancha', 'fx-wake', 'fx-splash']));
   });
 });
 
+describe('tema doces', () => {
+  it('a pista caramelo usa o tema doces com carros e fundo de lobby próprio', () => {
+    const t = themeForTrack('caramelo');
+    expect(t.id).toBe('doces');
+    expect(t.suffix).toBe('candy');
+    expect(vehicleForTrack('caramelo')).toBe('carro');
+    expect(themeKeys(t)).toEqual(expect.arrayContaining(['bg-candy', 'track-asphalt-candy', 'track-curb-candy', 'prop-ca-cupcake', 'prop-ca-cottoncandy']));
+  });
+});
+
 describe('temas', () => {
   it('cada pista tem um tema fixo e pistas desconhecidas ficam com relva', () => {
     expect(new Set(TRACKS.map((t) => themeForTrack(t.id).id)).size).toBe(THEMES.length);
-    expect(THEMES).toHaveLength(5);
+    expect(THEMES).toHaveLength(6);
     expect(themeForTrack('antiga').id).toBe('relva');
   });
   it('as chaves de textura seguem o manifest', () => {
