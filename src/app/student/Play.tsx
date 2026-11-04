@@ -172,8 +172,8 @@ export function Play() {
         const msg = errorMessage(e);
         const savedEnd = msg === 'PIN inválido' ? readEnd(player.session_id) : null;
         if (savedEnd) {
+          // O canal fica aberto: a professora pode abrir outro jogo na mesma sala e o aluno tem de o ouvir.
           setView({ k: 'end', e: savedEnd });
-          ch?.close();
           return;
         }
         if (msg === 'PIN inválido' && localStorage.getItem(`gpp.aborted.${player.session_id}`)) {
