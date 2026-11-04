@@ -162,7 +162,7 @@ function Lobby({ game, s }: { game: HostGame; s: HostSnapshot }) {
           {!wakeLockSupported() && <p className="muted">Dica: desliga o bloqueio automático do iPad (Ajustes → Ecrã e brilho).</p>}
           <div className="row spread" style={{ marginTop: 12 }}>
             <button onClick={() => setExiting(true)}>← Sair</button>
-            <span className={s.connected ? 'muted' : 'offline'}>{s.connected ? '● ligado' : '○ a ligar…'}</span>
+            {s.connected ? <span /> : <span className="offline">○ a ligar…</span>}
             <button className="primary big" disabled={!s.players.length} onClick={() => void game.start()}>🏁 Começar corrida</button>
           </div>
         </div>
