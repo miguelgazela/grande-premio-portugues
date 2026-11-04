@@ -388,7 +388,7 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
 
 /* Jogar em landscape (iPad): duas colunas, ecrã todo, sem scroll da página */
 .jogar-cols { display: grid; gap: 22px; }
-.adv-area { display: grid; }
+.adv-area { display: grid; grid-template-columns: minmax(0, 1fr); }
 @media (orientation: landscape) and (min-width: 900px) {
   .jogar { padding: 14px 20px; }
   .jogar .wide { width: 100%; height: 100%; padding: 20px 24px; gap: 14px; grid-template-rows: auto minmax(0, 1fr); }
@@ -506,3 +506,8 @@ details.more summary:focus-visible, .jogar button:focus-visible { outline: 3px s
 /* Contagem inicial: o painel já tem a cor e o espaço finais; o conteúdo da 1.ª pergunta aparece desfocado. */
 .host .qpanel.preview > * { filter: blur(14px); opacity: .55; pointer-events: none; user-select: none; }
 .host .qpanel { transition: none; }
+
+
+/* Jogar (professora): os grupos de botões nunca saem da coluna */
+.jogar .seg { flex-wrap: wrap; }
+.jogar .seg button { min-width: 0; padding-left: 12px; padding-right: 12px; flex: 1 1 auto; }
