@@ -13,7 +13,10 @@ const CAR_LEN = 34;
 const FOLLOW_ZOOM = 2.2;
 const LOOK_AHEAD = 70;
 /** A câmara afasta-se até aqui para manter os rivais mais próximos à vista; os que não cabem ficam com marcador no bordo. */
-const MIN_FOLLOW_ZOOM = 0.55;
+const MIN_FOLLOW_ZOOM = 0.75;
+/** Quantos rivais à frente e atrás do carro da turma a câmara tenta manter à vista (não precisa de todos). */
+const FRAME_AHEAD = 2;
+const FRAME_BEHIND = 2;
 const FRAME_MARGIN = 80;
 /** Só visual: acima desta diferença (unidades) os rivais aproximam-se do carro da turma, para ficarem sempre perto do ecrã. Os pontos e a classificação usam a distância real. */
 const NEAR_GAP = 260;
@@ -614,7 +617,11 @@ export class RaceView {
     let x0 = Math.min(root.x, lookX), x1 = Math.max(root.x, lookX);
     let y0 = Math.min(root.y, lookY), y1 = Math.max(root.y, lookY);
     const zoomFor = (a: number, b: number, c: number, d: number) => Math.min(this.view.w / (s0 * (b - a + FRAME_MARGIN * 2)), this.view.h / (s0 * (d - c + FRAME_MARGIN * 2)));
-    const others = race.cars.filter((c) => c !== team && !c.crossed).sort((a, b) => Math.abs(a.distance - team.distance) - Math.abs(b.distance - team.distance));
+    const rivals = race.cars.filter((c) => c !== team && !c.crossed);
+    const byGap = (a: CarState, b: CarState) => Math.abs(a.distance - team.distance) - Math.abs(b.distance - team.distance);
+    const ahead = rivals.filter((c) => c.distance >= team.distance).sort(byGap).slice(0, FRAME_AHEAD);
+    const behind = rivals.filter((c) => c.distance < team.distance).sort(byGap).slice(0, FRAME_BEHIND);
+    const others = [...ahead, ...behind].sort(byGap);
     for (const c of others) {
       const r = this.cars.get(c.driver.id)?.root;
       if (!r) continue;
