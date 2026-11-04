@@ -23,6 +23,8 @@ export interface PublicQuestion {
   body: PublicBody;
   /** Segundos que faltam para fechar. */
   time: number;
+  /** Só nos reenvios (aluno a reconectar): o jogo está em pausa, para o estado chegar numa só mensagem. */
+  paused?: boolean;
 }
 
 /** A solução, só enviada na revelação. */

@@ -96,7 +96,7 @@ export function Play() {
             const cur = viewRef.current;
             const same = cur.k === 'question' && cur.q.question_id === m.payload.question_id;
             lastBody.current = { id: m.payload.question_id, body: m.payload.body };
-            setView({ k: 'question', q: m.payload, at: Date.now(), full: same ? cur.full : m.payload.time });
+            setView({ k: 'question', q: m.payload, at: Date.now(), full: same ? cur.full : m.payload.time, paused: m.payload.paused === true });
             const prev = chosenRef.current[m.payload.question_id];
             if (prev !== undefined) ch?.send({ event: 'answer', payload: { player_id: player.player_id, question_id: m.payload.question_id, value: prev } });
             break;

@@ -260,8 +260,8 @@ export class HostGame {
       return;
     }
     if (m.event === 'question' && this.current) {
-      this.channel?.send({ event: 'question', payload: { ...m.payload, time: Math.max(0, this.config.questionTime - this.qElapsed) } });
-      if (this.snap.paused) this.announcePause();
+      // A pausa vai dentro da própria pergunta: duas mensagens separadas podiam chegar fora de ordem e o aluno alternava de estado.
+      this.channel?.send({ event: 'question', payload: { ...m.payload, time: Math.max(0, this.config.questionTime - this.qElapsed), paused: this.snap.paused } });
     } else {
       this.channel?.send(m);
     }
