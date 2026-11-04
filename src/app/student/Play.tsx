@@ -88,6 +88,8 @@ export function Play() {
     ch = api.openChannel(
       player.session_id,
       (m) => {
+        // Terminada pela professora: nada a reabre (um reenvio atrasado da pergunta não pode voltar a pôr o aluno a jogar).
+        if (viewRef.current.k === 'aborted' && m.event !== 'aborted') return;
         switch (m.event) {
           case 'lobby':
             if (viewRef.current.k === 'wait') setView({ k: 'wait', count: m.payload.count });

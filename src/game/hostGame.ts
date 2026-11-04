@@ -91,6 +91,8 @@ export class HostGame {
   private lastMsg: HostEvent | null = null;
   private lastResync = 0;
   private resyncT: number | undefined;
+  /** A sessão foi terminada: não se repete mais estado (senão o aluno voltava à pergunta). */
+  private aborting = false;
   private pollTimer = 0;
   private timeBucket = -1;
   private votes = new Map<string, StyleVote>();
@@ -165,6 +167,8 @@ export class HostGame {
 
   /** Avisa já os alunos, pelo canal que o anfitrião tem aberto, de que a sessão terminou. */
   announceAborted(): void {
+    this.aborting = true;
+    clearTimeout(this.resyncT);
     this.channel?.send({ event: 'aborted', payload: {} });
     window.setTimeout(() => this.channel?.send({ event: 'aborted', payload: {} }), 300);
   }
@@ -248,6 +252,7 @@ export class HostGame {
 
   /** Repete o último estado (alunos a reconectar). Limita a 1×/s para não inundar o canal. */
   private resync(force = false) {
+    if (this.aborting) return;
     const now = performance.now();
     if (!force && now - this.lastResync < 1000) {
       // Não perde o pedido: um `hello` apanhado pelo limite recebe o estado logo a seguir.
