@@ -25,7 +25,7 @@ export default defineConfig(({ mode, command }) => {
   }
   return {
   esbuild: { jsx: 'automatic' },
-  define: { __APP_VERSION__: JSON.stringify(appVersion()), __APP_BUILT__: JSON.stringify(new Date().toISOString()) },
+  define: { __APP_VERSION__: JSON.stringify(appVersion()) },
   // Aceita ligações da rede e de túneis HTTPS (testes com telemóveis/iPads).
   server: { host: true, allowedHosts: true },
   build: {
