@@ -276,7 +276,7 @@ function RaceScreen({ game, s }: { game: HostGame; s: HostSnapshot }) {
         )}
         {showReveal && (
           <div className={`banner ${s.reveal!.nitro ? 'nitro' : s.reveal!.effect}`}>
-            {(s.reveal!.nitro || s.reveal!.effect === 'turbo') && <Asset name="ui-flame" className="banner-flame" />}
+            {(s.reveal!.nitro || s.reveal!.effect === 'turbo') && <Asset name={s.reveal!.nitro ? 'ui-nitro' : 'ui-flame'} className="banner-flame" />}
             {s.reveal!.nitro ? 'NITRO!' : EFFECT_TEXT[s.reveal!.effect]} <small style={{ fontSize: '.5em' }}>{Math.round(s.reveal!.accuracy * 100)}% certas</small>
           </div>
         )}
