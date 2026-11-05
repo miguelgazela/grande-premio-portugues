@@ -12,14 +12,15 @@ export interface Theme {
   vehicle: Category;
   curbA: number;
   curbB: number;
+  /** Tinge o tile de fundo (multiplica as cores); omitido = sem alteração. */
+  bgTint?: number;
   /** Props: chave, tamanho, quantidade, margem e se ficam junto da estrada. */
   props: { key: string; size: number; count: number; margin: number; nearRoad: boolean; spin?: boolean }[];
 }
 
-const ROAD_PROPS = [
-  { key: 'prop-tires', size: 28, count: 14, margin: 8, nearRoad: true },
-  { key: 'prop-cone', size: 18, count: 20, margin: 6, nearRoad: true },
-];
+const CONES = { key: 'prop-cone', size: 18, count: 20, margin: 6, nearRoad: true };
+/** Pneus (bóias vermelhas e brancas) só fazem sentido na relva. */
+const ROAD_PROPS = [{ key: 'prop-tires', size: 28, count: 14, margin: 8, nearRoad: true }, CONES];
 
 export const THEMES: Theme[] = [
   {
@@ -28,15 +29,15 @@ export const THEMES: Theme[] = [
   },
   {
     id: 'deserto', vehicle: 'carro', name: 'Deserto', suffix: 'desert', background: 0xe0b66a, curbA: 0xb9502f, curbB: 0xf0e4d0,
-    props: [{ key: 'prop-cactus', size: 38, count: 34, margin: 10, nearRoad: false }, { key: 'prop-rocks-desert', size: 54, count: 22, margin: 8, nearRoad: false }, { key: 'prop-tumbleweed', size: 34, count: 18, margin: 8, nearRoad: false }, { key: 'prop-d-camel', size: 60, count: 5, margin: 8, nearRoad: false, spin: true }, { key: 'prop-d-oasis', size: 90, count: 3, margin: 8, nearRoad: false }, { key: 'prop-d-pyramid', size: 100, count: 2, margin: 8, nearRoad: false }, { key: 'prop-d-tent', size: 64, count: 4, margin: 8, nearRoad: false, spin: true }, { key: 'prop-d-cactus2', size: 38, count: 8, margin: 8, nearRoad: false }, { key: 'prop-d-chest', size: 36, count: 3, margin: 8, nearRoad: false, spin: true }, { key: 'prop-d-fossil', size: 50, count: 5, margin: 8, nearRoad: false, spin: true }, { key: 'prop-d-balloon', size: 70, count: 3, margin: 8, nearRoad: false }, ...ROAD_PROPS],
+    props: [{ key: 'prop-cactus', size: 38, count: 34, margin: 10, nearRoad: false }, { key: 'prop-rocks-desert', size: 54, count: 22, margin: 8, nearRoad: false }, { key: 'prop-tumbleweed', size: 34, count: 18, margin: 8, nearRoad: false }, { key: 'prop-d-camel', size: 50, count: 3, margin: 8, nearRoad: false, spin: true }, { key: 'prop-d-oasis', size: 90, count: 3, margin: 8, nearRoad: false }, { key: 'prop-d-pyramid', size: 70, count: 1, margin: 8, nearRoad: false }, { key: 'prop-d-tent', size: 64, count: 4, margin: 8, nearRoad: false, spin: true }, { key: 'prop-d-cactus2', size: 38, count: 8, margin: 8, nearRoad: false }, { key: 'prop-d-chest', size: 36, count: 3, margin: 8, nearRoad: false, spin: true }, { key: 'prop-d-fossil', size: 50, count: 5, margin: 8, nearRoad: false, spin: true }, { key: 'prop-d-balloon', size: 70, count: 3, margin: 8, nearRoad: false }, CONES],
   },
   {
-    id: 'neve', vehicle: 'carro', name: 'Neve', suffix: 'snow', background: 0xe8f2fa, curbA: 0x7cc0f5, curbB: 0xffffff,
-    props: [{ key: 'prop-pine', size: 70, count: 40, margin: 10, nearRoad: false }, { key: 'prop-snowman', size: 44, count: 10, margin: 8, nearRoad: false }, { key: 'prop-ice', size: 40, count: 18, margin: 8, nearRoad: false }, { key: 'prop-s-igloo', size: 76, count: 3, margin: 8, nearRoad: false }, { key: 'prop-s-penguins', size: 44, count: 6, margin: 8, nearRoad: false, spin: true }, { key: 'prop-s-polarbear', size: 60, count: 3, margin: 8, nearRoad: false, spin: true }, { key: 'prop-s-sled', size: 48, count: 4, margin: 8, nearRoad: false, spin: true }, { key: 'prop-s-pond', size: 80, count: 3, margin: 8, nearRoad: false }, { key: 'prop-s-pine2', size: 70, count: 12, margin: 8, nearRoad: false }, { key: 'prop-s-cabin', size: 84, count: 2, margin: 8, nearRoad: false }, { key: 'prop-s-mound', size: 50, count: 8, margin: 8, nearRoad: false, spin: true }, ...ROAD_PROPS],
+    id: 'neve', vehicle: 'carro', name: 'Neve', suffix: 'snow', background: 0xe8f2fa, curbA: 0x1f7fd6, curbB: 0xffffff,
+    props: [{ key: 'prop-pine', size: 70, count: 40, margin: 10, nearRoad: false }, { key: 'prop-snowman', size: 44, count: 10, margin: 8, nearRoad: false }, { key: 'prop-ice', size: 40, count: 8, margin: 8, nearRoad: false }, { key: 'prop-s-igloo', size: 76, count: 3, margin: 8, nearRoad: false }, { key: 'prop-s-penguins', size: 44, count: 6, margin: 8, nearRoad: false, spin: true }, { key: 'prop-s-polarbear', size: 60, count: 3, margin: 8, nearRoad: false, spin: true }, { key: 'prop-s-sled', size: 48, count: 4, margin: 8, nearRoad: false, spin: true }, { key: 'prop-s-pond', size: 80, count: 2, margin: 8, nearRoad: false }, { key: 'prop-s-pine2', size: 70, count: 12, margin: 8, nearRoad: false }, { key: 'prop-s-cabin', size: 84, count: 2, margin: 8, nearRoad: false }, { key: 'prop-s-mound', size: 50, count: 4, margin: 8, nearRoad: false, spin: true }, CONES],
   },
   {
-    id: 'cidade', vehicle: 'carro', name: 'Cidade', suffix: 'city', background: 0x6b7280, curbA: 0xffd100, curbB: 0x1d1d1d,
-    props: [{ key: 'prop-rooftop', size: 84, count: 18, margin: 12, nearRoad: false }, { key: 'prop-rooftop2', size: 84, count: 14, margin: 12, nearRoad: false }, { key: 'prop-fountain', size: 60, count: 4, margin: 10, nearRoad: false }, { key: 'prop-c-glassroof', size: 90, count: 6, margin: 8, nearRoad: false }, { key: 'prop-c-pool', size: 80, count: 3, margin: 8, nearRoad: false }, { key: 'prop-c-helipad', size: 80, count: 2, margin: 8, nearRoad: false }, { key: 'prop-c-foodtruck', size: 64, count: 3, margin: 8, nearRoad: false, spin: true }, { key: 'prop-c-bus', size: 70, count: 3, margin: 8, nearRoad: false, spin: true }, { key: 'prop-c-taxi', size: 52, count: 4, margin: 8, nearRoad: false, spin: true }, { key: 'prop-c-billboard', size: 70, count: 4, margin: 8, nearRoad: false }, { key: 'prop-c-park', size: 90, count: 4, margin: 8, nearRoad: false }, ...ROAD_PROPS],
+    id: 'cidade', vehicle: 'carro', name: 'Cidade', suffix: 'city', background: 0x6b7280, curbA: 0xffd100, curbB: 0x1d1d1d, bgTint: 0xb0b6c2,
+    props: [{ key: 'prop-rooftop', size: 84, count: 8, margin: 12, nearRoad: false }, { key: 'prop-rooftop2', size: 84, count: 14, margin: 12, nearRoad: false }, { key: 'prop-fountain', size: 60, count: 4, margin: 10, nearRoad: false }, { key: 'prop-c-glassroof', size: 90, count: 6, margin: 8, nearRoad: false }, { key: 'prop-c-pool', size: 80, count: 3, margin: 8, nearRoad: false }, { key: 'prop-c-helipad', size: 80, count: 2, margin: 8, nearRoad: false }, { key: 'prop-c-foodtruck', size: 64, count: 3, margin: 8, nearRoad: false, spin: true }, { key: 'prop-c-bus', size: 70, count: 3, margin: 8, nearRoad: false, spin: true }, { key: 'prop-c-taxi', size: 52, count: 4, margin: 8, nearRoad: false, spin: true }, { key: 'prop-c-billboard', size: 70, count: 4, margin: 8, nearRoad: false }, { key: 'prop-c-park', size: 90, count: 4, margin: 8, nearRoad: false }, CONES],
   },
   {
     id: 'agua', vehicle: 'barco', name: 'Água', suffix: 'water', background: 0x1f78b4, curbA: 0xff6a2b, curbB: 0xffffff,

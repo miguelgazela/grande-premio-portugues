@@ -109,6 +109,7 @@ export class RaceView {
     if (grass) {
       this.bg = new TilingSprite({ texture: grass, width: 100, height: 100 });
       this.bg.tileScale.set(0.45);
+      if (this.theme.bgTint !== undefined) this.bg.tint = this.theme.bgTint;
       this.world.addChild(this.bg);
     }
     this.world.addChild(this.chunkLayer, this.particles.under, this.carLayer, this.particles.over);
