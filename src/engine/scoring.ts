@@ -69,15 +69,17 @@ export interface Award {
 }
 
 /**
- * One winner per category, only if somebody qualifies. Prefers a different
- * student for each award so more of the class gets recognised.
+ * One winner per category, only if somebody qualifies. Among exact ties prefers a
+ * student without an award yet; a clear best always wins the category.
  */
 export function pickAwards(scores: PlayerScore[]): Award[] {
   const awards: Award[] = [];
   const taken = new Set<string>();
   const best = (list: PlayerScore[], cmp: (a: PlayerScore, b: PlayerScore) => number) => {
     const sorted = [...list].sort(cmp);
-    const pick = sorted.find((s) => !taken.has(s.playerId)) ?? sorted[0];
+    // Só se troca de aluno entre empates reais: quem é melhor naquela categoria ganha-a, mesmo que já tenha outro prémio.
+    const ties = sorted.filter((s) => cmp(s, sorted[0]) === 0);
+    const pick = ties.find((s) => !taken.has(s.playerId)) ?? sorted[0];
     if (pick) taken.add(pick.playerId);
     return pick;
   };

@@ -151,6 +151,15 @@ describe('outcome & scoring', () => {
     expect(pickAwards(scores).find((a) => a.key === 'hero')?.playerId).toBe('a');
   });
 
+  it('o mais certeiro é quem tem mais certas, mesmo que já tenha outro prémio', () => {
+    const base = { points: 0, partial: 0, answered: 20, bestStreak: 0, heroCount: 0 };
+    const mara = { ...base, playerId: 'mara', correct: 17, avgCorrectTime: 0.2 };
+    const eu = { ...base, playerId: 'eu', correct: 11, avgCorrectTime: 0.5 };
+    const a = pickAwards([eu, mara]);
+    expect(a.find((x) => x.key === 'fastest')?.playerId).toBe('mara');
+    expect(a.find((x) => x.key === 'accurate')?.playerId).toBe('mara');
+  });
+
   it('simulated race produces scores for every student', () => {
     const { race, students, answersByQ } = buildRace(DEFAULT_CONFIG, DEFAULT_SIM, 42);
     race.runToEnd();
