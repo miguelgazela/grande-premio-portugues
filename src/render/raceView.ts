@@ -31,6 +31,9 @@ const CHUNKS_AHEAD = 4;
 /** Área de mundo que um bloco de relva/props cobria antes (para manter a densidade dos temas). */
 const OLD_WORLD_AREA = 1800 * 1140;
 const OLD_TRACK_LEN = 3948;
+/** Menos props por ecrã (estavam a sobrepor-se) e uma folga entre eles. */
+const PROP_DENSITY = 0.6;
+const PROP_GAP = 1.2;
 
 interface CarNode {
   root: Container;
@@ -333,7 +336,7 @@ export class RaceView {
       const tex = this.t(key);
       if (!tex) return;
       const r = size / 2;
-      const along = nearRoad ? count * (chunkLen / OLD_TRACK_LEN) : (count * (chunkLen * 900)) / OLD_WORLD_AREA;
+      const along = PROP_DENSITY * (nearRoad ? count * (chunkLen / OLD_TRACK_LEN) : (count * (chunkLen * 900)) / OLD_WORLD_AREA);
       const want = Math.floor(along) + (rng() < along - Math.floor(along) ? 1 : 0);
       for (let n = 0, tries = 0; n < want && tries < 120; tries++) {
         let x: number;
@@ -350,7 +353,7 @@ export class RaceView {
           y = p.y + p.ny * off;
         }
         if (clearance(x, y) < roadEdge + r * 0.8 + margin) continue;
-        if (placed.some((o) => Math.hypot(o.x - x, o.y - y) < (o.r + r) * 0.9)) continue;
+        if (placed.some((o) => Math.hypot(o.x - x, o.y - y) < (o.r + r) * PROP_GAP)) continue;
         placed.push({ x, y, r });
         const k = size / Math.max(tex.width, tex.height);
         add(tex, x, y, tex.width * k, tex.height * k, spin ? rng() * Math.PI * 2 : 0);
