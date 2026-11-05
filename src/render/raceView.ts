@@ -312,7 +312,8 @@ export class RaceView {
     };
 
     // Bancadas: à partida e à meta, do lado de fora da curva (lado esquerdo na partida, direito na meta).
-    const stand = this.t('prop-grandstand');
+    // Bancada do tema (`prop-grandstand-<sufixo>`) se existir; senão a da relva.
+    const stand = (this.theme.suffix && this.t(`prop-grandstand-${this.theme.suffix}`)) || this.t('prop-grandstand');
     if (stand) {
       const standAt = (d: number, side: number, w: number) => {
         const h = (stand.height / stand.width) * w;

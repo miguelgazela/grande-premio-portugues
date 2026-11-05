@@ -63,7 +63,7 @@ export function themeForTrack(trackId: string): Theme {
 /** Chaves de textura de um tema. */
 export function themeKeys(t: Theme): string[] {
   const s = t.suffix ? `-${t.suffix}` : '';
-  return [`bg${t.suffix ? s : '-grass'}`, `track-asphalt${s}`, `track-curb${s}`, ...t.props.map((p) => p.key), ...(t.vehicle === 'barco' ? [...carsOfCat('barco').map((c) => c.key), 'fx-wake', 'fx-splash'] : []), ...(t.vehicle === 'nave' ? [...carsOfCat('nave').map((c) => c.key), 'fx-trail-space'] : [])];
+  return [`bg${t.suffix ? s : '-grass'}`, `track-asphalt${s}`, `track-curb${s}`, ...(t.suffix ? [`prop-grandstand${s}`] : []), ...t.props.map((p) => p.key), ...(t.vehicle === 'barco' ? [...carsOfCat('barco').map((c) => c.key), 'fx-wake', 'fx-splash'] : []), ...(t.vehicle === 'nave' ? [...carsOfCat('nave').map((c) => c.key), 'fx-trail-space'] : [])];
 }
 
 /** Categoria de veículo de uma pista (água = barcos; espaço = naves; o resto, carros). */
